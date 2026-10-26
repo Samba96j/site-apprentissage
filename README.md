@@ -2,6 +2,8 @@
 
 Site web éducatif statique qui regroupe des cours, des fiches de révision et des exercices interactifs, du collège à l'enseignement supérieur.
 
+**Site en ligne :** <https://samba96j.github.io/site-apprentissage/>
+
 ![Aperçu de LearnHub](assets/images/hero-education.png)
 
 ## Fonctionnalités
