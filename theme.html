@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plateforme d'Étude - Une si longue lettre | Admin</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+    <style>
+        :root {
+            --primary: #6a1b9a;
+            --secondary: #ab47bc;
+            --accent: #ff7043;
+            --light: #f3e5f5;
+            --dark: #4a148c;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #fafafa;
+            line-height: 1.6;
+        }
+        
+        /* Panel Admin */
+        .admin-panel {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .admin-nav {
+            background-color: var(--dark);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .admin-nav .nav-link {
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 5px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        
+        .admin-nav .nav-link:hover, 
+        .admin-nav .nav-link.active {
+            background-color: var(--primary);
+            color: white;
+            padding-left: 15px;
+        }
+        
+        /* Exercices */
+        .exercise-card {
+            border-left: 4px solid var(--secondary);
+            transition: all 0.3s;
+        }
+        
+        .exercise-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        /* Éditeur d'exercices */
+        .exercise-editor {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px dashed #ccc;
+        }
+        
+        /* Tableau de bord */
+        .dashboard-card {
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        /* Autres styles existants... */
+    </style>
+</head>
+<body>
+    <!-- Navigation Admin -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, var(--primary), var(--dark));">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-user-cog me-2"></i>Panel Admin
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="adminNavbar">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="fas fa-bell"></i></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="fas fa-cog"></i></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="fas fa-sign-out-alt"></i></a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenu Principal -->
+    <div class="container my-4">
+        <div class="row">
+            <!-- Sidebar Admin -->
+            <div class="col-lg-3 mb-4">
+                <div class="admin-nav sticky-top" style="top: 20px;">
+                    <h5 class="mb-3"><i class="fas fa-tachometer-alt me-2"></i> Tableau de bord</h5>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#dashboard"><i class="fas fa-home me-2"></i> Accueil</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#exercises"><i class="fas fa-tasks me-2"></i> Gestion des exercices</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#resources"><i class="fas fa-file-pdf me-2"></i> Ressources PDF</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#settings"><i class="fas fa-cogs me-2"></i> Paramètres</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#users"><i class="fas fa-users me-2"></i> Utilisateurs</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#stats"><i class="fas fa-chart-bar me-2"></i> Statistiques</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+
+            <!-- Contenu Admin -->
+            <div class="col-lg-9">
+                <!-- Tableau de bord -->
+                <section id="dashboard" class="mb-5">
+                    <h2 class="mb-4"><i class="fas fa-tachometer-alt me-2"></i> Tableau de bord</h2>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-4 mb-3">
+                            <div class="dashboard-card bg-primary text-white p-3">
+                                <h5><i class="fas fa-tasks me-2"></i> Exercices actifs</h5>
+                                <h2 class="mt-2">24</h2>
+                                <p class="mb-0">+5 ce mois-ci</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="dashboard-card bg-success text-white p-3">
+                                <h5><i class="fas fa-users me-2"></i> Étudiants</h5>
+                                <h2 class="mt-2">156</h2>
+                                <p class="mb-0">+12 cette semaine</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="dashboard-card bg-warning text-dark p-3">
+                                <h5><i class="fas fa-file-pdf me-2"></i> Ressources</h5>
+                                <h2 class="mt-2">18</h2>
+                                <p class="mb-0">3 nouvelles</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="admin-panel">
+                        <h4 class="mb-3"><i class="fas fa-bell me-2"></i> Activité récente</h4>
+                        <div class="list-group">
+                            <a href="#" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Nouvel exercice ajouté</h6>
+                                    <small>Il y a 15 min</small>
+                                </div>
+                                <p class="mb-1">Quiz sur les personnages principaux</p>
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Ressource mise à jour</h6>
+                                    <small>Il y a 2 heures</small>
+                                </div>
+                                <p class="mb-1">Fiche de lecture complète</p>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Gestion des exercices -->
+                <section id="exercises" class="mb-5">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2><i class="fas fa-tasks me-2"></i> Gestion des exercices</h2>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addExerciseModal">
+                            <i class="fas fa-plus me-1"></i> Nouvel exercice
+                        </button>
+                    </div>
+                    
+                    <div class="admin-panel">
+                        <ul class="nav nav-tabs" id="exerciseTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="quiz-tab" data-bs-toggle="tab" data-bs-target="#quiz-list" type="button">
+                                    Quiz
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="matching-tab" data-bs-toggle="tab" data-bs-target="#matching-list" type="button">
+                                    Associations
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="fillblank-tab" data-bs-toggle="tab" data-bs-target="#fillblank-list" type="button">
+                                    Textes à trous
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content p-3 border border-top-0 rounded-bottom">
+                            <!-- Liste des Quiz -->
+                            <div class="tab-pane fade show active" id="quiz-list" role="tabpanel">
+                                <table id="quizTable" class="table table-striped" style="width:100%">
+                                    <thead>
+                                        <tr>
+                                            <th>Titre</th>
+                                            <th>Questions</th>
+                                            <th>Durée</th>
+                                            <th>Statut</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Personnages principaux</td>
+                                            <td>10</td>
+                                            <td>15 min</td>
+                                            <td><span class="badge bg-success">Actif</span></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></button>
+                                                <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Thèmes du roman</td>
+                                            <td>8</td>
+                                            <td>10 min</td>
+                                            <td><span class="badge bg-warning text-dark">Brouillon</span></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></button>
+                                                <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Liste des Associations -->
+                            <div class="tab-pane fade" id="matching-list" role="tabpanel">
+                                <table id="matchingTable" class="table table-striped" style="width:100%">
+                                    <thead>
+                                        <tr>
+                                            <th>Titre</th>
+                                            <th>Paires</th>
+                                            <th>Statut</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Personnages - Descriptions</td>
+                                            <td>6</td>
+                                            <td><span class="badge bg-success">Actif</span></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></button>
+                                                <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Liste des Textes à trous -->
+                            <div class="tab-pane fade" id="fillblank-list" role="tabpanel">
+                                <table id="fillblankTable" class="table table-striped" style="width:100%">
+                                    <thead>
+                                        <tr>
+                                            <th>Titre</th>
+                                            <th>Citations</th>
+                                            <th>Statut</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Citations célèbres</td>
+                                            <td>5</td>
+                                            <td><span class="badge bg-success">Actif</span></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></button>
+                                                <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Gestion des ressources -->
+                <section id="resources" class="mb-5">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2><i class="fas fa-file-pdf me-2"></i> Ressources PDF</h2>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addResourceModal">
+                            <i class="fas fa-plus me-1"></i> Ajouter une ressource
+                        </button>
+                    </div>
+                    
+                    <div class="admin-panel">
+                        <table id="resourcesTable" class="table table-striped" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Titre</th>
+                                    <th>Type</th>
+                                    <th>Taille</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Fiche de lecture complète</td>
+                                    <td>Analyse</td>
+                                    <td>2.4 MB</td>
+                                    <td>15/10/2023</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></button>
+                                        <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-download"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Exposé corrigé - Les thèmes</td>
+                                    <td>Corrigé</td>
+                                    <td>1.8 MB</td>
+                                    <td>10/10/2023</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></button>
+                                        <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-download"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Paramètres des exercices -->
+                <section id="settings" class="mb-5">
+                    <h2 class="mb-4"><i class="fas fa-cogs me-2"></i> Paramètres des exercices</h2>
+                    
+                    <div class="admin-panel">
+                        <form>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="defaultQuizTime" class="form-label">Temps par défaut pour les quiz (minutes)</label>
+                                    <input type="number" class="form-control" id="defaultQuizTime" value="15">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="maxAttempts" class="form-label">Tentatives maximales par exercice</label>
+                                    <input type="number" class="form-control" id="maxAttempts" value="3">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="scoringSystem" class="form-label">Système de notation</label>
+                                <select class="form-select" id="scoringSystem">
+                                    <option value="simple">Simple (1 point par bonne réponse)</option>
+                                    <option value="weighted">Pondéré (points variables)</option>
+                                    <option value="timed">Avec bonus temps</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="showCorrections" checked>
+                                <label class="form-check-label" for="showCorrections">Afficher les corrections après soumission</label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="randomizeQuestions" checked>
+                                <label class="form-check-label" for="randomizeQuestions">Ordonner aléatoirement les questions</label>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Enregistrer les paramètres</button>
+                        </form>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajout d'exercice -->
+    <div class="modal fade" id="addExerciseModal" tabindex="-1" aria-labelledby="addExerciseModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addExerciseModalLabel">Nouvel exercice</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3" id="exerciseTypeTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="quiz-type-tab" data-bs-toggle="tab" data-bs-target="#quiz-type" type="button">Quiz</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="matching-type-tab" data-bs-toggle="tab" data-bs-target="#matching-type" type="button">Associations</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="fillblank-type-tab" data-bs-toggle="tab" data-bs-target="#fillblank-type" type="button">Textes à trous</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="exerciseTypeContent">
+                        <!-- Formulaire Quiz -->
+                        <div class="tab-pane fade show active" id="quiz-type" role="tabpanel">
+                            <form id="quizForm">
+                                <div class="mb-3">
+                                    <label for="quizTitle" class="form-label">Titre du quiz</label>
+                                    <input type="text" class="form-control" id="quizTitle" required>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="quizTimeLimit" class="form-label">Durée (minutes)</label>
+                                        <input type="number" class="form-control" id="quizTimeLimit" value="15">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="quizPassingScore" class="form-label">Score de réussite (%)</label>
+                                        <input type="number" class="form-control" id="quizPassingScore" value="70">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Questions</label>
+                                    <div id="quizQuestionsContainer">
+                                        <!-- Les questions seront ajoutées ici dynamiquement -->
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addQuestionBtn">
+                                        <i class="fas fa-plus me-1"></i>Ajouter une question
+                                    </button>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="quizIsActive" checked>
+                                    <label class="form-check-label" for="quizIsActive">Activer ce quiz</label>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Formulaire Associations -->
+                        <div class="tab-pane fade" id="matching-type" role="tabpanel">
+                            <form id="matchingForm">
+                                <div class="mb-3">
+                                    <label for="matchingTitle" class="form-label">Titre de l'exercice</label>
+                                    <input type="text" class="form-control" id="matchingTitle" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Paires à associer</label>
+                                    <div id="matchingPairsContainer">
+                                        <!-- Les paires seront ajoutées ici dynamiquement -->
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addPairBtn">
+                                        <i class="fas fa-plus me-1"></i>Ajouter une paire
+                                    </button>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="matchingIsActive" checked>
+                                    <label class="form-check-label" for="matchingIsActive">Activer cet exercice</label>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Formulaire Textes à trous -->
+                        <div class="tab-pane fade" id="fillblank-type" role="tabpanel">
+                            <form id="fillblankForm">
+                                <div class="mb-3">
+                                    <label for="fillblankTitle" class="form-label">Titre de l'exercice</label>
+                                    <input type="text" class="form-control" id="fillblankTitle" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="fillblankText" class="form-label">Texte avec trous</label>
+                                    <textarea class="form-control" id="fillblankText" rows="5" placeholder="Entrez le texte en entourant les mots à trouver avec des crochets comme ceci: [mot]"></textarea>
+                                    <small class="text-muted">Entourez les mots à trouver avec des crochets [comme ceci]</small>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="fillblankIsActive" checked>
+                                    <label class="form-check-label" for="fillblankIsActive">Activer cet exercice</label>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" id="saveExerciseBtn">Enregistrer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajout de ressource -->
+    <div class="modal fade" id="addResourceModal" tabindex="-1" aria-labelledby="addResourceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addResourceModalLabel">Ajouter une ressource</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="resourceForm">
+                        <div class="mb-3">
+                            <label for="resourceTitle" class="form-label">Titre</label>
+                            <input type="text" class="form-control" id="resourceTitle" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="resourceType" class="form-label">Type</label>
+                            <select class="form-select" id="resourceType" required>
+                                <option value="">Sélectionnez un type</option>
+                                <option value="fiche">Fiche de lecture</option>
+                                <option value="expose">Exposé corrigé</option>
+                                <option value="analyse">Analyse littéraire</option>
+                                <option value="autre">Autre</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="resourceFile" class="form-label">Fichier PDF</label>
+                            <input class="form-control" type="file" id="resourceFile" accept=".pdf" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="resourceDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="resourceDescription" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" id="saveResourceBtn">Enregistrer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery, Bootstrap JS, DataTables -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Initialisation des DataTables
+            $('#quizTable').DataTable();
+            $('#matchingTable').DataTable();
+            $('#fillblankTable').DataTable();
+            $('#resourcesTable').DataTable();
+            
+            // Gestion des formulaires d'exercices
+            let questionCount = 0;
+            
+            // Ajouter une question au quiz
+            $('#addQuestionBtn').click(function() {
+                questionCount++;
+                const questionHtml = `
+                    <div class="card mb-3 question-card" data-id="${questionCount}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>Question ${questionCount}</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-question">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Question</label>
+                                <input type="text" class="form-control question-text" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Options</label>
+                                <div class="options-container">
+                                    <div class="input-group mb-2">
+                                        <input type="text" class="form-control option-text" placeholder="Option 1">
+                                        <div class="input-group-text">
+                                            <input class="form-check-input correct-answer" type="radio" name="correct-${questionCount}" value="0">
+                                        </div>
+                                    </div>
+                                    <div class="input-group mb-2">
+                                        <input type="text" class="form-control option-text" placeholder="Option 2">
+                                        <div class="input-group-text">
+                                            <input class="form-check-input correct-answer" type="radio" name="correct-${questionCount}" value="1">
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary add-option">
+                                    <i class="fas fa-plus me-1"></i>Ajouter une option
+                                </button>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Explication (optionnelle)</label>
+                                <textarea class="form-control explanation" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('#quizQuestionsContainer').append(questionHtml);
+            });
+            
+            // Ajouter une option à une question
+            $(document).on('click', '.add-option', function() {
+                const questionId = $(this).closest('.question-card').data('id');
+                const optionCount = $(this).siblings('.options-container').children().length;
+                
+                const optionHtml = `
+                    <div class="input-group mb-2">
+                        <input type="text" class="form-control option-text" placeholder="Option ${optionCount + 1}">
+                        <div class="input-group-text">
+                            <input class="form-check-input correct-answer" type="radio" name="correct-${questionId}" value="${optionCount}">
+                        </div>
+                    </div>
+                `;
+                $(this).siblings('.options-container').append(optionHtml);
+            });
+            
+            // Supprimer une question
+            $(document).on('click', '.delete-question', function() {
+                $(this).closest('.question-card').remove();
+                // Recalculer les numéros de question
+                $('.question-card').each(function(index) {
+                    $(this).find('.card-header span').text(`Question ${index + 1}`);
+                });
+                questionCount = $('.question-card').length;
+            });
+            
+            // Ajouter une paire d'association
+            let pairCount = 0;
+            $('#addPairBtn').click(function() {
+                pairCount++;
+                const pairHtml = `
+                    <div class="card mb-3 pair-card" data-id="${pairCount}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>Paire ${pairCount}</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-pair">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Élément à associer</label>
+                                    <input type="text" class="form-control pair-item" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Correspondance</label>
+                                    <input type="text" class="form-control pair-match" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('#matchingPairsContainer').append(pairHtml);
+            });
+            
+            // Supprimer une paire
+            $(document).on('click', '.delete-pair', function() {
+                $(this).closest('.pair-card').remove();
+                // Recalculer les numéros de paires
+                $('.pair-card').each(function(index) {
+                    $(this).find('.card-header span').text(`Paire ${index + 1}`);
+                });
+                pairCount = $('.pair-card').length;
+            });
+            
+            // Enregistrer un exercice
+            $('#saveExerciseBtn').click(function() {
+                const activeTab = $('#exerciseTypeTabs .nav-link.active').attr('id');
+                
+                if (activeTab === 'quiz-type-tab') {
+                    // Validation du quiz
+                    if ($('#quizTitle').val() === '') {
+                        alert('Veuillez entrer un titre pour le quiz');
+                        return;
+                    }
+                    
+                    if ($('.question-card').length === 0) {
+                        alert('Veuillez ajouter au moins une question');
+                        return;
+                    }
+                    
+                    // Collecter les données du quiz
+                    const quizData = {
+                        title: $('#quizTitle').val(),
+                        timeLimit: $('#quizTimeLimit').val(),
+                        passingScore: $('#quizPassingScore').val(),
+                        isActive: $('#quizIsActive').is(':checked'),
+                        questions: []
+                    };
+                    
+                    $('.question-card').each(function() {
+                        const questionText = $(this).find('.question-text').val();
+                        const explanation = $(this).find('.explanation').val();
+                        const options = [];
+                        let correctAnswer = -1;
+                        
+                        $(this).find('.options-container .input-group').each(function(index) {
+                            const optionText = $(this).find('.option-text').val();
+                            if (optionText === '') return;
+                            
+                            options.push(optionText);
+                            
+                            if ($(this).find('.correct-answer').is(':checked')) {
+                                correctAnswer = index;
+                            }
+                        });
+                        
+                        if (questionText && options.length > 1 && correctAnswer !== -1) {
+                            quizData.questions.push({
+                                question: questionText,
+                                options: options,
+                                answer: correctAnswer,
+                                explanation: explanation
+                            });
+                        }
+                    });
+                    
+                    if (quizData.questions.length === 0) {
+                        alert('Veuillez compléter toutes les questions avec au moins 2 options et une réponse correcte');
+                        return;
+                    }
+                    
+                    console.log('Quiz à enregistrer:', quizData);
+                    alert('Quiz enregistré avec succès!');
+                    $('#addExerciseModal').modal('hide');
+                    
+                } else if (activeTab === 'matching-type-tab') {
+                    // Validation des associations
+                    if ($('#matchingTitle').val() === '') {
+                        alert('Veuillez entrer un titre pour l\'exercice');
+                        return;
+                    }
+                    
+                    if ($('.pair-card').length === 0) {
+                        alert('Veuillez ajouter au moins une paire');
+                        return;
+                    }
+                    
+                    // Collecter les données des paires
+                    const matchingData = {
+                        title: $('#matchingTitle').val(),
+                        isActive: $('#matchingIsActive').is(':checked'),
+                        pairs: []
+                    };
+                    
+                    $('.pair-card').each(function() {
+                        const item = $(this).find('.pair-item').val();
+                        const match = $(this).find('.pair-match').val();
+                        
+                        if (item && match) {
+                            matchingData.pairs.push({
+                                item: item,
+                                match: match
+                            });
+                        }
+                    });
+                    
+                    if (matchingData.pairs.length === 0) {
+                        alert('Veuillez compléter toutes les paires');
+                        return;
+                    }
+                    
+                    console.log('Associations à enregistrer:', matchingData);
+                    alert('Exercice d\'associations enregistré avec succès!');
+                    $('#addExerciseModal').modal('hide');
+                    
+                } else if (activeTab === 'fillblank-type-tab') {
+                    // Validation du texte à trous
+                    if ($('#fillblankTitle').val() === '') {
+                        alert('Veuillez entrer un titre pour l\'exercice');
+                        return;
+                    }
+                    
+                    if ($('#fillblankText').val() === '') {
+                        alert('Veuillez entrer un texte avec des mots à trouver');
+                        return;
+                    }
+                    
+                    // Extraire les mots à trouver
+                    const text = $('#fillblankText').val();
+                    const blanks = text.match(/\[(.*?)\]/g) || [];
+                    
+                    if (blanks.length === 0) {
+                        alert('Veuillez entourer les mots à trouver avec des crochets [comme ceci]');
+                        return;
+                    }
+                    
+                    const fillblankData = {
+                        title: $('#fillblankTitle').val(),
+                        text: text,
+                        blanks: blanks.map(b => b.replace(/[\[\]]/g, '')),
+                        isActive: $('#fillblankIsActive').is(':checked')
+                    };
+                    
+                    console.log('Texte à trous à enregistrer:', fillblankData);
+                    alert('Exercice de texte à trous enregistré avec succès!');
+                    $('#addExerciseModal').modal('hide');
+                }
+            });
+            
+            // Enregistrer une ressource
+            $('#saveResourceBtn').click(function() {
+                if ($('#resourceTitle').val() === '') {
+                    alert('Veuillez entrer un titre pour la ressource');
+                    return;
+                }
+                
+                if ($('#resourceType').val() === '') {
+                    alert('Veuillez sélectionner un type de ressource');
+                    return;
+                }
+                
+                if ($('#resourceFile').val() === '') {
+                    alert('Veuillez sélectionner un fichier PDF');
+                    return;
+                }
+                
+                // Ici, vous ajouteriez le code pour uploader le fichier
+                // et enregistrer les métadonnées dans votre base de données
+                
+                alert('Ressource enregistrée avec succès!');
+                $('#addResourceModal').modal('hide');
+                $('#resourceForm')[0].reset();
+            });
+            
+            // Réinitialiser les formulaires quand les modals se ferment
+            $('.modal').on('hidden.bs.modal', function() {
+                $(this).find('form')[0].reset();
+                $('#quizQuestionsContainer').empty();
+                $('#matchingPairsContainer').empty();
+                questionCount = 0;
+                pairCount = 0;
+            });
+        });
+    </script>
+</body>
+</html>

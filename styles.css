@@ -1,0 +1,243 @@
+:root {
+    --primary: #6a1b9a;
+    --secondary: #ab47bc;
+    --accent: #ff7043;
+    --light: #f8f6fc;
+    --dark: #311b4f;
+    --success: #43a047;
+    --danger: #e53935;
+    --warning: #ffc107;
+    --shadow: 0 8px 32px rgba(106,27,154,0.12);
+    --glass-bg: rgba(255,255,255,0.7);
+    --glass-blur: blur(12px);
+}
+
+body {
+    font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(120deg, var(--light) 60%, #fff 100%);
+    color: #2d2d2d;
+    line-height: 1.7;
+    min-height: 100vh;
+    background-attachment: fixed;
+}
+
+/* Effet glassmorphism générique */
+.glass {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    box-shadow: 0 8px 32px rgba(106,27,154,0.13);
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.25);
+}
+
+/* Authentification */
+.auth-container {
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 36px 32px;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border-radius: 22px;
+    box-shadow: 0 12px 40px rgba(106,27,154,0.18);
+    border: 1.5px solid #ececec;
+    transition: box-shadow 0.3s, border 0.3s;
+}
+.auth-container:hover {
+    box-shadow: 0 24px 60px rgba(106,27,154,0.22);
+    border: 1.5px solid var(--primary);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.auth-icon {
+    font-size: 3.2rem;
+    color: var(--primary);
+    margin-bottom: 18px;
+    transition: transform 0.3s, color 0.3s;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 50%;
+    padding: 18px;
+    box-shadow: 0 4px 16px rgba(106,27,154,0.13);
+}
+.auth-icon:hover {
+    transform: scale(1.12) rotate(-6deg);
+    color: var(--accent);
+}
+
+/* Navigation */
+.navbar {
+    background: linear-gradient(135deg, var(--primary), var(--dark));
+    box-shadow: 0 2px 16px rgba(49,27,79,0.13);
+    padding: 0.7rem 2rem;
+    border-radius: 0 0 22px 22px;
+}
+.navbar-brand {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    color: #fff;
+    font-size: 1.4rem;
+    letter-spacing: 1px;
+}
+.navbar-brand i {
+    margin-right: 12px;
+    font-size: 2rem;
+}
+
+/* Boutons principaux */
+.btn-primary, .btn-outline-light {
+    border-radius: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(106,27,154,0.08);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s, border 0.2s;
+}
+.btn-primary {
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border: none;
+}
+.btn-primary:hover, .btn-primary:focus {
+    background: linear-gradient(90deg, var(--secondary), var(--primary));
+    box-shadow: 0 4px 16px rgba(171,71,188,0.18);
+}
+.btn-outline-light {
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    background: transparent;
+}
+.btn-outline-light:hover, .btn-outline-light:focus {
+    background: var(--primary);
+    color: #fff;
+    border: 2px solid var(--primary);
+}
+
+/* Cartes domaines et méthodes */
+.domaine-card, .methode-card {
+    border: none;
+    border-radius: 18px;
+    box-shadow: 0 4px 24px rgba(106,27,154,0.10);
+    transition: transform 0.3s, box-shadow 0.3s;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+}
+.domaine-card:hover, .methode-card:hover {
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: 0 12px 36px rgba(171,71,188,0.16);
+}
+.domaine-icon, .methode-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(106,27,154,0.10);
+}
+.bg-maths { background: linear-gradient(135deg, #42a5f5, #7e57c2);}
+.bg-sciences { background: linear-gradient(135deg, #43a047, #ab47bc);}
+.bg-lettres { background: linear-gradient(135deg, #ff7043, #ab47bc);}
+.methode-icon { background: linear-gradient(135deg, var(--primary), var(--accent)); }
+
+/* Contenu principal */
+.content {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.3s;
+    overflow: hidden;
+    padding: 2.2rem 2rem;
+    margin-bottom: 2rem;
+}
+.content:hover {
+    box-shadow: 0 12px 32px rgba(106,27,154,0.13);
+}
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(120deg, var(--light) 60%, #fff 100%);
+    border-radius: 0 0 32px 32px;
+    box-shadow: 0 8px 32px rgba(106,27,154,0.07);
+    margin-bottom: 2rem;
+}
+.hero-section h1 {
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+.hero-section .btn-lg {
+    font-size: 1.15rem;
+    padding: 0.8rem 2.2rem;
+}
+
+/* Footer */
+footer {
+    background: linear-gradient(90deg, var(--dark), var(--primary));
+    color: white;
+    padding: 40px 0 20px;
+    margin-top: 40px;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -4px 24px rgba(49,27,79,0.08);
+}
+footer a {
+    color: rgba(255,255,255,0.85);
+    transition: color 0.2s;
+    text-decoration: none;
+}
+footer a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .content {
+        padding: 1.2rem 0.7rem;
+    }
+    .sidebar {
+        margin-bottom: 18px;
+        padding: 0.7rem 0.5rem;
+    }
+}
+@media (max-width: 600px) {
+    .auth-container {
+        margin: 30px auto;
+        padding: 16px 8px;
+    }
+    .content {
+        padding: 0.7rem 0.2rem;
+    }
+    .sidebar {
+        margin-bottom: 12px;
+        padding: 0.5rem 0.2rem;
+    }
+    .theme-card {
+        padding: 0.7rem 0.5rem;
+    }
+    .hero-section {
+        border-radius: 0 0 18px 18px;
+    }
+    .domaine-icon, .methode-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 1.3rem;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px);}
+    to { opacity: 1; transform: translateY(0);}
+}
+.fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+}

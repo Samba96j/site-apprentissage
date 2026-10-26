@@ -1,0 +1,14 @@
+# Systèmes d'exploitation
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+
+# Journaux et fichiers temporaires
+*.log
+*.tmp
