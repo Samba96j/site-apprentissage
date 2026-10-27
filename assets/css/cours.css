@@ -1,0 +1,218 @@
+/* Composants des vues « cours » et « exercices ».
+   Les réglages globaux (couleurs, typographie, navbar, footer) restent dans styles.css. */
+
+.sidebar {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+}
+
+.sidebar .nav-link {
+    color: #333;
+    border-radius: 8px;
+    margin-bottom: 0.25rem;
+    padding: 0.45rem 0.75rem;
+    transition: background-color 0.2s, color 0.2s, padding-left 0.2s;
+}
+
+.sidebar .nav-link i {
+    margin-right: 8px;
+    width: 18px;
+    text-align: center;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background-color: rgba(106, 27, 154, 0.1);
+    color: var(--primary);
+    padding-left: 1rem;
+}
+
+.theme-card {
+    background-color: #f7f3fb;
+    border-left: 4px solid var(--secondary);
+    border-radius: 0 10px 10px 0;
+    transition: transform 0.25s, box-shadow 0.25s;
+}
+
+.theme-card:hover {
+    transform: translateX(4px);
+    box-shadow: 0 6px 18px rgba(106, 27, 154, 0.08);
+}
+
+.quote {
+    font-style: italic;
+    color: var(--dark);
+    border-left: 3px solid var(--accent);
+    background-color: rgba(171, 71, 188, 0.1);
+    border-radius: 0 8px 8px 0;
+}
+
+/* Onglets des exercices */
+.game-tab {
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    font-weight: 500;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.game-tab:hover:not(.active) {
+    border-bottom-color: rgba(106, 27, 154, 0.3);
+    color: var(--primary);
+}
+
+.game-tab.active {
+    border-bottom-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* Options de quiz */
+.option {
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
+}
+
+.option:hover:not(:disabled) {
+    border-color: var(--secondary) !important;
+    transform: translateX(4px);
+}
+
+.option.correct {
+    background-color: rgba(67, 160, 71, 0.12) !important;
+    border-color: var(--success) !important;
+    color: #2e7d32 !important;
+}
+
+.option.wrong {
+    background-color: rgba(229, 57, 53, 0.1) !important;
+    border-color: var(--danger) !important;
+    color: #c62828 !important;
+}
+
+.timer {
+    min-width: 2rem;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Jeu d'association */
+.draggable {
+    cursor: pointer;
+    margin-bottom: 10px;
+    padding: 12px;
+    background-color: #fff;
+    border: 1px solid #e0d6ea;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.draggable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(106, 27, 154, 0.12);
+}
+
+.draggable.selected {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(106, 27, 154, 0.15);
+}
+
+.droppable {
+    min-height: 64px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border: 2px dashed #d5c8e2;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.droppable.highlight {
+    background-color: rgba(67, 160, 71, 0.08);
+    border-color: var(--success);
+    transform: scale(1.01);
+}
+
+.droppable.wrong {
+    border-color: var(--danger);
+    background-color: rgba(229, 57, 53, 0.08);
+    animation: shake 0.5s;
+}
+
+.matched {
+    background-color: rgba(67, 160, 71, 0.12);
+    border-color: var(--success) !important;
+    color: #2e7d32;
+}
+
+/* Texte à trous */
+.blank {
+    display: inline-block;
+    min-width: 110px;
+    border-bottom: 2px solid var(--dark);
+    text-align: center;
+    margin: 0 6px;
+    padding: 0 6px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.blank.correct {
+    border-color: var(--success);
+    color: #2e7d32;
+    font-weight: 600;
+}
+
+.blank.wrong {
+    border-color: var(--danger);
+    color: var(--danger);
+    animation: shake 0.5s;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-5px); }
+    40%, 80% { transform: translateX(5px); }
+}
+
+.word-option {
+    cursor: pointer;
+    margin: 5px;
+    padding: 8px 15px;
+    background-color: #f3e9f8;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    display: inline-block;
+    transition: background-color 0.2s, color 0.2s, transform 0.2s;
+}
+
+.word-option:hover {
+    background-color: var(--secondary);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.word-option.selected {
+    background-color: var(--primary);
+    color: #fff;
+}
+
+.word-option.used {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: scale(0.95);
+}
+
+/* Messages de correction */
+.feedback {
+    transition: opacity 0.3s;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+}
+
+.feedback.show {
+    opacity: 1;
+    max-height: 240px;
+}

@@ -1,0 +1,156 @@
+/* Styles propres à l'application monopage : en-tête, cartes de statistiques,
+   badges, notifications. La base visuelle reste dans styles.css. */
+
+.bg-edu {
+    background: linear-gradient(135deg, var(--primary), var(--dark));
+}
+
+.lien-evitement {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: #fff;
+    color: var(--primary);
+    padding: 0.5rem 1rem;
+    z-index: 1100;
+    border-radius: 0 0 8px 0;
+}
+
+.lien-evitement:focus {
+    left: 0;
+}
+
+/* Recherche dans l'en-tête */
+.header-search {
+    max-width: 340px;
+    width: 100%;
+}
+
+.header-search .form-control {
+    min-width: 160px;
+}
+
+@media (max-width: 991.98px) {
+    .header-search {
+        max-width: none;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Cartes de statistiques */
+.stat-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 18px rgba(106, 27, 154, 0.08);
+    padding: 1rem 1.1rem;
+    text-align: center;
+}
+
+.stat-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    color: #fff;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.stat-valeur {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1.2;
+}
+
+.stat-label {
+    color: #6d6d6d;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Pastilles de niveau */
+.niveau-badge {
+    background-color: rgba(106, 27, 154, 0.1);
+    color: var(--primary);
+    font-weight: 600;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+}
+
+.niveau-badge:hover {
+    background-color: rgba(106, 27, 154, 0.2);
+}
+
+/* Appel à l'action */
+.cta-section {
+    background: linear-gradient(120deg, var(--primary), var(--secondary));
+}
+
+/* Badges de progression */
+.badge-card {
+    border: 1px solid #ececec;
+    border-radius: 14px;
+    padding: 1rem;
+    text-align: center;
+    height: 100%;
+    background: #fff;
+    opacity: 0.55;
+    transition: opacity 0.25s, transform 0.25s, box-shadow 0.25s;
+}
+
+.badge-card.obtenu {
+    opacity: 1;
+    border-color: var(--primary);
+    box-shadow: 0 8px 22px rgba(106, 27, 154, 0.14);
+    color: var(--primary);
+}
+
+.badge-card.obtenu:hover {
+    transform: translateY(-3px);
+}
+
+/* Photo de présentation (accueil) */
+.photo-presentation {
+    width: 100%;
+    max-width: 420px;
+    border-radius: 50%;
+    border: 6px solid #fff;
+    background: #fff;
+    box-shadow: 0 18px 48px rgba(106, 27, 154, 0.22);
+}
+
+/* Notifications */
+.toast-zone {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 1080;
+    display: none;
+    max-width: 340px;
+}
+
+.toast-zone.show {
+    display: block;
+}
+
+.toast-message {
+    background: #fff;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+    font-size: 0.92rem;
+}
+
+/* Listes de chapitres */
+.list-group-item-action {
+    transition: background-color 0.2s, padding-left 0.2s;
+}
+
+.list-group-item-action:hover {
+    background-color: rgba(106, 27, 154, 0.05);
+}
