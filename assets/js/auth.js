@@ -15,11 +15,20 @@ window.LearnHubAuth = (function () {
         progress: PREFIX + 'progress'
     };
 
-    const ROLES = { ELEVE: 'eleve', ADMIN: 'admin' };
+    const ROLES = { ELEVE: 'eleve', ADMIN: 'admin', SUPERADMIN: 'superadmin' };
+
+    // Identifiants du super-administrateur créé automatiquement s'il n'en existe aucun.
+    // Ils peuvent ensuite être modifiés depuis #/superadmin (rubrique « Mes identifiants »).
+    const SUPER_ADMIN_AMORCAGE = {
+        username: 'superadmin',
+        email: 'superadmin@example.com',
+        password: 'superadmin123'
+    };
 
     const COMPTES_DEMO = [
         { username: 'etudiant', email: 'etudiant@example.com', password: 'motdepasse', role: ROLES.ELEVE },
-        { username: 'admin', email: 'admin@example.com', password: 'admin123', role: ROLES.ADMIN }
+        { username: 'admin', email: 'admin@example.com', password: 'admin123', role: ROLES.ADMIN },
+        { username: SUPER_ADMIN_AMORCAGE.username, email: SUPER_ADMIN_AMORCAGE.email, password: SUPER_ADMIN_AMORCAGE.password, role: ROLES.SUPERADMIN }
     ];
 
     function read(key, fallback) {
@@ -85,6 +94,25 @@ window.LearnHubAuth = (function () {
         return value !== null && value === user.hash;
     }
 
+    /** Vrai si le super-administrateur connecté utilise encore le mot de passe d'amorçage. */
+    async function motDePasseParDefaut() {
+        const user = current();
+        if (!user || user.role !== ROLES.SUPERADMIN) return false;
+        const compte = findUser(user.username);
+        if (!compte) return false;
+        return verifierEmpreinte(compte, SUPER_ADMIN_AMORCAGE.password);
+    }
+
+    function creerEspaceId(username) {
+        const base = String(username || 'espace')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '') || 'espace';
+        return 'esp-' + base + '-' + Math.random().toString(36).slice(2, 6);
+    }
+
     async function init() {
         const users = read(KEYS.users, null);
         if (!users) {
@@ -98,11 +126,58 @@ window.LearnHubAuth = (function () {
                     algo: empreinte.algo,
                     salt: empreinte.salt,
                     hash: empreinte.hash,
+                    espaceId: compte.role === ROLES.ADMIN ? creerEspaceId(compte.username) : null,
+                    espaceNom: compte.role === ROLES.ADMIN ? 'Espace de ' + compte.username : null,
+                    classeId: null,
                     cree: new Date().toISOString()
                 });
             }
             write(KEYS.users, seed);
         }
+
+        // Chaque administrateur possède son propre espace de travail.
+        const comptes = read(KEYS.users, []);
+        let modifie = false;
+        comptes.forEach(function (compte) {
+            if (compte.role === ROLES.ADMIN && !compte.espaceId) {
+                compte.espaceId = creerEspaceId(compte.username);
+                compte.espaceNom = compte.espaceNom || 'Espace de ' + compte.username;
+                modifie = true;
+            }
+            if (compte.role === ROLES.ELEVE && compte.classeId === undefined) {
+                compte.classeId = null;
+                modifie = true;
+            }
+        });
+        if (modifie) write(KEYS.users, comptes);
+
+        // Un super-administrateur est indispensable pour gérer tous les comptes.
+        const avecSuperAdmin = read(KEYS.users, []).some(function (u) { return u.role === ROLES.SUPERADMIN; });
+        if (!avecSuperAdmin) {
+            const existants = read(KEYS.users, []);
+            const noms = existants.map(function (u) { return u.username.toLowerCase(); });
+            let identifiant = SUPER_ADMIN_AMORCAGE.username;
+            let suffixe = 1;
+            while (noms.indexOf(identifiant) >= 0) {
+                suffixe++;
+                identifiant = SUPER_ADMIN_AMORCAGE.username + suffixe;
+            }
+            const empreinte = await creerEmpreinte(SUPER_ADMIN_AMORCAGE.password);
+            existants.push({
+                username: identifiant,
+                email: identifiant === SUPER_ADMIN_AMORCAGE.username ? SUPER_ADMIN_AMORCAGE.email : identifiant + '@example.com',
+                role: ROLES.SUPERADMIN,
+                algo: empreinte.algo,
+                salt: empreinte.salt,
+                hash: empreinte.hash,
+                espaceId: null,
+                espaceNom: null,
+                classeId: null,
+                cree: new Date().toISOString()
+            });
+            write(KEYS.users, existants);
+        }
+
         const session = read(KEYS.session, null);
         if (session && !read(KEYS.users, []).some(function (u) { return u.username === session.username; })) {
             write(KEYS.session, null);
@@ -124,12 +199,137 @@ window.LearnHubAuth = (function () {
         if (!session) return null;
         const user = findUser(session.username);
         if (!user) return null;
-        return { username: user.username, email: user.email, role: user.role, loginAt: session.loginAt };
+        return {
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            espaceId: user.espaceId || null,
+            espaceNom: user.espaceNom || null,
+            classeId: user.classeId || null,
+            loginAt: session.loginAt
+        };
     }
 
     function isAdmin() {
         const user = current();
         return !!user && user.role === ROLES.ADMIN;
+    }
+
+    function isSuperAdmin() {
+        const user = current();
+        return !!user && user.role === ROLES.SUPERADMIN;
+    }
+
+    /**
+     * Espace de travail courant : celui de l'administrateur, ou celui de la
+     * classe de l'élève. `null` correspond à la bibliothèque publique.
+     */
+    function espaceActif() {
+        const user = current();
+        if (!user) return null;
+        if (user.role === ROLES.ADMIN) return user.espaceId || null;
+        if (!user.classeId) return null;
+        const store = window.LearnHubStore;
+        const classe = store && store.classes ? store.classes.get(user.classeId) : null;
+        return classe ? classe.espaceId : null;
+    }
+
+    function maClasse() {
+        const user = current();
+        if (!user || !user.classeId) return null;
+        const store = window.LearnHubStore;
+        return store && store.classes ? store.classes.get(user.classeId) : null;
+    }
+
+    function monEspace() {
+        const user = current();
+        if (!user) return null;
+        if (user.role === ROLES.ADMIN) {
+            return {
+                id: user.espaceId,
+                nom: user.espaceNom || 'Espace de ' + user.username,
+                role: ROLES.ADMIN
+            };
+        }
+        const classe = maClasse();
+        if (!classe) return null;
+        const titulaire = users().find(function (u) {
+            return u.role === ROLES.ADMIN && u.espaceId === classe.espaceId;
+        });
+        return {
+            id: classe.espaceId,
+            nom: titulaire ? (titulaire.espaceNom || 'Espace de ' + titulaire.username) : 'Espace enseignant',
+            role: ROLES.ELEVE
+        };
+    }
+
+    function rejoindreClasse(code) {
+        const user = current();
+        if (!user) return { ok: false, error: 'Connectez-vous pour rejoindre une classe.' };
+        if (user.role !== ROLES.ELEVE) return { ok: false, error: 'Seuls les élèves peuvent rejoindre une classe.' };
+        const store = window.LearnHubStore;
+        const classe = store && store.classes ? store.classes.byCode(code) : null;
+        if (!classe) return { ok: false, error: 'Aucune classe ne correspond à ce code.' };
+        const liste = users();
+        const cible = liste.find(function (u) { return u.username === user.username; });
+        cible.classeId = classe.id;
+        write(KEYS.users, liste);
+        return { ok: true, classe: classe };
+    }
+
+    function quitterClasse() {
+        const user = current();
+        if (!user) return { ok: false, error: 'Connectez-vous pour gérer votre classe.' };
+        const liste = users();
+        const cible = liste.find(function (u) { return u.username === user.username; });
+        cible.classeId = null;
+        write(KEYS.users, liste);
+        return { ok: true };
+    }
+
+    function detacherClasse(classeId) {
+        const liste = users();
+        let modifie = false;
+        liste.forEach(function (u) {
+            if (u.classeId === classeId) {
+                u.classeId = null;
+                modifie = true;
+            }
+        });
+        if (modifie) write(KEYS.users, liste);
+        return modifie;
+    }
+
+    function membresClasse(classeId) {
+        if (!classeId) return [];
+        return users().filter(function (u) {
+            return u.role === ROLES.ELEVE && u.classeId === classeId;
+        });
+    }
+
+    function retirerDeClasse(username) {
+        const liste = users();
+        const cible = liste.find(function (u) { return u.username === username; });
+        if (!cible) return { ok: false, error: 'Élève introuvable.' };
+        cible.classeId = null;
+        write(KEYS.users, liste);
+        return { ok: true };
+    }
+
+    function renommerEspace(nom) {
+        const user = current();
+        if (!user || user.role !== ROLES.ADMIN) {
+            return { ok: false, error: 'Seul un administrateur peut nommer son espace.' };
+        }
+        const propre = String(nom || '').trim();
+        if (propre.length < 2) {
+            return { ok: false, error: "Le nom de l'espace doit contenir au moins 2 caractères." };
+        }
+        const liste = users();
+        const cible = liste.find(function (u) { return u.username === user.username; });
+        cible.espaceNom = propre;
+        write(KEYS.users, liste);
+        return { ok: true };
     }
 
     async function login(username, password) {
@@ -157,17 +357,25 @@ window.LearnHubAuth = (function () {
 
         const empreinte = await creerEmpreinte(password);
         const liste = users();
-        liste.push({
+        const enseignant = !!data.enseignant;
+        const compte = {
             username: username,
             email: email,
-            role: ROLES.ELEVE,
+            role: enseignant ? ROLES.ADMIN : ROLES.ELEVE,
             algo: empreinte.algo,
             salt: empreinte.salt,
             hash: empreinte.hash,
+            espaceId: enseignant ? creerEspaceId(username) : null,
+            espaceNom: enseignant ? 'Espace de ' + username : null,
+            classeId: null,
             cree: new Date().toISOString()
-        });
+        };
+        liste.push(compte);
         if (!write(KEYS.users, liste)) {
             return { ok: false, error: "L'enregistrement a échoué (stockage du navigateur indisponible)." };
+        }
+        if (enseignant && window.LearnHubStore && window.LearnHubStore.exercices) {
+            window.LearnHubStore.exercices.importerDemo(compte.espaceId);
         }
         return { ok: true };
     }
@@ -177,27 +385,117 @@ window.LearnHubAuth = (function () {
     }
 
     function setRole(username, role) {
-        if (role !== ROLES.ADMIN && role !== ROLES.ELEVE) return { ok: false, error: 'Rôle inconnu.' };
+        if ([ROLES.ADMIN, ROLES.ELEVE, ROLES.SUPERADMIN].indexOf(role) === -1) {
+            return { ok: false, error: 'Rôle inconnu.' };
+        }
+        const acteur = current();
+        if (!acteur || (acteur.role !== ROLES.ADMIN && acteur.role !== ROLES.SUPERADMIN)) {
+            return { ok: false, error: 'Action réservée aux administrateurs.' };
+        }
+        if (acteur.role === ROLES.ADMIN && role === ROLES.SUPERADMIN) {
+            return { ok: false, error: 'Seul un super-administrateur peut attribuer ce rôle.' };
+        }
+
         const liste = users();
         const user = liste.find(function (u) { return u.username === username; });
         if (!user) return { ok: false, error: 'Utilisateur introuvable.' };
+
+        if (user.role === ROLES.SUPERADMIN) {
+            if (acteur.role !== ROLES.SUPERADMIN) {
+                return { ok: false, error: 'Seul un super-administrateur peut modifier ce compte.' };
+            }
+            if (user.username === acteur.username && role !== ROLES.SUPERADMIN) {
+                return { ok: false, error: 'Impossible de retirer votre propre rôle de super-administrateur.' };
+            }
+            const supers = liste.filter(function (u) { return u.role === ROLES.SUPERADMIN; });
+            if (role !== ROLES.SUPERADMIN && supers.length <= 1) {
+                return { ok: false, error: 'Il doit rester au moins un super-administrateur.' };
+            }
+        }
+
+        if (acteur.role === ROLES.ADMIN && user.role === ROLES.ADMIN && user.username !== acteur.username) {
+            return { ok: false, error: 'Seul un super-administrateur peut modifier un autre administrateur.' };
+        }
+
         const admins = liste.filter(function (u) { return u.role === ROLES.ADMIN; });
         if (user.role === ROLES.ADMIN && role !== ROLES.ADMIN && admins.length <= 1) {
             return { ok: false, error: 'Il doit rester au moins un administrateur.' };
         }
+
         user.role = role;
+        let nouvelEspace = false;
+        if (role === ROLES.ADMIN && !user.espaceId) {
+            user.espaceId = creerEspaceId(user.username);
+            user.espaceNom = user.espaceNom || 'Espace de ' + user.username;
+            nouvelEspace = true;
+        }
+        if (role !== ROLES.ELEVE) user.classeId = null;
         write(KEYS.users, liste);
+        if (nouvelEspace && window.LearnHubStore && window.LearnHubStore.exercices) {
+            window.LearnHubStore.exercices.importerDemo(user.espaceId);
+        }
         return { ok: true };
     }
 
+    async function creerCompte(data) {
+        const acteur = current();
+        if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
+            return { ok: false, error: 'Action réservée au super-administrateur.' };
+        }
+        const username = String(data.username || '').trim();
+        const email = String(data.email || '').trim();
+        const password = String(data.password || '');
+        const role = data.role === ROLES.ADMIN ? ROLES.ADMIN : ROLES.ELEVE;
+
+        if (username.length < 3) return { ok: false, error: "Le nom d'utilisateur doit contenir au moins 3 caractères." };
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, error: 'Adresse e-mail invalide.' };
+        if (password.length < 6) return { ok: false, error: 'Le mot de passe doit contenir au moins 6 caractères.' };
+        if (findUser(username)) return { ok: false, error: "Ce nom d'utilisateur est déjà pris." };
+        if (users().some(function (u) { return u.email.toLowerCase() === email.toLowerCase(); })) {
+            return { ok: false, error: 'Cette adresse e-mail est déjà utilisée.' };
+        }
+
+        const empreinte = await creerEmpreinte(password);
+        const liste = users();
+        const compte = {
+            username: username,
+            email: email,
+            role: role,
+            algo: empreinte.algo,
+            salt: empreinte.salt,
+            hash: empreinte.hash,
+            espaceId: role === ROLES.ADMIN ? creerEspaceId(username) : null,
+            espaceNom: role === ROLES.ADMIN ? 'Espace de ' + username : null,
+            classeId: null,
+            cree: new Date().toISOString()
+        };
+        liste.push(compte);
+        if (!write(KEYS.users, liste)) {
+            return { ok: false, error: "L'enregistrement a échoué (stockage du navigateur indisponible)." };
+        }
+        if (role === ROLES.ADMIN && window.LearnHubStore && window.LearnHubStore.exercices) {
+            window.LearnHubStore.exercices.importerDemo(compte.espaceId);
+        }
+        return { ok: true, compte: { username: username, email: email, role: role } };
+    }
+
     function removeUser(username) {
-        const session = current();
-        if (session && session.username === username) {
+        const acteur = current();
+        if (acteur && acteur.username === username) {
             return { ok: false, error: 'Impossible de supprimer votre propre compte.' };
         }
         const liste = users();
         const user = liste.find(function (u) { return u.username === username; });
         if (!user) return { ok: false, error: 'Utilisateur introuvable.' };
+        if (user.role === ROLES.SUPERADMIN) {
+            if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
+                return { ok: false, error: 'Seul un super-administrateur peut supprimer ce compte.' };
+            }
+            const supers = liste.filter(function (u) { return u.role === ROLES.SUPERADMIN; });
+            if (supers.length <= 1) {
+                return { ok: false, error: 'Il doit rester au moins un super-administrateur.' };
+            }
+        }
         const admins = liste.filter(function (u) { return u.role === ROLES.ADMIN; });
         if (user.role === ROLES.ADMIN && admins.length <= 1) {
             return { ok: false, error: 'Il doit rester au moins un administrateur.' };
@@ -207,6 +505,62 @@ window.LearnHubAuth = (function () {
         delete progress[username];
         write(KEYS.progress, progress);
         return { ok: true };
+    }
+
+    /**
+     * Met à jour le nom d'utilisateur et l'e-mail du super-administrateur connecté.
+     * L'historique de progression et la session suivent le renommage.
+     */
+    function mettreAJourIdentifiants(username, data) {
+        const acteur = current();
+        if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
+            return { ok: false, error: 'Action réservée au super-administrateur.' };
+        }
+        if (acteur.username !== username) {
+            return { ok: false, error: 'Vous ne pouvez modifier que votre propre compte.' };
+        }
+        const liste = users();
+        const cible = liste.find(function (u) { return u.username === username; });
+        if (!cible) return { ok: false, error: 'Compte introuvable.' };
+
+        const nouveauNom = String(data.username || '').trim();
+        const nouvelEmail = String(data.email || '').trim();
+        if (nouveauNom.length < 3) {
+            return { ok: false, error: "Le nom d'utilisateur doit contenir au moins 3 caractères." };
+        }
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(nouvelEmail)) {
+            return { ok: false, error: 'Adresse e-mail invalide.' };
+        }
+        if (liste.some(function (u) {
+            return u.username !== cible.username && u.username.toLowerCase() === nouveauNom.toLowerCase();
+        })) {
+            return { ok: false, error: "Ce nom d'utilisateur est déjà pris." };
+        }
+        if (liste.some(function (u) {
+            return u.username !== cible.username && u.email.toLowerCase() === nouvelEmail.toLowerCase();
+        })) {
+            return { ok: false, error: 'Cette adresse e-mail est déjà utilisée.' };
+        }
+
+        const ancienNom = cible.username;
+        cible.username = nouveauNom;
+        cible.email = nouvelEmail;
+        write(KEYS.users, liste);
+
+        if (ancienNom !== nouveauNom) {
+            const progress = allProgress();
+            if (progress[ancienNom]) {
+                progress[nouveauNom] = progress[ancienNom];
+                delete progress[ancienNom];
+                write(KEYS.progress, progress);
+            }
+            const session = read(KEYS.session, null);
+            if (session && session.username === ancienNom) {
+                session.username = nouveauNom;
+                write(KEYS.session, session);
+            }
+        }
+        return { ok: true, username: nouveauNom };
     }
 
     async function changePassword(username, currentPassword, newPassword) {
@@ -361,11 +715,24 @@ window.LearnHubAuth = (function () {
         findUser: findUser,
         current: current,
         isAdmin: isAdmin,
+        isSuperAdmin: isSuperAdmin,
+        motDePasseParDefaut: motDePasseParDefaut,
+        espaceActif: espaceActif,
+        monEspace: monEspace,
+        maClasse: maClasse,
+        rejoindreClasse: rejoindreClasse,
+        quitterClasse: quitterClasse,
+        detacherClasse: detacherClasse,
+        membresClasse: membresClasse,
+        retirerDeClasse: retirerDeClasse,
+        renommerEspace: renommerEspace,
         login: login,
         register: register,
         logout: logout,
         setRole: setRole,
+        creerCompte: creerCompte,
         removeUser: removeUser,
+        mettreAJourIdentifiants: mettreAJourIdentifiants,
         changePassword: changePassword,
         attempts: attempts,
         allProgress: allProgress,

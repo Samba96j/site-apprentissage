@@ -103,6 +103,7 @@
                         '</li>' +
                         '<li class="nav-item"><a class="nav-link" href="#/cours/une-si-longue-lettre" data-nav="cours">Étude d\'œuvre</a></li>' +
                         '<li class="nav-item"><a class="nav-link" href="#/exercices" data-nav="exercices">Exercices</a></li>' +
+                        '<li class="nav-item"><a class="nav-link" href="#/seances" data-nav="seances">Séances</a></li>' +
                     '</ul>' +
                     '<form class="d-flex header-search my-2 my-lg-0" id="form-recherche" role="search">' +
                         '<label class="visually-hidden" for="champ-recherche">Rechercher</label>' +
@@ -141,6 +142,7 @@
                         '<ul class="list-unstyled">' +
                             '<li><a href="#/cours/une-si-longue-lettre">Étude d\'œuvre</a></li>' +
                             '<li><a href="#/exercices">Exercices</a></li>' +
+                            '<li><a href="#/seances">Mes séances</a></li>' +
                             '<li><a href="#/recherche">Recherche</a></li>' +
                             '<li><a href="#/profil">Ma progression</a></li>' +
                         '</ul>' +
@@ -149,6 +151,8 @@
                         '<h6>Espace admin</h6>' +
                         '<ul class="list-unstyled">' +
                             '<li><a href="#/admin">Tableau de bord</a></li>' +
+                            '<li><a href="#/admin/classes">Classes</a></li>' +
+                            '<li><a href="#/admin/seances">Séances</a></li>' +
                             '<li><a href="#/admin/exercices">Exercices</a></li>' +
                             '<li><a href="#/admin/ressources">Ressources</a></li>' +
                             '<li><a href="#/admin/statistiques">Statistiques</a></li>' +
@@ -176,7 +180,9 @@
             '</button>' +
             '<ul class="dropdown-menu dropdown-menu-end">' +
                 '<li><a class="dropdown-item" href="#/profil"><i class="fas fa-chart-line me-2"></i>Ma progression</a></li>' +
+                '<li><a class="dropdown-item" href="#/seances"><i class="fas fa-calendar-days me-2"></i>Mes séances</a></li>' +
                 (user.role === 'admin' ? '<li><a class="dropdown-item" href="#/admin"><i class="fas fa-user-cog me-2"></i>Administration</a></li>' : '') +
+                (user.role === 'superadmin' ? '<li><a class="dropdown-item" href="#/superadmin"><i class="fas fa-shield-halved me-2"></i>Super-administration</a></li>' : '') +
                 '<li><hr class="dropdown-divider"></li>' +
                 '<li><button class="dropdown-item" type="button" id="bouton-deconnexion"><i class="fas fa-sign-out-alt me-2"></i>Se déconnecter</button></li>' +
             '</ul>' +
@@ -525,10 +531,14 @@
         };
     }
 
-    function vueExercices() {
+    function vueExercices(parametres) {
         const user = auth.current();
-        const actifs = store.exercices.actifs();
-        const pastilles = ['<button class="btn btn-sm btn-primary" data-matiere="" aria-pressed="true"><i class="fas fa-layer-group me-1"></i>Toutes <span class="badge bg-light text-dark ms-1">' + actifs.length + '</span></button>']
+        const exoCible = parametres ? parametres.get('exo') : null;
+        const tous = store.exercices.actifs();
+        const actifs = exoCible
+            ? tous.filter(function (ex) { return ex.id === exoCible; })
+            : tous;
+        const pastilles = exoCible ? '' : ['<button class="btn btn-sm btn-primary" data-matiere="" aria-pressed="true"><i class="fas fa-layer-group me-1"></i>Toutes <span class="badge bg-light text-dark ms-1">' + actifs.length + '</span></button>']
             .concat(data.matieres.map(function (matiere) {
                 const nombre = actifs.filter(function (ex) { return ex.matiere === matiere.slug; }).length;
                 return '<button class="btn btn-sm btn-outline-primary" data-matiere="' + esc(matiere.slug) + '" aria-pressed="false">' +
@@ -548,9 +558,14 @@
                         ? '<a class="btn btn-outline-primary btn-sm" href="#/profil"><i class="fas fa-chart-line me-1"></i>Ma progression</a>'
                         : '<a class="btn btn-primary btn-sm" href="#/connexion">Se connecter pour enregistrer mes scores</a>') +
                 '</div>' +
+                (exoCible
+                    ? '<div class="alert alert-info py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">' +
+                        '<span><i class="fas fa-calendar-check me-1"></i>Exercice assigné dans une séance.</span>' +
+                        '<a class="alert-link" href="#/exercices">Voir tous les exercices</a></div>'
+                    : '') +
                 '<div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filtrer les exercices par matière">' + pastilles + '</div>' +
                 '<div class="content"><div id="zone-jeux"></div></div>' +
-                '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Les exercices sont gérés depuis le back-office : un exercice créé par un administrateur apparaît ici immédiatement.</p>' +
+                '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Les exercices affichés proviennent de la bibliothèque publique et de l\'espace de votre enseignant.</p>' +
             '</div>',
             after: function (racine) {
                 const zone = racine.querySelector('#zone-jeux');
@@ -742,11 +757,14 @@
                                     '<div class="form-text">Six caractères minimum.</div></div>' +
                                 '<div class="mb-3"><label class="form-label" for="reg-confirm">Confirmer le mot de passe</label>' +
                                     '<input class="form-control" type="password" id="reg-confirm" autocomplete="new-password" required></div>' +
+                                '<div class="form-check mb-3">' +
+                                    '<input class="form-check-input" type="checkbox" id="reg-enseignant">' +
+                                    '<label class="form-check-label" for="reg-enseignant">Je suis enseignant : créer mon propre espace administrateur</label>' +
+                                '</div>' +
                                 '<button class="btn btn-primary w-100" type="submit">Créer mon compte</button>' +
                             '</form>' +
                             '<hr class="my-4">' +
-                            '<p class="small text-muted mb-1"><strong>Comptes de démonstration</strong></p>' +
-                            '<p class="small text-muted mb-0">Élève : <code>etudiant</code> / <code>motdepasse</code><br>Administrateur : <code>admin</code> / <code>admin123</code></p>' +
+                            '<p class="small text-muted mb-0"><i class="fas fa-lock me-1"></i>Les identifiants sont fournis par l\'administrateur de la plateforme. Ils ne sont pas affichés ici afin de protéger les espaces.</p>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
@@ -794,7 +812,8 @@
                     const donnees = {
                         username: racine.querySelector('#reg-username').value,
                         email: racine.querySelector('#reg-email').value,
-                        password: racine.querySelector('#reg-password').value
+                        password: racine.querySelector('#reg-password').value,
+                        enseignant: racine.querySelector('#reg-enseignant').checked
                     };
                     const confirmation = racine.querySelector('#reg-confirm').value;
                     if (donnees.password !== confirmation) {
@@ -813,7 +832,7 @@
                     if (connexion.ok) {
                         toast('Compte créé, bienvenue !');
                         majEntete([]);
-                        naviguer(suivant ? '#/' + suivant : '#/profil');
+                        naviguer(suivant ? '#/' + suivant : (donnees.enseignant ? '#/admin/classes' : '#/profil'));
                     } else {
                         afficherMessage('Compte créé. Vous pouvez maintenant vous connecter.', 'success');
                     }
@@ -836,6 +855,9 @@
         const stats = auth.statsFor(user.username);
         const badges = auth.badges(user.username);
         const tentatives = auth.attempts(user.username).slice().sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+        const classe = auth.maClasse();
+        const espace = auth.monEspace();
+        const seances = classe ? store.seances.pourClasse(classe.id) : [];
 
         return {
             titre: 'Ma progression',
@@ -847,6 +869,25 @@
                         (tentatives.length ? '<button class="btn btn-outline-danger btn-sm" id="effacer-historique"><i class="fas fa-rotate-left me-1"></i>Effacer mon historique</button>' : '') +
                     '</div>' +
                 '</div>' +
+                (user.role === 'eleve'
+                    ? '<div class="content mb-4">' +
+                        '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">' +
+                            '<h2 class="h5 mb-0"><i class="fas fa-users-rectangle me-2"></i>Ma classe</h2>' +
+                            (classe ? '<button class="btn btn-outline-secondary btn-sm" id="quitter-classe"><i class="fas fa-right-from-bracket me-1"></i>Quitter la classe</button>' : '') +
+                        '</div>' +
+                        (classe
+                            ? '<p class="mb-1"><strong>' + esc(classe.nom) + '</strong>' +
+                                (espace ? ' <span class="text-muted">· ' + esc(espace.nom) + '</span>' : '') + '</p>' +
+                              '<p class="text-muted small mb-0">' + seances.length + ' séance(s) pour votre classe. ' +
+                                '<a href="#/seances">Consulter mes séances</a></p>'
+                            : '<p class="text-muted small">Vous n\'êtes rattaché à aucune classe. Saisissez le code fourni par votre enseignant pour accéder à ses séances et exercices.</p>' +
+                              '<form class="row g-2 align-items-end" id="form-classe">' +
+                                '<div class="col-sm-6"><label class="form-label" for="code-classe">Code de la classe</label>' +
+                                    '<input class="form-control" id="code-classe" maxlength="10" placeholder="ex. AB12CD" autocomplete="off"></div>' +
+                                '<div class="col-sm-6"><button class="btn btn-primary" type="submit"><i class="fas fa-right-to-bracket me-1"></i>Rejoindre la classe</button></div>' +
+                              '</form>') +
+                      '</div>'
+                    : '') +
                 '<div class="row g-3 mb-4">' +
                     carteStat('bg-primary', 'fa-pen-to-square', 'Tentatives', stats.tentatives) +
                     carteStat('bg-success', 'fa-percent', 'Moyenne', stats.tentatives ? stats.moyenne + ' %' : '—') +
@@ -885,14 +926,145 @@
             '</div>',
             after: function (racine) {
                 const bouton = racine.querySelector('#effacer-historique');
-                if (!bouton) return;
-                bouton.addEventListener('click', function () {
-                    if (!window.confirm('Effacer tout votre historique de scores ?')) return;
-                    auth.clearProgress(user.username);
-                    toast('Historique effacé.');
-                    router();
-                });
+                if (bouton) {
+                    bouton.addEventListener('click', function () {
+                        if (!window.confirm('Effacer tout votre historique de scores ?')) return;
+                        auth.clearProgress(user.username);
+                        toast('Historique effacé.');
+                        router();
+                    });
+                }
+
+                const formClasse = racine.querySelector('#form-classe');
+                if (formClasse) {
+                    formClasse.addEventListener('submit', function (event) {
+                        event.preventDefault();
+                        const resultat = auth.rejoindreClasse(racine.querySelector('#code-classe').value);
+                        if (!resultat.ok) {
+                            toast(resultat.error, 'danger');
+                            return;
+                        }
+                        toast('Classe rejointe : ' + resultat.classe.nom);
+                        router();
+                    });
+                }
+
+                const quitter = racine.querySelector('#quitter-classe');
+                if (quitter) {
+                    quitter.addEventListener('click', function () {
+                        if (!window.confirm('Quitter votre classe ? Vous n\'aurez plus accès à ses séances.')) return;
+                        auth.quitterClasse();
+                        toast('Vous avez quitté la classe.');
+                        router();
+                    });
+                }
             }
+        };
+    }
+
+    function vueSeances() {
+        const user = auth.current();
+        if (!user) {
+            return {
+                titre: 'Mes séances',
+                html: '<div class="container py-4"><div class="alert alert-info mb-0">' +
+                    'Connectez-vous pour consulter les séances de votre classe. ' +
+                    '<a href="#/connexion?next=seances" class="alert-link">Se connecter</a>' +
+                '</div></div>'
+            };
+        }
+
+        const classe = auth.maClasse();
+        const espace = auth.monEspace();
+        const toutes = classe ? store.seances.pourClasse(classe.id) : [];
+        const seances = toutes.slice().sort(function (a, b) {
+            return new Date(b.date || 0) - new Date(a.date || 0);
+        });
+        const aujourdhui = new Date();
+        aujourdhui.setHours(0, 0, 0, 0);
+
+        function scoreExercice(exerciceId) {
+            const essais = auth.attempts(user.username).filter(function (t) { return t.exerciceId === exerciceId; });
+            if (!essais.length) return null;
+            return essais.reduce(function (acc, t) {
+                const ratio = t.total > 0 ? Math.round((t.score / t.total) * 100) : 0;
+                return Math.max(acc, ratio);
+            }, 0);
+        }
+
+        const cartes = seances.map(function (seance) {
+            const exercices = (seance.exercices || []).map(function (id) {
+                const exercice = store.exercices.get(id);
+                return exercice ? { id: id, titre: exercice.titre, type: exercice.type } : null;
+            }).filter(Boolean);
+            const chapitres = (seance.chapitres || []).map(function (id) { return data.getChapitre(id); }).filter(Boolean);
+            const faits = exercices.filter(function (ex) { return scoreExercice(ex.id) !== null; }).length;
+            const moyenne = exercices.length
+                ? Math.round(exercices.reduce(function (acc, ex) {
+                    const score = scoreExercice(ex.id);
+                    return acc + (score === null ? 0 : score);
+                }, 0) / exercices.length)
+                : 0;
+            const date = seance.date ? new Date(seance.date) : null;
+            const passee = date && date < aujourdhui;
+
+            return '<div class="content mb-3">' +
+                '<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">' +
+                    '<div>' +
+                        '<h2 class="h5 mb-1">' + esc(seance.titre) + '</h2>' +
+                        '<p class="text-muted small mb-0"><i class="fas fa-calendar-day me-1"></i>' +
+                            (date ? date.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'Date à préciser') +
+                            ' · ' + (seance.duree || 60) + ' min</p>' +
+                    '</div>' +
+                    '<span class="badge ' + (passee ? 'bg-secondary' : 'bg-success') + '">' + (passee ? 'Passée' : 'À venir') + '</span>' +
+                '</div>' +
+                (seance.description ? '<p class="mb-3">' + esc(seance.description) + '</p>' : '') +
+                (chapitres.length
+                    ? '<h3 class="h6">Chapitres à revoir</h3>' +
+                      '<ul class="list-unstyled mb-3">' + chapitres.map(function (chapitre) {
+                        return '<li class="border-bottom py-1"><a href="#/chapitre/' + esc(chapitre.id) + '">' +
+                            '<i class="fas fa-book-open me-1 text-primary"></i>' + esc(chapitre.titre) + '</a>' +
+                            '<span class="text-muted small ms-2">' + esc(chapitre.matiereNom || '') + '</span></li>';
+                      }).join('') + '</ul>'
+                    : '') +
+                (exercices.length
+                    ? '<h3 class="h6">Exercices de la séance</h3>' +
+                      '<div class="d-flex flex-wrap gap-2 mb-3">' + exercices.map(function (exercice) {
+                        const score = scoreExercice(exercice.id);
+                        return '<a class="btn btn-sm ' + (score === null ? 'btn-outline-primary' : 'btn-success') + '" href="#/exercices?exo=' + encodeURIComponent(exercice.id) + '">' +
+                            '<i class="fas fa-gamepad me-1"></i>' + esc(exercice.titre) +
+                            (score === null ? '' : ' <span class="badge bg-light text-dark ms-1">' + score + ' %</span>') + '</a>';
+                      }).join('') + '</div>' +
+                      '<div class="d-flex justify-content-between small text-muted mb-1">' +
+                        '<span>Exercices réalisés : ' + faits + '/' + exercices.length + '</span>' +
+                        '<span>Moyenne : ' + (faits ? moyenne + ' %' : '—') + '</span>' +
+                      '</div>' +
+                      '<div class="progress" style="height:8px"><div class="progress-bar bg-success" style="width:' +
+                        (exercices.length ? Math.round((faits / exercices.length) * 100) : 0) + '%"></div></div>'
+                    : '') +
+            '</div>';
+        });
+
+        return {
+            titre: 'Mes séances',
+            html: '<div class="container py-4">' +
+                '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">' +
+                    '<div>' +
+                        '<h1 class="h3 mb-1">Mes séances</h1>' +
+                        '<p class="text-muted mb-0">' +
+                            (classe
+                                ? 'Classe ' + esc(classe.nom) + (espace ? ' · ' + esc(espace.nom) : '')
+                                : 'Aucune classe rejointe') +
+                        '</p>' +
+                    '</div>' +
+                    '<a class="btn btn-outline-primary btn-sm" href="#/profil"><i class="fas fa-users-rectangle me-1"></i>Ma classe</a>' +
+                '</div>' +
+                (!classe
+                    ? '<div class="alert alert-info">Rejoignez une classe depuis <a href="#/profil" class="alert-link">Ma progression</a> avec le code fourni par votre enseignant.</div>'
+                    : (!cartes.length
+                        ? '<div class="content text-muted"><i class="fas fa-calendar-xmark me-2"></i>Aucune séance programmée pour le moment.</div>'
+                        : cartes.join(''))) +
+            '</div>'
         };
     }
 
@@ -906,8 +1078,281 @@
         '</div>';
     }
 
+    /* ------------------------------ Super-administration ------------------------------ */
+
+    const LIBELLES_ROLES = { eleve: 'Élève', admin: 'Administrateur', superadmin: 'Super-admin' };
+    const ORDRE_ROLES = { superadmin: 0, admin: 1, eleve: 2 };
+
+    function infosEspaceCompte(compte) {
+        if (compte.role === 'admin') {
+            return { espace: compte.espaceNom || compte.espaceId || '—', classe: '—' };
+        }
+        if (compte.role === 'eleve' && compte.classeId) {
+            const classe = store.classes.get(compte.classeId);
+            if (!classe) return { espace: '—', classe: '—' };
+            const titulaire = auth.users().find(function (u) {
+                return u.role === 'admin' && u.espaceId === classe.espaceId;
+            });
+            return {
+                espace: titulaire ? (titulaire.espaceNom || titulaire.espaceId) : '—',
+                classe: classe.nom
+            };
+        }
+        return { espace: '—', classe: '—' };
+    }
+
+    function vueSuperAdmin() {
+        const user = auth.current();
+        if (!auth.isSuperAdmin()) {
+            return {
+                titre: 'Super-administration',
+                html: '<div class="container py-5"><div class="content text-center">' +
+                    '<i class="fas fa-shield-halved fa-3x text-primary mb-3"></i>' +
+                    '<h1 class="h4 mb-3">Accès réservé au super-administrateur</h1>' +
+                    '<p class="text-muted">La gestion globale de tous les comptes est réservée à ce rôle.</p>' +
+                    '<p class="small text-muted">Connectez-vous avec le compte super-administrateur de la plateforme.</p>' +
+                    '<a class="btn btn-primary" href="#/connexion?next=superadmin">Se connecter</a>' +
+                '</div></div>'
+            };
+        }
+
+        const comptes = auth.users().slice().sort(function (a, b) {
+            const ordre = (ORDRE_ROLES[a.role] || 9) - (ORDRE_ROLES[b.role] || 9);
+            return ordre !== 0 ? ordre : a.username.localeCompare(b.username);
+        });
+        const totalEleves = comptes.filter(function (c) { return c.role === 'eleve'; }).length;
+        const totalAdmins = comptes.filter(function (c) { return c.role === 'admin'; }).length;
+        const totalSupers = comptes.filter(function (c) { return c.role === 'superadmin'; }).length;
+        const totalClasses = store.classes.all().length;
+        const totalSeances = store.seances.all().length;
+
+        const lignes = comptes.map(function (compte) {
+            const infos = infosEspaceCompte(compte);
+            const tentatives = auth.attempts(compte.username);
+            const points = tentatives.reduce(function (acc, t) { return acc + t.score; }, 0);
+            const possibles = tentatives.reduce(function (acc, t) { return acc + t.total; }, 0);
+            const moyenne = possibles > 0 ? Math.round((points / possibles) * 100) : null;
+            const moi = user.username === compte.username;
+            const options = Object.keys(LIBELLES_ROLES).map(function (cle) {
+                return '<option value="' + cle + '" ' + (compte.role === cle ? 'selected' : '') + '>' + LIBELLES_ROLES[cle] + '</option>';
+            }).join('');
+            return '<tr>' +
+                '<td class="fw-semibold">' + esc(compte.username) + (moi ? ' <span class="badge bg-info text-dark">vous</span>' : '') + '</td>' +
+                '<td class="text-muted small">' + esc(compte.email) + '</td>' +
+                '<td><select class="form-select form-select-sm" data-action="role" data-username="' + esc(compte.username) + '" data-role="' + esc(compte.role) + '" style="min-width:150px" ' + (moi ? 'disabled' : '') + '>' + options + '</select></td>' +
+                '<td class="small">' + esc(infos.espace) + '</td>' +
+                '<td class="small">' + esc(infos.classe) + '</td>' +
+                '<td>' + tentatives.length + '</td>' +
+                '<td>' + (moyenne === null ? '—' : moyenne + ' %') + '</td>' +
+                '<td class="text-end text-nowrap">' +
+                    '<button class="btn btn-sm btn-outline-secondary me-1" data-action="reinitialiser" data-username="' + esc(compte.username) + '" title="Réinitialiser la progression" ' + (tentatives.length ? '' : 'disabled') + '><i class="fas fa-rotate-left"></i></button>' +
+                    '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-username="' + esc(compte.username) + '" title="Supprimer le compte" ' + (moi ? 'disabled' : '') + '><i class="fas fa-trash"></i></button>' +
+                '</td>' +
+            '</tr>';
+        }).join('');
+
+        return {
+            titre: 'Super-administration',
+            html: '<div class="container py-4">' +
+                '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">' +
+                    '<div>' +
+                        '<h1 class="h3 mb-1"><i class="fas fa-shield-halved me-2"></i>Super-administration</h1>' +
+                        '<p class="text-muted mb-0">Tous les comptes, espaces, classes et séances de la plateforme.</p>' +
+                    '</div>' +
+                    '<button class="btn btn-outline-primary btn-sm" id="export-comptes"><i class="fas fa-file-csv me-1"></i>Exporter en CSV</button>' +
+                '</div>' +
+                '<div id="super-message" class="d-none"></div>' +
+                '<div id="super-alerte" class="d-none"></div>' +
+                '<div class="row g-3 mb-4">' +
+                    carteStat('bg-primary', 'fa-users', 'Comptes', comptes.length) +
+                    carteStat('bg-success', 'fa-user-graduate', 'Élèves', totalEleves) +
+                    carteStat('bg-warning', 'fa-chalkboard-user', 'Enseignants', totalAdmins) +
+                    carteStat('bg-info', 'fa-shield-halved', 'Super-admins', totalSupers) +
+                '</div>' +
+                '<div class="content mb-4">' +
+                    '<h2 class="h5 mb-3"><i class="fas fa-id-card me-2"></i>Mes identifiants super-admin</h2>' +
+                    '<p class="text-muted small">Remplacez les identifiants de démonstration par les vôtres. Le nom d\'utilisateur ou l\'e-mail servent à la connexion.</p>' +
+                    '<form class="row g-3 align-items-end" id="form-identifiants">' +
+                        '<div class="col-md-4"><label class="form-label" for="super-username">Nom d\'utilisateur</label>' +
+                            '<input class="form-control" id="super-username" required minlength="3" value="' + esc(user.username) + '"></div>' +
+                        '<div class="col-md-4"><label class="form-label" for="super-email">E-mail</label>' +
+                            '<input class="form-control" type="email" id="super-email" required value="' + esc(user.email) + '"></div>' +
+                        '<div class="col-md-4"><button class="btn btn-primary w-100" type="submit"><i class="fas fa-floppy-disk me-1"></i>Enregistrer mes identifiants</button></div>' +
+                    '</form>' +
+                    '<hr>' +
+                    '<form class="row g-3 align-items-end" id="form-mdp-super">' +
+                        '<div class="col-md-4"><label class="form-label" for="super-mdp-actuel">Mot de passe actuel</label>' +
+                            '<input class="form-control" type="password" id="super-mdp-actuel" required autocomplete="current-password"></div>' +
+                        '<div class="col-md-4"><label class="form-label" for="super-mdp-nouveau">Nouveau mot de passe</label>' +
+                            '<input class="form-control" type="password" id="super-mdp-nouveau" required minlength="6" autocomplete="new-password"></div>' +
+                        '<div class="col-md-4"><button class="btn btn-outline-primary w-100" type="submit"><i class="fas fa-key me-1"></i>Changer le mot de passe</button></div>' +
+                    '</form>' +
+                '</div>' +
+                '<div class="content mb-4">' +
+                    '<h2 class="h5 mb-3"><i class="fas fa-user-plus me-2"></i>Créer un compte</h2>' +
+                    '<p class="text-muted small">' + totalClasses + ' classe(s) et ' + totalSeances + ' séance(s) sur la plateforme. Un compte enseignant reçoit automatiquement son propre espace et la bibliothèque de démonstration.</p>' +
+                    '<form class="row g-3 align-items-end" id="form-compte">' +
+                        '<div class="col-md-3"><label class="form-label" for="compte-username">Nom d\'utilisateur</label>' +
+                            '<input class="form-control" id="compte-username" required minlength="3" autocomplete="off"></div>' +
+                        '<div class="col-md-3"><label class="form-label" for="compte-email">E-mail</label>' +
+                            '<input class="form-control" type="email" id="compte-email" required autocomplete="off"></div>' +
+                        '<div class="col-md-2"><label class="form-label" for="compte-password">Mot de passe</label>' +
+                            '<input class="form-control" type="password" id="compte-password" required minlength="6" autocomplete="new-password"></div>' +
+                        '<div class="col-md-2"><label class="form-label" for="compte-role">Rôle</label>' +
+                            '<select class="form-select" id="compte-role"><option value="eleve">Élève</option><option value="admin">Enseignant</option></select></div>' +
+                        '<div class="col-md-2"><button class="btn btn-primary w-100" type="submit"><i class="fas fa-plus me-1"></i>Créer</button></div>' +
+                    '</form>' +
+                '</div>' +
+                '<div class="admin-panel">' +
+                    '<h2 class="h5 mb-3"><i class="fas fa-address-book me-2"></i>Tous les comptes (' + comptes.length + ')</h2>' +
+                    '<div class="table-responsive"><table class="table table-striped align-middle mb-0" id="table-comptes">' +
+                        '<thead><tr><th>Utilisateur</th><th>E-mail</th><th>Rôle</th><th>Espace</th><th>Classe</th><th>Tentatives</th><th>Moyenne</th><th class="text-end">Actions</th></tr></thead>' +
+                        '<tbody>' + lignes + '</tbody>' +
+                    '</table></div>' +
+                    '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Les comptes et leurs données restent stockés dans ce navigateur. Le rôle « super-admin » ne peut être attribué que depuis cette page.</p>' +
+                '</div>' +
+            '</div>',
+            after: function (racine) {
+                const zone = racine.querySelector('#super-message');
+                const table = racine.querySelector('#table-comptes');
+
+                function afficher(texte, type) {
+                    zone.className = 'alert alert-' + type + ' py-2';
+                    zone.textContent = texte;
+                }
+
+                auth.motDePasseParDefaut().then(function (parDefaut) {
+                    if (!parDefaut) return;
+                    const alerte = racine.querySelector('#super-alerte');
+                    if (!alerte) return;
+                    alerte.className = 'alert alert-danger';
+                    alerte.innerHTML = '<i class="fas fa-triangle-exclamation me-1"></i>' +
+                        '<strong>Mot de passe d\'amorçage encore actif.</strong> ' +
+                        'Remplacez-le dans « Mes identifiants super-admin » ci-dessous pour protéger cet espace.';
+                });
+
+                racine.querySelector('#form-identifiants').addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    const resultat = auth.mettreAJourIdentifiants(user.username, {
+                        username: racine.querySelector('#super-username').value,
+                        email: racine.querySelector('#super-email').value
+                    });
+                    if (!resultat.ok) {
+                        afficher(resultat.error, 'danger');
+                        return;
+                    }
+                    toast('Identifiants mis à jour : ' + resultat.username);
+                    router();
+                });
+
+                racine.querySelector('#form-mdp-super').addEventListener('submit', async function (event) {
+                    event.preventDefault();
+                    const resultat = await auth.changePassword(
+                        user.username,
+                        racine.querySelector('#super-mdp-actuel').value,
+                        racine.querySelector('#super-mdp-nouveau').value
+                    );
+                    if (!resultat.ok) {
+                        afficher(resultat.error, 'danger');
+                        return;
+                    }
+                    afficher('Mot de passe modifié. Utilisez-le à votre prochaine connexion.', 'success');
+                    event.target.reset();
+                });
+
+                racine.querySelector('#form-compte').addEventListener('submit', async function (event) {
+                    event.preventDefault();
+                    const bouton = event.target.querySelector('button[type="submit"]');
+                    bouton.disabled = true;
+                    const resultat = await auth.creerCompte({
+                        username: racine.querySelector('#compte-username').value,
+                        email: racine.querySelector('#compte-email').value,
+                        password: racine.querySelector('#compte-password').value,
+                        role: racine.querySelector('#compte-role').value
+                    });
+                    bouton.disabled = false;
+                    if (!resultat.ok) {
+                        afficher(resultat.error, 'danger');
+                        return;
+                    }
+                    toast('Compte créé : ' + resultat.compte.username);
+                    router();
+                });
+
+                table.addEventListener('change', function (event) {
+                    const select = event.target.closest('select[data-action="role"]');
+                    if (!select) return;
+                    const resultat = auth.setRole(select.dataset.username, select.value);
+                    if (!resultat.ok) {
+                        afficher(resultat.error, 'danger');
+                        select.value = select.dataset.role;
+                        return;
+                    }
+                    toast('Rôle mis à jour pour ' + select.dataset.username + '.');
+                    router();
+                });
+
+                table.addEventListener('click', function (event) {
+                    const bouton = event.target.closest('button[data-action]');
+                    if (!bouton) return;
+                    const username = bouton.dataset.username;
+
+                    if (bouton.dataset.action === 'reinitialiser') {
+                        if (!window.confirm('Effacer la progression de ' + username + ' ?')) return;
+                        auth.clearProgress(username);
+                        toast('Progression réinitialisée.');
+                        router();
+                    } else if (bouton.dataset.action === 'supprimer') {
+                        if (!window.confirm('Supprimer définitivement le compte ' + username + ' ?')) return;
+                        const resultat = auth.removeUser(username);
+                        if (!resultat.ok) {
+                            afficher(resultat.error, 'danger');
+                            return;
+                        }
+                        toast('Compte supprimé.');
+                        router();
+                    }
+                });
+
+                racine.querySelector('#export-comptes').addEventListener('click', function () {
+                    const lignesCsv = [['Utilisateur', 'E-mail', 'Rôle', 'Espace', 'Classe', 'Tentatives', 'Moyenne']];
+                    auth.users().forEach(function (compte) {
+                        const infos = infosEspaceCompte(compte);
+                        const tentatives = auth.attempts(compte.username);
+                        const points = tentatives.reduce(function (acc, t) { return acc + t.score; }, 0);
+                        const possibles = tentatives.reduce(function (acc, t) { return acc + t.total; }, 0);
+                        lignesCsv.push([
+                            compte.username,
+                            compte.email,
+                            LIBELLES_ROLES[compte.role] || compte.role,
+                            infos.espace,
+                            infos.classe,
+                            tentatives.length,
+                            possibles > 0 ? Math.round((points / possibles) * 100) + ' %' : ''
+                        ]);
+                    });
+                    const csv = lignesCsv.map(function (ligne) {
+                        return ligne.map(function (valeur) {
+                            return '"' + String(valeur).replace(/"/g, '""') + '"';
+                        }).join(';');
+                    }).join('\r\n');
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                    const lien = document.createElement('a');
+                    lien.href = URL.createObjectURL(blob);
+                    lien.download = 'learnhub-comptes.csv';
+                    document.body.appendChild(lien);
+                    lien.click();
+                    document.body.removeChild(lien);
+                    URL.revokeObjectURL(lien.href);
+                });
+            }
+        };
+    }
+
     const SECTIONS_ADMIN = [
         { slug: 'dashboard', titre: 'Tableau de bord', icone: 'fa-tachometer-alt' },
+        { slug: 'classes', titre: 'Classes', icone: 'fa-users-rectangle' },
+        { slug: 'seances', titre: 'Séances', icone: 'fa-calendar-days' },
         { slug: 'exercices', titre: 'Exercices', icone: 'fa-tasks' },
         { slug: 'ressources', titre: 'Ressources', icone: 'fa-file-pdf' },
         { slug: 'utilisateurs', titre: 'Utilisateurs', icone: 'fa-users' },
@@ -923,8 +1368,10 @@
                 html: '<div class="container py-4"><div class="content">' +
                     '<h1 class="h4 mb-3"><i class="fas fa-lock me-2"></i>Accès réservé</h1>' +
                     '<p class="text-muted">Cet espace est réservé aux administrateurs.</p>' +
-                    '<p class="small text-muted">Compte de démonstration : <code>admin</code> / <code>admin123</code></p>' +
-                    '<a class="btn btn-primary" href="#/connexion?next=admin">Se connecter</a>' +
+                    '<p class="small text-muted">Connectez-vous avec un compte administrateur fourni par la plateforme.</p>' +
+                    (auth.isSuperAdmin()
+                        ? '<a class="btn btn-primary" href="#/superadmin">Ouvrir la super-administration</a>'
+                        : '<a class="btn btn-primary" href="#/connexion?next=admin">Se connecter</a>') +
                     (user ? ' <a class="btn btn-outline-secondary" href="#/profil">Mon espace élève</a>' : '') +
                 '</div></div>'
             };
@@ -987,10 +1434,12 @@
             case 'niveau': return vueNiveau(segments[1]);
             case 'chapitre': return vueChapitre(segments[1]);
             case 'cours': return vueCours(segments[1], segments[2]);
-            case 'exercices': return vueExercices();
+            case 'exercices': return vueExercices(parametres);
+            case 'seances': return vueSeances();
             case 'recherche': return vueRecherche(parametres);
             case 'connexion': return vueConnexion(parametres);
             case 'profil': return vueProfil();
+            case 'superadmin': return vueSuperAdmin();
             case 'admin': return vueAdmin(segments[1]);
             default: return vueIntrouvable();
         }

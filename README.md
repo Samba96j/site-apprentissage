@@ -15,16 +15,38 @@ Site web éducatif statique qui regroupe des cours, des fiches de révision et d
 - **Suivi de progression.** Chaque tentative est enregistrée : moyenne, meilleur score, historique et badges (premier pas, sans faute, persévérant, polyvalent, expert).
 - **Recherche globale.** Un champ unique interroge les matières, les chapitres, le cours, les exercices et les ressources.
 - **Espace administrateur réel.** Création, modification, activation et suppression des exercices ; gestion des ressources (liens ou PDF importés) ; gestion des utilisateurs et des rôles ; statistiques calculées ; export CSV ; paramètres appliqués aux exercices.
+- **Un espace par enseignant.** Chaque administrateur dispose de son propre espace cloisonné : ses exercices, ressources, classes, séances et réglages sont invisibles pour les autres administrateurs. Un nouvel espace peut importer la bibliothèque de démonstration en un clic.
+- **Classes et séances.** Un enseignant crée des classes avec un code d'inscription, planifie des séances (date, durée, chapitres, exercices assignés, classes ciblées), publie ou masque celles-ci, et suit les résultats de chaque élève.
+- **Espace élève personnalisé.** En saisissant le code de sa classe, un élève rejoint l'espace de son enseignant et accède à ses séances, ses chapitres et ses exercices, avec la progression réalisée séance par séance.
 - **Navigation corrigée.** Aucun lien mort : le pied de page, les menus et les fil d'Ariane pointent tous vers une vue existante. Les anciennes adresses (`exo.html`, `theme.html`, `eleve/**`) redirigent automatiquement.
 
-## Comptes de démonstration
+## Comptes et identifiants
 
 | Rôle | Identifiant | Mot de passe |
 |---|---|---|
-| Élève | `etudiant` | `motdepasse` |
-| Administrateur | `admin` | `admin123` |
+| Élève (démo) | `etudiant` | `motdepasse` |
+| Administrateur | défini dans `COMPTES_DEMO` ([auth.js](assets/js/auth.js)) | idem |
+| Super-administrateur | défini dans `SUPER_ADMIN_AMORCAGE` ([auth.js](assets/js/auth.js)) | idem |
 
-L'inscription est ouverte : tout nouveau compte est créé avec le rôle « élève ». Seul un administrateur peut changer un rôle.
+Pour éviter tout accès non désiré, la page de connexion **n'affiche plus aucun identifiant** : le formulaire reste utilisable avec les coordonnées définies dans le code. Personnalisez `SUPER_ADMIN_AMORCAGE` avant publication, puis changez le mot de passe depuis `#/superadmin` → « Mes identifiants super-admin » (une alerte rouge s'affiche tant que le mot de passe d'amorçage est encore actif).
+
+> **Limite du site statique.** Comptes, rôles et règles d'accès vivent dans le navigateur. Masquer les identifiants dans l'interface évite les accès accidentels, mais ne remplace pas une authentification serveur : toute personne qui lit le JavaScript peut retrouver les valeurs du code. Pour une réelle protection, ajoutez un backend (Supabase, Firebase, API…) et vérifiez les rôles côté serveur.
+
+L'inscription est ouverte. Une case à cocher permet de créer directement un **espace enseignant** (rôle administrateur) ; sans elle, le compte est un compte élève. Un administrateur peut changer le rôle des élèves rattachés à ses classes.
+
+Le rôle **super-administrateur** `#/superadmin` dépasse le cloisonnement des espaces : il liste tous les comptes, affiche leur espace et leur classe, permet de changer les rôles (élève, administrateur, super-admin), de réinitialiser une progression, de supprimer un compte, d'en créer et d'exporter la liste en CSV. Seul un super-administrateur peut attribuer ce rôle ; un compte d'amorçage est créé automatiquement s'il n'en existe aucun.
+
+Les identifiants du super-administrateur se remplacent directement dans `#/superadmin`, rubrique **« Mes identifiants super-admin »** : nom d'utilisateur, e-mail et mot de passe (l'historique de progression suit le renommage). Pour une installation neuve, les valeurs d'amorçage sont définies dans la constante `SUPER_ADMIN_AMORCAGE` de [auth.js](assets/js/auth.js).
+
+## Espaces enseignants, classes et séances
+
+1. **Créer son espace.** S'inscrire en cochant « Je suis enseignant », ou être promu administrateur. Chaque administrateur reçoit un identifiant d'espace (`esp-…`) et peut le renommer dans `#/admin/parametres`.
+2. **Créer une classe.** `#/admin/classes` → « Nouvelle classe ». Le code généré (ex. `AB12CD`) est à communiquer aux élèves.
+3. **Rejoindre une classe.** L'élève se connecte, va dans `#/profil` et saisit le code. Il voit alors les séances, chapitres et exercices de cet espace.
+4. **Planifier une séance.** `#/admin/seances` → « Nouvelle séance » : titre, date, durée, classes ciblées, chapitres et exercices assignés, publication.
+5. **Suivre les résultats.** Le bouton « Suivi » d'une séance affiche, pour chaque élève, le nombre d'exercices réalisés, la moyenne, la dernière activité et le meilleur score par exercice.
+
+Les contenus publics livrés avec le site restent visibles pour les visiteurs et les élèves sans classe. Un espace enseignant est vide au départ : le bouton « Bibliothèque démo » (onglet Exercices) ou « Importer la bibliothèque de démonstration » (onglet Paramètres) y copie les 14 exercices.
 
 ## Routes principales
 
@@ -35,10 +57,13 @@ L'inscription est ouverte : tout nouveau compte est créé avec le rôle « él�
 | `#/niveaux` · `#/niveau/lycee` | Liste des niveaux et détail d'un niveau |
 | `#/chapitre/maths-pythagore` | Fiche d'un chapitre |
 | `#/cours/une-si-longue-lettre` | Étude d'œuvre (section optionnelle : `…/exposes`) |
-| `#/exercices` | Exercices interactifs |
+| `#/exercices` · `#/exercices?exo=<id>` | Exercices interactifs (tous, ou un exercice assigné) |
+| `#/seances` | Séances de la classe de l'élève |
 | `#/recherche?q=polygamie` | Recherche |
-| `#/connexion` · `#/profil` | Authentification et progression |
+| `#/connexion` · `#/profil` | Authentification, classe et progression |
+| `#/admin/classes` · `#/admin/seances` | Classes et séances de l'enseignant |
 | `#/admin/exercices` | Back-office (réservé aux administrateurs) |
+| `#/superadmin` | Gestion globale de tous les comptes (super-administrateur) |
 
 ## Structure du projet
 
@@ -55,7 +80,7 @@ L'inscription est ouverte : tout nouveau compte est créé avec le rôle « él�
 │   │   └── cours.css           # Composants du cours et des exercices
 │   ├── js/
 │   │   ├── data.js             # Source de données unique (matières, cours, exercices)
-│   │   ├── store.js            # Persistance locale (exercices, ressources, paramètres)
+│   │   ├── store.js            # Persistance locale (contenus par espace, classes, séances)
 │   │   ├── auth.js             # Comptes, session et progression
 │   │   ├── games.js            # Quiz, associations, textes à trous
 │   │   ├── admin.js            # Back-office
@@ -90,7 +115,7 @@ puis ouvrir <http://localhost:8000>.
 
 - **Un chapitre** : ajouter une entrée dans `matieres[].chapitres` de [data.js](assets/js/data.js) (`id`, `niveau`, `titre`, `resume`, `objectifs`, `points`, `duree`).
 - **Une matière ou un niveau** : compléter les tableaux `matieres` ou `niveaux` du même fichier.
-- **Un exercice** : le créer depuis `#/admin/exercices` (persisté dans le navigateur) ou l'ajouter à `exercicesSeed`.
+- **Un exercice** : le créer depuis `#/admin/exercices` (persisté dans le navigateur, rattaché à votre espace) ou l'ajouter à `exercicesSeed`.
 
 ## Technologies
 
