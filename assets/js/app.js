@@ -234,17 +234,14 @@
             html:
                 '<section class="hero-section py-5">' +
                     '<div class="container py-4">' +
-                        '<div class="row align-items-center">' +
-                            '<div class="col-lg-6">' +
+                        '<div class="row justify-content-center text-center">' +
+                            '<div class="col-lg-9">' +
                                 '<h1 class="display-5 fw-bold mb-4">Apprendre sans limites</h1>' +
                                 '<p class="lead mb-4">Cours, fiches et exercices interactifs du collège à l\'enseignement supérieur, réunis dans un seul espace.</p>' +
-                                '<div class="d-flex flex-wrap gap-3">' +
+                                '<div class="d-flex flex-wrap gap-3 justify-content-center">' +
                                     '<a href="#/matieres" class="btn btn-primary btn-lg">Commencer maintenant</a>' +
                                     '<a href="#/cours/une-si-longue-lettre" class="btn btn-outline-primary btn-lg">Découvrir une étude d\'œuvre</a>' +
                                 '</div>' +
-                            '</div>' +
-                            '<div class="col-lg-6 text-center">' +
-                                '<img src="assets/images/presentation-bibliotheque.png" alt="Présentation de LearnHub : lire, apprendre et se former en toute liberté" class="img-fluid photo-presentation">' +
                             '</div>' +
                         '</div>' +
                     '</div>' +

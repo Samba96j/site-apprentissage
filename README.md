@@ -4,7 +4,7 @@ Site web éducatif statique qui regroupe des cours, des fiches de révision et d
 
 **Site en ligne :** <https://samba96j.github.io/site-apprentissage/>
 
-![Aperçu de LearnHub](assets/images/presentation-bibliotheque.png)
+![Aperçu de LearnHub](assets/images/hero-education.png)
 
 ## Fonctionnalités
 
