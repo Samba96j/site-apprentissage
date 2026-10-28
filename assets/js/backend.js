@@ -350,6 +350,13 @@ window.LearnHubBackend = (function () {
 
     function traduireErreur(erreur) {
         const message = (erreur && erreur.message) || '';
+        if (/email rate limit exceeded|over_email_send_rate_limit|too many requests/i.test(message)) {
+            return 'Trop de tentatives : Supabase limite l’envoi d’e-mails (quelques-uns par heure, service intégré). Réessayez dans une heure, ou désactivez « Confirm email » dans Authentication → Providers → Email.';
+        }
+        if (/you can only request this after (\d+) seconds/i.test(message)) {
+            const secondes = message.match(/after (\d+) seconds/i)[1];
+            return 'Patientez ' + secondes + ' secondes avant de réessayer.';
+        }
         if (/invalid login credentials/i.test(message)) return 'Identifiants incorrects.';
         if (/email not confirmed/i.test(message)) return 'Confirmez votre adresse e-mail avant de vous connecter.';
         if (/user already registered/i.test(message)) return 'Cette adresse e-mail est déjà utilisée.';
