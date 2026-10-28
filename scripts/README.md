@@ -52,6 +52,21 @@ node importer-bibliotheque.js               # import complet
 - note sa progression dans `.import-state.json` : après une coupure, il **reprend** là où il s'était arrêté ;
 - réessaie 3 fois chaque fichier en cas d'erreur réseau, puis continue et affiche le bilan.
 
+## Mise à niveau d'une bibliothèque déjà importée
+
+Si des documents ont été ajoutés avant l'introduction de la visibilité (ou importés depuis le navigateur, sans métadonnées), lancez :
+
+```powershell
+node enrichir-bibliotheque.js --dry-run   # simulation
+node enrichir-bibliotheque.js             # application
+```
+
+Le script :
+
+- applique la visibilité `eleves` à tous les documents (modifiable avec `--visibilite public`) ;
+- remplit **titre, auteur, matière et niveau** depuis le catalogue `database.db` (rapprochement sur le nom de fichier) ;
+- supprime les doublons créés par un import de test sur R2 (`--garder-doublons` pour les conserver).
+
 ## Options
 
 | Option | Effet |
