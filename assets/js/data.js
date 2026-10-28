@@ -11,7 +11,7 @@ window.LearnHubData = (function () {
     const developpeur = {
         nom: 'M.BA',
         titre: 'Ingénieur en génie logiciel',
-        email: '',
+        email: 'moyizaba@gmail.com',
         role: 'Conception et développement de la plateforme LearnHub'
     };
 

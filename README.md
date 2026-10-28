@@ -38,18 +38,7 @@ Pour éviter tout accès non désiré, la page de connexion **n'affiche plus auc
 
 La page `#/contact` présente **M.BA — Ingénieur en génie logiciel** et un formulaire (nom, e-mail, sujet, message). Les messages sont enregistrés dans le navigateur et listés dans `#/superadmin` → « Messages reçus », avec suppression possible.
 
-Pour activer l'envoi par messagerie, renseignez l'adresse dans [data.js](assets/js/data.js) :
-
-```js
-const developpeur = {
-    nom: 'M.BA',
-    titre: 'Ingénieur en génie logiciel',
-    email: 'votre.adresse@exemple.com',
-    role: 'Conception et développement de la plateforme LearnHub'
-};
-```
-
-Un bouton « Ouvrir dans ma messagerie » apparaît alors après l'envoi (lien `mailto:`). Sans backend ni service de formulaires, aucun message n'est transmis automatiquement à distance : c'est une limite du site statique.
+Pour activer l'envoi par messagerie, l'adresse est renseignée dans [data.js](assets/js/data.js) (`moyizaba@gmail.com`). Un bouton « Ouvrir dans ma messagerie » apparaît après l'envoi (lien `mailto:`). Sans backend ni service de formulaires, aucun message n'est transmis automatiquement à distance : c'est une limite du site statique.
 
 L'inscription est ouverte. Une case à cocher permet de créer directement un **espace enseignant** (rôle administrateur) ; sans elle, le compte est un compte élève. Un administrateur peut changer le rôle des élèves rattachés à ses classes.
 
