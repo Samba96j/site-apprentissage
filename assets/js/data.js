@@ -12,7 +12,7 @@ window.LearnHubData = (function () {
     const developpeur = {
         nom: 'M.BA',
         titre: 'Ingénieur en génie logiciel',
-        formulaire: '',
+        formulaire: 'https://formspree.io/f/xdeegrzw',
         role: 'Conception et développement de la plateforme LearnHub'
     };
 

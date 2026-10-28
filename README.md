@@ -38,22 +38,21 @@ Pour éviter tout accès non désiré, la page de connexion **n'affiche plus auc
 
 La page `#/contact` présente **M.BA — Ingénieur en génie logiciel** et un formulaire (nom, e-mail, sujet, message). Les messages sont enregistrés dans le navigateur et listés dans `#/superadmin` → « Messages reçus », avec suppression possible.
 
-Aucune adresse e-mail n'est publiée sur le site. Pour recevoir les messages par e-mail, utiliser un service de formulaire :
+Aucune adresse e-mail n'est publiée sur le site. Le formulaire passe par un service externe :
 
-1. Créer un formulaire gratuit sur [Formspree](https://formspree.io) (ou Getform), relié à votre boîte.
-2. Copier son endpoint (`https://formspree.io/f/xxxxxxxx`).
-3. Le renseigner dans [data.js](assets/js/data.js) :
+1. Le formulaire gratuit [Formspree](https://formspree.io) est déjà relié au compte du développeur.
+2. Son endpoint est configuré dans [data.js](assets/js/data.js) :
 
 ```js
 const developpeur = {
     nom: 'M.BA',
     titre: 'Ingénieur en génie logiciel',
-    formulaire: 'https://formspree.io/f/xxxxxxxx',
+    formulaire: 'https://formspree.io/f/xdeegrzw',
     role: 'Conception et développement de la plateforme LearnHub'
 };
 ```
 
-Le formulaire envoie alors les champs en `POST` au service, qui les transmet à votre adresse. Tant que l'endpoint est vide, les messages sont seulement conservés dans le navigateur et visibles dans la super-administration.
+Le formulaire envoie alors les champs en `POST` au service, qui les transmet par e-mail. Pour changer de service ou de formulaire, remplacer la valeur de `formulaire`. Si l'endpoint est vide, les messages sont seulement conservés dans le navigateur et visibles dans la super-administration.
 
 L'inscription est ouverte. Une case à cocher permet de créer directement un **espace enseignant** (rôle administrateur) ; sans elle, le compte est un compte élève. Un administrateur peut changer le rôle des élèves rattachés à ses classes.
 
