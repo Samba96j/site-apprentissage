@@ -67,6 +67,7 @@ Les fichiers sont hébergés dans le bucket Supabase Storage **`documents`** (pu
 - Lecture : tout le monde, connecté ou non (page `#/bibliotheque`).
 - Écriture : rôles `admin` et `superadmin` uniquement (page `#/admin/bibliotheque`).
 - Formats acceptés : PDF, DOC/DOCX, TXT, ODT, EPUB, ou un lien externe.
+- **Import par lot** : sélectionnez plusieurs fichiers d'un coup ; ils sont envoyés un par un avec une barre de progression, le titre étant repris du nom du fichier (`03_les-fractions.pdf` → « Les fractions »). La matière, le niveau et l'auteur choisis s'appliquent à tout le lot.
 - La suppression retire la ligne **et** le fichier du bucket.
 
 ## 6. Sécurité (RLS)

@@ -1697,6 +1697,24 @@ window.LearnHubAdmin = (function () {
 
     /* -------------------------------- Bibliothèque -------------------------------- */
 
+    /** Transforme « 03_les-fractions_final.pdf » en « Les fractions final ». */
+    function titreDepuisNom(nom) {
+        const base = String(nom || '')
+            .replace(/\.[^.]+$/, '')
+            .replace(/[_-]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!base) return 'Document';
+        return base.charAt(0).toUpperCase() + base.slice(1);
+    }
+
+    function typeDepuisNom(nom) {
+        const extension = (String(nom || '').split('.').pop() || '').toLowerCase();
+        if (extension === 'pdf') return 'pdf';
+        if (['doc', 'docx', 'odt', 'rtf', 'txt', 'epub'].indexOf(extension) !== -1) return 'word';
+        return 'autre';
+    }
+
     function renderBibliotheque(racine) {
         const b = window.LearnHubBackend;
         const actif = !!(b && b.estActif());
@@ -1709,16 +1727,21 @@ window.LearnHubAdmin = (function () {
                     '<h2 class="mb-0"><i class="fas fa-book me-2"></i>Bibliothèque publique</h2>' +
                     '<p class="text-muted small mb-0">Documents visibles par tous les visiteurs sur la page <a href="#/bibliotheque" target="_blank">Bibliothèque</a>.</p>' +
                 '</div>' +
-                '<button class="btn btn-primary btn-sm" id="nouveau-document"><i class="fas fa-plus me-1"></i>Ajouter un document</button>' +
+                '<div class="d-flex gap-2">' +
+                    '<button class="btn btn-outline-primary btn-sm" id="lot-document"><i class="fas fa-layer-group me-1"></i>Import par lot</button>' +
+                    '<button class="btn btn-primary btn-sm" id="nouveau-document"><i class="fas fa-plus me-1"></i>Ajouter un document</button>' +
+                '</div>' +
             '</div>' +
             (!niveauConnecte
                 ? '<div class="alert alert-warning py-2">Connectez-vous pour gérer la bibliothèque.</div>'
                 : '') +
             '<div id="formulaire-document" class="d-none"></div>' +
+            '<div id="lot-document-zone" class="d-none"></div>' +
             '<div class="admin-panel"><div id="liste-documents"></div></div>';
 
         const zoneMessage = racine.querySelector('#admin-message');
         const formulaire = racine.querySelector('#formulaire-document');
+        const zoneLot = racine.querySelector('#lot-document-zone');
         const liste = racine.querySelector('#liste-documents');
 
         if (!actif) {
@@ -1763,7 +1786,122 @@ window.LearnHubAdmin = (function () {
             });
         }
 
+        racine.querySelector('#lot-document').addEventListener('click', function () {
+            formulaire.classList.add('d-none');
+            formulaire.innerHTML = '';
+            zoneLot.classList.remove('d-none');
+            zoneLot.innerHTML =
+                '<div class="admin-panel border border-primary">' +
+                    '<h4 class="mb-1"><i class="fas fa-layer-group me-2"></i>Import par lot</h4>' +
+                    '<p class="text-muted small mb-3">Sélectionnez plusieurs fichiers : ils sont envoyés l\'un après l\'autre. Le titre est repris du nom du fichier.</p>' +
+                    '<div class="row g-3">' +
+                        '<div class="col-12"><label class="form-label" for="lot-fichiers">Fichiers (PDF, DOCX, TXT, ODT, EPUB)</label>' +
+                            '<input type="file" class="form-control" id="lot-fichiers" multiple accept=".pdf,.doc,.docx,.txt,.odt,.epub"></div>' +
+                        '<div class="col-md-4"><label class="form-label" for="lot-matiere">Matière</label>' +
+                            '<select class="form-select" id="lot-matiere"><option value="">Général</option>' +
+                                window.LearnHubData.matieres.map(function (m) {
+                                    return '<option value="' + esc(m.slug) + '">' + esc(m.nom) + '</option>';
+                                }).join('') +
+                            '</select></div>' +
+                        '<div class="col-md-4"><label class="form-label" for="lot-niveau">Niveau</label>' +
+                            '<select class="form-select" id="lot-niveau"><option value="">Tous</option>' +
+                                window.LearnHubData.niveaux.map(function (n) {
+                                    return '<option value="' + esc(n.slug) + '">' + esc(n.nom) + '</option>';
+                                }).join('') +
+                            '</select></div>' +
+                        '<div class="col-md-4"><label class="form-label" for="lot-auteur">Auteur / source</label>' +
+                            '<input type="text" class="form-control" id="lot-auteur" placeholder="Facultatif"></div>' +
+                    '</div>' +
+                    '<div class="d-flex gap-2 mt-3">' +
+                        '<button class="btn btn-primary" id="lancer-lot"><i class="fas fa-upload me-1"></i>Importer</button>' +
+                        '<button class="btn btn-outline-secondary" id="fermer-lot">Fermer</button>' +
+                    '</div>' +
+                    '<div id="lot-progression" class="mt-3 d-none">' +
+                        '<div class="progress mb-2" style="height:18px">' +
+                            '<div class="progress-bar" id="lot-barre" role="progressbar" style="width:0%"></div>' +
+                        '</div>' +
+                        '<div class="small text-muted mb-2" id="lot-compteur"></div>' +
+                        '<ul class="list-unstyled small mb-0" id="lot-journal" style="max-height:220px;overflow:auto"></ul>' +
+                    '</div>' +
+                '</div>';
+
+            zoneLot.querySelector('#fermer-lot').addEventListener('click', function () {
+                zoneLot.classList.add('d-none');
+                zoneLot.innerHTML = '';
+            });
+
+            zoneLot.querySelector('#lancer-lot').addEventListener('click', async function () {
+                const bouton = zoneLot.querySelector('#lancer-lot');
+                const champ = zoneLot.querySelector('#lot-fichiers');
+                const fichiers = Array.prototype.slice.call(champ.files || []);
+                const progression = zoneLot.querySelector('#lot-progression');
+                const barre = zoneLot.querySelector('#lot-barre');
+                const compteur = zoneLot.querySelector('#lot-compteur');
+                const journal = zoneLot.querySelector('#lot-journal');
+
+                if (!fichiers.length) {
+                    message(zoneMessage, 'Sélectionnez au moins un fichier.', 'danger');
+                    return;
+                }
+
+                const matiere = zoneLot.querySelector('#lot-matiere').value;
+                const niveau = zoneLot.querySelector('#lot-niveau').value;
+                const auteur = zoneLot.querySelector('#lot-auteur').value;
+
+                bouton.disabled = true;
+                bouton.innerHTML = '<i class="fas fa-circle-notch fa-spin me-1"></i>Import en cours…';
+                progression.classList.remove('d-none');
+                journal.innerHTML = '';
+
+                let reussis = 0;
+                const echecs = [];
+
+                for (let index = 0; index < fichiers.length; index++) {
+                    const fichier = fichiers[index];
+                    compteur.textContent = (index + 1) + ' / ' + fichiers.length + ' — ' + fichier.name;
+
+                    const resultat = await b.ajouterDocument({
+                        titre: titreDepuisNom(fichier.name),
+                        auteur: auteur,
+                        matiere: matiere,
+                        niveau: niveau,
+                        type: typeDepuisNom(fichier.name),
+                        description: '',
+                        fichier: fichier,
+                        url: ''
+                    });
+
+                    const pourcentage = Math.round(((index + 1) / fichiers.length) * 100);
+                    barre.style.width = pourcentage + '%';
+                    barre.className = 'progress-bar' + (resultat.ok ? '' : ' bg-danger');
+
+                    if (resultat.ok) {
+                        reussis++;
+                        journal.insertAdjacentHTML('beforeend',
+                            '<li class="text-success"><i class="fas fa-check me-1"></i>' + esc(fichier.name) + '</li>');
+                    } else {
+                        echecs.push(fichier.name + ' — ' + resultat.error);
+                        journal.insertAdjacentHTML('beforeend',
+                            '<li class="text-danger"><i class="fas fa-xmark me-1"></i>' + esc(fichier.name) + ' — ' + esc(resultat.error) + '</li>');
+                    }
+                }
+
+                compteur.textContent = reussis + ' document(s) importé(s)' +
+                    (echecs.length ? ' · ' + echecs.length + ' échec(s)' : '');
+                bouton.disabled = false;
+                bouton.innerHTML = '<i class="fas fa-upload me-1"></i>Importer';
+                champ.value = '';
+
+                message(zoneMessage, reussis + ' document(s) publié(s)' +
+                    (echecs.length ? ', ' + echecs.length + ' échec(s)' : '') + '.',
+                    echecs.length ? 'warning' : 'success');
+                rafraichir();
+            });
+        });
+
         racine.querySelector('#nouveau-document').addEventListener('click', function () {
+            zoneLot.classList.add('d-none');
+            zoneLot.innerHTML = '';
             formulaire.classList.remove('d-none');
             formulaire.innerHTML =
                 '<div class="admin-panel border border-primary">' +
