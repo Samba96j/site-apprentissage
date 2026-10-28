@@ -1,0 +1,13 @@
+{
+  "name": "learnhub-import-bibliotheque",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Import des livres vers Cloudflare R2 + Supabase",
+  "type": "commonjs",
+  "scripts": {
+    "import": "node importer-bibliotheque.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.700.0"
+  }
+}

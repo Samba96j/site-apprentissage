@@ -131,6 +131,12 @@ GitHub Pages ne peut pas exécuter de code serveur, mais le site appelle une **A
 
 Les données locales existantes ne peuvent pas être transférées automatiquement : les mots de passe locaux sont hachés dans le navigateur. Chaque personne recrée son compte Supabase ; les contenus et résultats pourront être importés par un écran dédié (à venir).
 
+## Import massif de livres
+
+Pour importer un dossier entier (plusieurs centaines de fichiers, plusieurs Go), utilisez le script fourni : [scripts/importer-bibliotheque.js](scripts/importer-bibliotheque.js). Il envoie les fichiers vers **Cloudflare R2** (10 Go gratuits, trafic sortant gratuit) et enregistre les métadonnées dans Supabase.
+
+Supabase garde les métadonnées ; R2 héberge les fichiers. Voir [scripts/README.md](scripts/README.md) pour la mise en place et les options (`--dry-run`, `--limit`, `--reset`).
+
 ## Lancer le site
 
 Le site est entièrement statique : aucune installation n'est nécessaire.

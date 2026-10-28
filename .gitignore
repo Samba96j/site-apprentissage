@@ -12,3 +12,8 @@ desktop.ini
 # Journaux et fichiers temporaires
 *.log
 *.tmp
+
+# Script d'import de la bibliothèque : dépendances, secrets et état de reprise
+scripts/node_modules/
+scripts/.env
+scripts/.import-state.json

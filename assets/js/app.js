@@ -673,7 +673,6 @@
                 '<div class="d-flex flex-wrap gap-2 mb-4">' +
                     '<select class="form-select form-select-sm" id="biblio-matiere" style="max-width:200px">' +
                         '<option value="">Toutes les matières</option>' +
-                        data.matieres.map(function (m) { return '<option value="' + esc(m.slug) + '">' + esc(m.nom) + '</option>'; }).join('') +
                     '</select>' +
                     '<select class="form-select form-select-sm" id="biblio-niveau" style="max-width:180px">' +
                         '<option value="">Tous les niveaux</option>' +
@@ -698,11 +697,31 @@
 
                 function nomMatiere(slug) {
                     const m = data.getMatiere(slug);
-                    return m ? m.nom : 'Général';
+                    if (m) return m.nom;
+                    if (!slug) return 'Général';
+                    // Matière libre saisie lors d'un import : on l'affiche lisiblement.
+                    const texte = String(slug).replace(/[-_]+/g, ' ');
+                    return texte.charAt(0).toUpperCase() + texte.slice(1);
                 }
                 function nomNiveau(slug) {
                     const n = data.niveaux.find(function (x) { return x.slug === slug; });
-                    return n ? n.nom : '';
+                    if (n) return n.nom;
+                    return slug ? String(slug) : '';
+                }
+
+                function remplirFiltreMatieres() {
+                    const valeurs = {};
+                    documents.forEach(function (d) {
+                        if (d.matiere) valeurs[d.matiere] = true;
+                    });
+                    const courante = filtreMatiere.value;
+                    filtreMatiere.innerHTML = '<option value="">Toutes les matières</option>' +
+                        Object.keys(valeurs).sort(function (a, b) {
+                            return nomMatiere(a).localeCompare(nomMatiere(b), 'fr');
+                        }).map(function (valeur) {
+                            return '<option value="' + esc(valeur) + '">' + esc(nomMatiere(valeur)) + '</option>';
+                        }).join('');
+                    filtreMatiere.value = courante;
                 }
 
                 function carte(document) {
@@ -777,6 +796,7 @@
                         return;
                     }
                     documents = resultat.documents;
+                    remplirFiltreMatieres();
                     rafraichir();
                 }).catch(function () {
                     liste.innerHTML = '<div class="alert alert-danger">Impossible de charger la bibliothèque.</div>';
