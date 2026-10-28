@@ -259,6 +259,100 @@
         '</div>';
     }
 
+    /**
+     * Fait vivre le carrousel : moteur Bootstrap quand il est disponible,
+     * moteur de secours sinon (CDN bloqué, réseau lent…). Le bouton pause
+     * reste le même dans les deux cas.
+     */
+    let arreterCarrousel = null;
+
+    function demarrerCarrousel(racine) {
+        if (arreterCarrousel) {
+            arreterCarrousel();
+            arreterCarrousel = null;
+        }
+        const carrousel = racine.querySelector('#carrousel-learnhub');
+        if (!carrousel) return;
+        const items = Array.prototype.slice.call(carrousel.querySelectorAll('.carousel-item'));
+        if (items.length < 2) return;
+
+        const bouton = carrousel.querySelector('.diapo-pause');
+        const indicateurs = Array.prototype.slice.call(carrousel.querySelectorAll('.carousel-indicators button'));
+        const reduireAnimations = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        const intervalle = 6000;
+        const moteurBootstrap = window.bootstrap && window.bootstrap.Carousel;
+        let minuterie = null;
+        let courant = items.findIndex(function (item) { return item.classList.contains('active'); });
+        if (courant < 0) courant = 0;
+
+        function etatPause(enPause) {
+            if (!bouton) return;
+            bouton.innerHTML = '<i class="fas fa-' + (enPause ? 'play' : 'pause') + '"></i>';
+            bouton.setAttribute('aria-label', enPause ? 'Lancer le diaporama' : 'Mettre le diaporama en pause');
+            bouton.setAttribute('title', enPause ? 'Lancer le diaporama' : 'Mettre le diaporama en pause');
+        }
+
+        /* --- Moteur Bootstrap : il gère les flèches, les indicateurs et le clavier --- */
+        if (moteurBootstrap) {
+            const instance = window.bootstrap.Carousel.getOrCreateInstance(carrousel, {
+                interval: intervalle,
+                ride: 'carousel',
+                pause: false
+            });
+            let enPause = false;
+            if (reduireAnimations) { instance.pause(); enPause = true; }
+            etatPause(enPause);
+            if (bouton) {
+                bouton.addEventListener('click', function () {
+                    enPause = !enPause;
+                    if (enPause) instance.pause(); else instance.cycle();
+                    etatPause(enPause);
+                });
+            }
+            arreterCarrousel = function () { instance.dispose(); };
+            return;
+        }
+
+        /* --- Moteur de secours (sans Bootstrap) --- */
+        function afficher(index) {
+            courant = (index + items.length) % items.length;
+            items.forEach(function (item, i) { item.classList.toggle('active', i === courant); });
+            indicateurs.forEach(function (indicateur, i) {
+                indicateur.classList.toggle('active', i === courant);
+                if (i === courant) indicateur.setAttribute('aria-current', 'true');
+                else indicateur.removeAttribute('aria-current');
+            });
+        }
+
+        function jouer() {
+            if (minuterie) return;
+            minuterie = setInterval(function () { afficher(courant + 1); }, intervalle);
+            etatPause(false);
+        }
+
+        function arreter() {
+            if (minuterie) { clearInterval(minuterie); minuterie = null; }
+            etatPause(true);
+        }
+
+        indicateurs.forEach(function (indicateur, i) {
+            indicateur.addEventListener('click', function () { afficher(i); });
+        });
+        const precedent = carrousel.querySelector('.carousel-control-prev');
+        const suivant = carrousel.querySelector('.carousel-control-next');
+        if (precedent) precedent.addEventListener('click', function () { afficher(courant - 1); });
+        if (suivant) suivant.addEventListener('click', function () { afficher(courant + 1); });
+
+        if (bouton) {
+            bouton.addEventListener('click', function () {
+                if (minuterie) arreter(); else jouer();
+            });
+        }
+
+        arreterCarrousel = function () { if (minuterie) { clearInterval(minuterie); minuterie = null; } };
+        if (reduireAnimations) arreter(); else jouer();
+    }
+
     function vueAccueil() {
         const chapitres = data.getChapitres();
         const exercices = store.exercices.actifs();
@@ -284,7 +378,7 @@
             html:
                 '<h1 class="visually-hidden">LearnHub — apprendre sans limites</h1>' +
                 '<section class="carrousel-accueil" aria-label="Présentation de la plateforme">' +
-                    '<div id="carrousel-learnhub" class="carousel slide" data-bs-ride="carousel" data-bs-interval="6000" data-bs-pause="hover">' +
+                    '<div id="carrousel-learnhub" class="carousel slide" data-bs-interval="6000">' +
                         '<div class="carousel-indicators">' +
                             diapositives.map(function (slide, index) {
                                 return '<button type="button" data-bs-target="#carrousel-learnhub" data-bs-slide-to="' + index + '"' +
@@ -302,6 +396,9 @@
                         '<button class="carousel-control-next" type="button" data-bs-target="#carrousel-learnhub" data-bs-slide="next">' +
                             '<span class="carousel-control-next-icon" aria-hidden="true"></span>' +
                             '<span class="visually-hidden">Diapositive suivante</span>' +
+                        '</button>' +
+                        '<button class="diapo-pause" type="button" aria-label="Mettre le diaporama en pause">' +
+                            '<i class="fas fa-pause" aria-hidden="true"></i>' +
                         '</button>' +
                     '</div>' +
                 '</section>' +
@@ -338,7 +435,10 @@
                         '<p class="lead mb-4">Créez un compte gratuit pour conserver vos scores et suivre votre progression.</p>' +
                         '<a href="#/connexion?mode=inscription" class="btn btn-light btn-lg">Créer un compte</a>' +
                     '</div>' +
-                '</section>'
+                '</section>',
+            after: function (racine) {
+                demarrerCarrousel(racine);
+            }
         };
     }
 
@@ -2094,6 +2194,10 @@
 
     function router() {
         const { segments, params } = parseRoute();        window.LearnHubGames.destroy();
+        if (arreterCarrousel) {
+            arreterCarrousel();
+            arreterCarrousel = null;
+        }
         const vue = choisirVue(segments, params);
         vueCourante = vue;
 

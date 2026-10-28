@@ -515,6 +515,39 @@ body {
     opacity: 1;
 }
 
+/* Bouton pause / lecture du diaporama */
+.diapo-pause {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 50%;
+    background: rgba(20, 8, 32, 0.45);
+    color: #fff;
+    font-size: 0.72rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.diapo-pause:hover,
+.diapo-pause:focus-visible {
+    background: rgba(20, 8, 32, 0.78);
+    transform: scale(1.06);
+}
+
+.diapo-pause:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
 @media (max-width: 575.98px) {
     .diapo {
         min-height: 320px;
