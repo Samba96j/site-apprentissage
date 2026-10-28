@@ -14,6 +14,8 @@ window.LearnHubStore = (function () {
         settings: PREFIX + 'settings',
         classes: PREFIX + 'classes',
         seances: PREFIX + 'seances',
+        lecons: PREFIX + 'lecons',
+        messages: PREFIX + 'messages',
         seeded: PREFIX + 'seeded'
     };
 
@@ -112,6 +114,8 @@ window.LearnHubStore = (function () {
             write(KEYS.settings, clone(DEFAULT_SETTINGS));
             write(KEYS.classes, []);
             write(KEYS.seances, []);
+            write(KEYS.lecons, []);
+            write(KEYS.messages, []);
             write(KEYS.seeded, SEED_VERSION);
             amorcerEspacesAdmins();
             return;
@@ -164,6 +168,8 @@ window.LearnHubStore = (function () {
         }
         if (!read(KEYS.classes, null)) write(KEYS.classes, []);
         if (!read(KEYS.seances, null)) write(KEYS.seances, []);
+        if (!read(KEYS.lecons, null)) write(KEYS.lecons, []);
+        if (!read(KEYS.messages, null)) write(KEYS.messages, []);
         if (version < SEED_VERSION) amorcerEspacesAdmins();
         write(KEYS.seeded, SEED_VERSION);
     }
@@ -409,6 +415,7 @@ window.LearnHubStore = (function () {
                 espaceId: espace,
                 classeIds: Array.isArray(data.classeIds) ? data.classeIds : [],
                 chapitres: Array.isArray(data.chapitres) ? data.chapitres : [],
+                lecons: Array.isArray(data.lecons) ? data.lecons : [],
                 exercices: Array.isArray(data.exercices) ? data.exercices : [],
                 maj: new Date().toISOString()
             });
@@ -431,11 +438,152 @@ window.LearnHubStore = (function () {
         }
     };
 
+    /* ---------------------------------- Leçons ---------------------------------- */
+
+    const lecons = {
+        all: function () {
+            return read(KEYS.lecons, []).filter(visible);
+        },
+        miens: function () {
+            const espace = espaceActif();
+            if (!espace) return [];
+            return read(KEYS.lecons, []).filter(dansEspaceActif);
+        },
+        get: function (id) {
+            return this.all().find(function (l) { return l.id === id; }) || null;
+        },
+        save: function (data) {
+            const espace = espaceActif();
+            if (!espace) return null;
+            const liste = read(KEYS.lecons, []);
+            const index = data.id ? liste.findIndex(function (l) { return l.id === data.id; }) : -1;
+            if (index >= 0 && liste[index].espaceId !== espace) return null;
+            const enregistrement = Object.assign({}, data, {
+                id: data.id || uid('lecon'),
+                espaceId: espace,
+                objectifs: Array.isArray(data.objectifs) ? data.objectifs : [],
+                maj: new Date().toISOString()
+            });
+            if (index >= 0) {
+                liste[index] = Object.assign({}, liste[index], enregistrement);
+            } else {
+                enregistrement.cree = new Date().toISOString();
+                liste.push(enregistrement);
+            }
+            return write(KEYS.lecons, liste) ? enregistrement : null;
+        },
+        remove: function (id) {
+            const liste = read(KEYS.lecons, []);
+            const cible = liste.find(function (l) { return l.id === id; });
+            if (!cible || !dansEspaceActif(cible)) return false;
+            const seances = read(KEYS.seances, []).map(function (seance) {
+                return Object.assign({}, seance, {
+                    lecons: (seance.lecons || []).filter(function (lid) { return lid !== id; })
+                });
+            });
+            write(KEYS.seances, seances);
+            return write(KEYS.lecons, liste.filter(function (l) { return l.id !== id; }));
+        },
+        count: function () {
+            return this.miens().length;
+        }
+    };
+
+    /* ------------------------------ Mise en forme riche ------------------------------ */
+
+    const BALISES_AUTORISEES = {
+        P: true, BR: true, STRONG: true, B: true, EM: true, I: true, U: true, S: true,
+        UL: true, OL: true, LI: true, H2: true, H3: true, H4: true,
+        BLOCKQUOTE: true, A: true, CODE: true, PRE: true, HR: true
+    };
+
+    // Balises dont le contenu doit disparaître entièrement (pas seulement la balise).
+    const BALISES_SUPPRIMEES = {
+        SCRIPT: true, STYLE: true, IFRAME: true, OBJECT: true, EMBED: true,
+        NOSCRIPT: true, TEMPLATE: true, FORM: true, INPUT: true, BUTTON: true,
+        SELECT: true, TEXTAREA: true, SVG: true, MATH: true
+    };
+
+    /** Nettoie le HTML des leçons : balises et attributs limités à une liste blanche. */
+    function nettoyerHtml(html) {
+        const source = String(html || '');
+        if (!source || !window.DOMParser) return '';
+        const doc = new DOMParser().parseFromString('<div id="racine">' + source + '</div>', 'text/html');
+        const racine = doc.getElementById('racine');
+        if (!racine) return '';
+
+        function nettoyer(parent) {
+            Array.prototype.slice.call(parent.childNodes).forEach(function (noeud) {
+                if (noeud.nodeType === 3) return;
+                if (noeud.nodeType !== 1) {
+                    parent.removeChild(noeud);
+                    return;
+                }
+                if (BALISES_SUPPRIMEES[noeud.tagName]) {
+                    parent.removeChild(noeud);
+                    return;
+                }
+                if (!BALISES_AUTORISEES[noeud.tagName]) {
+                    const fragment = doc.createDocumentFragment();
+                    while (noeud.firstChild) fragment.appendChild(noeud.firstChild);
+                    parent.replaceChild(fragment, noeud);
+                    return;
+                }
+                Array.prototype.slice.call(noeud.attributes).forEach(function (attribut) {
+                    if (noeud.tagName === 'A' && (attribut.name === 'href' || attribut.name === 'title')) return;
+                    noeud.removeAttribute(attribut.name);
+                });
+                if (noeud.tagName === 'A') {
+                    const href = noeud.getAttribute('href') || '';
+                    if (!/^(https?:\/\/|mailto:|#|\/)/i.test(href)) {
+                        noeud.removeAttribute('href');
+                    } else {
+                        noeud.setAttribute('rel', 'noopener noreferrer');
+                    }
+                }
+                nettoyer(noeud);
+            });
+        }
+
+        // Deux passes : la première déballe les balises interdites,
+        // la seconde nettoie les nœuds ainsi remontés.
+        nettoyer(racine);
+        nettoyer(racine);
+        return racine.innerHTML;
+    }
+
+    /* --------------------------------- Messages ---------------------------------- */
+
+    const messages = {
+        all: function () {
+            return read(KEYS.messages, []);
+        },
+        add: function (data) {
+            const liste = this.all();
+            const message = {
+                id: uid('msg'),
+                nom: String(data.nom || '').trim(),
+                email: String(data.email || '').trim(),
+                sujet: String(data.sujet || '').trim(),
+                message: String(data.message || '').trim(),
+                date: new Date().toISOString()
+            };
+            liste.push(message);
+            return write(KEYS.messages, liste) ? message : null;
+        },
+        remove: function (id) {
+            return write(KEYS.messages, this.all().filter(function (m) { return m.id !== id; }));
+        },
+        count: function () {
+            return this.all().length;
+        }
+    };
+
     function viderEspace() {
         const espace = espaceActif();
         if (!espace) return null;
         const resultat = {};
-        [['exercices', KEYS.exercices], ['ressources', KEYS.ressources], ['seances', KEYS.seances]].forEach(function (paire) {
+        [['exercices', KEYS.exercices], ['ressources', KEYS.ressources], ['seances', KEYS.seances], ['lecons', KEYS.lecons]].forEach(function (paire) {
             const liste = read(paire[1], []);
             const garde = liste.filter(function (entree) { return entree.espaceId !== espace; });
             resultat[paire[0]] = liste.length - garde.length;
@@ -450,10 +598,13 @@ window.LearnHubStore = (function () {
         uid: uid,
         espaceActif: espaceActif,
         viderEspace: viderEspace,
+        nettoyerHtml: nettoyerHtml,
         exercices: exercices,
         ressources: ressources,
         settings: settings,
         classes: classes,
-        seances: seances
+        seances: seances,
+        lecons: lecons,
+        messages: messages
     };
 })();

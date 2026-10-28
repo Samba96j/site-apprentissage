@@ -6,6 +6,15 @@
 window.LearnHubData = (function () {
     'use strict';
 
+    // Coordonnées affichées sur la page #/contact. Renseigner `email` pour
+    // activer le bouton « Ouvrir dans ma messagerie » (envoi via le client mail).
+    const developpeur = {
+        nom: 'M.BA',
+        titre: 'Ingénieur en génie logiciel',
+        email: '',
+        role: 'Conception et développement de la plateforme LearnHub'
+    };
+
     const matieres = [
         {
             slug: 'maths',
@@ -1205,6 +1214,7 @@ window.LearnHubData = (function () {
     }
 
     return {
+        developpeur: developpeur,
         matieres: matieres,
         niveaux: niveaux,
         cours: cours,

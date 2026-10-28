@@ -102,6 +102,7 @@
                             '<ul class="dropdown-menu">' + menuNiveaux() + '</ul>' +
                         '</li>' +
                         '<li class="nav-item"><a class="nav-link" href="#/cours/une-si-longue-lettre" data-nav="cours">Étude d\'œuvre</a></li>' +
+                        '<li class="nav-item"><a class="nav-link" href="#/lecons" data-nav="lecons">Leçons</a></li>' +
                         '<li class="nav-item"><a class="nav-link" href="#/exercices" data-nav="exercices">Exercices</a></li>' +
                         '<li class="nav-item"><a class="nav-link" href="#/seances" data-nav="seances">Séances</a></li>' +
                     '</ul>' +
@@ -141,10 +142,12 @@
                         '<h6>Apprendre</h6>' +
                         '<ul class="list-unstyled">' +
                             '<li><a href="#/cours/une-si-longue-lettre">Étude d\'œuvre</a></li>' +
+                            '<li><a href="#/lecons">Leçons</a></li>' +
                             '<li><a href="#/exercices">Exercices</a></li>' +
                             '<li><a href="#/seances">Mes séances</a></li>' +
                             '<li><a href="#/recherche">Recherche</a></li>' +
                             '<li><a href="#/profil">Ma progression</a></li>' +
+                            '<li><a href="#/contact">Contact</a></li>' +
                         '</ul>' +
                     '</div>' +
                     '<div class="col-6 col-lg-2 mb-4">' +
@@ -152,6 +155,7 @@
                         '<ul class="list-unstyled">' +
                             '<li><a href="#/admin">Tableau de bord</a></li>' +
                             '<li><a href="#/admin/classes">Classes</a></li>' +
+                            '<li><a href="#/admin/lecons">Leçons</a></li>' +
                             '<li><a href="#/admin/seances">Séances</a></li>' +
                             '<li><a href="#/admin/exercices">Exercices</a></li>' +
                             '<li><a href="#/admin/ressources">Ressources</a></li>' +
@@ -162,7 +166,10 @@
                 '<hr class="border-light opacity-25">' +
                 '<div class="d-flex flex-wrap justify-content-between small text-white-50">' +
                     '<span>&copy; ' + new Date().getFullYear() + ' LearnHub.</span>' +
-                    '<span>Contenus pédagogiques — démonstration.</span>' +
+                    '<span>Développé par <a class="link-light text-decoration-none" href="#/contact">' +
+                        esc((data.developpeur && data.developpeur.nom) || 'M.BA') + ' — ' +
+                        esc((data.developpeur && data.developpeur.titre) || 'Ingénieur en génie logiciel') +
+                    '</a></span>' +
                 '</div>' +
             '</div>' +
         '</footer>';
@@ -531,6 +538,212 @@
         };
     }
 
+    function texteVersHtml(texte) {
+        const blocs = String(texte || '').replace(/\r/g, '').split(/\n{2,}/);
+        return blocs.map(function (bloc) {
+            const lignes = bloc.split('\n').filter(function (ligne) { return ligne.trim(); });
+            if (!lignes.length) return '';
+            const estListe = lignes.every(function (ligne) { return /^\s*[-*]\s+/.test(ligne); });
+            if (estListe) {
+                return '<ul>' + lignes.map(function (ligne) {
+                    return '<li>' + esc(ligne.replace(/^\s*[-*]\s+/, '')) + '</li>';
+                }).join('') + '</ul>';
+            }
+            return '<p>' + lignes.map(esc).join('<br>') + '</p>';
+        }).join('');
+    }
+
+    function vueLecons() {
+        const user = auth.current();
+        const lecons = store.lecons.all().slice().sort(function (a, b) {
+            return String(a.titre).localeCompare(String(b.titre));
+        });
+
+        const cartes = lecons.map(function (lecon) {
+            const matiere = data.getMatiere(lecon.matiere);
+            const niveau = lecon.niveau ? data.getNiveau(lecon.niveau) : null;
+            return '<div class="col-md-6 col-xl-4">' +
+                '<div class="content h-100 d-flex flex-column">' +
+                    '<div class="d-flex justify-content-between align-items-start gap-2 mb-2">' +
+                        '<h2 class="h5 mb-0">' + esc(lecon.titre) + '</h2>' +
+                        (matiere ? '<span class="badge bg-primary bg-opacity-10 text-primary">' + esc(matiere.nom) + '</span>' : '') +
+                    '</div>' +
+                    '<p class="text-muted small mb-2">' +
+                        '<i class="fas fa-clock me-1"></i>' + (lecon.duree || 30) + ' min' +
+                        (niveau ? ' · ' + esc(niveau.nom) : ' · Tous niveaux') +
+                    '</p>' +
+                    (lecon.resume ? '<p class="mb-3">' + esc(lecon.resume) + '</p>' : '') +
+                    '<a class="btn btn-outline-primary btn-sm mt-auto align-self-start" href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
+                        '<i class="fas fa-book-open me-1"></i>Lire la leçon</a>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        return {
+            titre: 'Leçons',
+            html: '<div class="container py-4">' +
+                '<div class="mb-4">' +
+                    '<h1 class="h3 mb-1">Leçons</h1>' +
+                    '<p class="text-muted mb-0">Les leçons rédigées par votre enseignant et assignées à vos séances.</p>' +
+                '</div>' +
+                (lecons.length
+                    ? '<div class="row g-3">' + cartes + '</div>'
+                    : '<div class="content text-muted">' +
+                        '<i class="fas fa-book-open me-2"></i>Aucune leçon disponible pour le moment.' +
+                        '<div class="small mt-2">' +
+                            (user && !auth.maClasse()
+                                ? 'Rejoignez une classe depuis <a href="#/profil">Ma progression</a> pour accéder aux leçons de votre enseignant.'
+                                : 'Votre enseignant peut en créer depuis l\'onglet « Leçons » de son espace.') +
+                        '</div>' +
+                      '</div>') +
+            '</div>'
+        };
+    }
+
+    function vueLecon(id) {
+        const lecon = store.lecons.get(id);
+        if (!lecon) return vueIntrouvable('Cette leçon n\'existe pas ou n\'est pas accessible depuis votre espace.');
+        const matiere = data.getMatiere(lecon.matiere);
+        const niveau = lecon.niveau ? data.getNiveau(lecon.niveau) : null;
+
+        return {
+            titre: lecon.titre,
+            html: '<div class="container py-4">' +
+                '<nav aria-label="Fil d\'Ariane" class="mb-3">' +
+                    '<ol class="breadcrumb mb-0">' +
+                        '<li class="breadcrumb-item"><a href="#/">Accueil</a></li>' +
+                        '<li class="breadcrumb-item"><a href="#/lecons">Leçons</a></li>' +
+                        '<li class="breadcrumb-item active" aria-current="page">' + esc(lecon.titre) + '</li>' +
+                    '</ol>' +
+                '</nav>' +
+                '<article class="content">' +
+                    '<h1 class="h3 mb-2">' + esc(lecon.titre) + '</h1>' +
+                    '<p class="text-muted small mb-3">' +
+                        (matiere ? '<span class="badge bg-primary bg-opacity-10 text-primary me-2">' + esc(matiere.nom) + '</span>' : '') +
+                        (niveau ? esc(niveau.nom) : 'Tous niveaux') + ' · ' + (lecon.duree || 30) + ' min' +
+                    '</p>' +
+                    (lecon.resume ? '<p class="lead">' + esc(lecon.resume) + '</p>' : '') +
+                    ((lecon.objectifs || []).length
+                        ? '<div class="alert alert-info py-2"><strong class="d-block mb-1">Objectifs</strong>' +
+                            '<ul class="mb-0">' + lecon.objectifs.map(function (objectif) {
+                                return '<li>' + esc(objectif) + '</li>';
+                            }).join('') + '</ul></div>'
+                        : '') +
+                    '<div class="lecon-contenu">' +
+                        (lecon.contenuHtml ? store.nettoyerHtml(lecon.contenuHtml) : texteVersHtml(lecon.contenu)) +
+                    '</div>' +
+                    '<hr>' +
+                    '<div class="d-flex flex-wrap gap-2">' +
+                        '<a class="btn btn-outline-secondary btn-sm" href="#/lecons"><i class="fas fa-arrow-left me-1"></i>Toutes les leçons</a>' +
+                        '<a class="btn btn-outline-primary btn-sm" href="#/exercices"><i class="fas fa-gamepad me-1"></i>S\'entraîner</a>' +
+                        '<a class="btn btn-outline-primary btn-sm" href="#/seances"><i class="fas fa-calendar-days me-1"></i>Mes séances</a>' +
+                    '</div>' +
+                '</article>' +
+            '</div>'
+        };
+    }
+
+    function vueContact() {
+        const developpeur = data.developpeur || {};
+        const emailValide = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(developpeur.email || ''));
+
+        return {
+            titre: 'Contact',
+            html: '<div class="container py-4">' +
+                '<div class="row g-4">' +
+                    '<div class="col-lg-5">' +
+                        '<div class="content h-100">' +
+                            '<div class="text-center mb-3">' +
+                                '<i class="fas fa-code fa-2x text-primary mb-2"></i>' +
+                                '<h1 class="h4 mb-1">' + esc(developpeur.nom || 'Développeur') + '</h1>' +
+                                '<p class="text-muted mb-0">' + esc(developpeur.titre || '') + '</p>' +
+                            '</div>' +
+                            '<p class="mb-2">' + esc(developpeur.role || '') + '</p>' +
+                            (emailValide
+                                ? '<p class="mb-2"><i class="fas fa-envelope me-2"></i><a href="mailto:' + esc(developpeur.email) + '">' + esc(developpeur.email) + '</a></p>'
+                                : '<p class="text-muted small mb-2"><i class="fas fa-envelope me-2"></i>Adresse e-mail non publiée sur le site.</p>') +
+                            '<hr>' +
+                            '<p class="text-muted small mb-0"><i class="fas fa-circle-info me-1"></i>Formulaire de contact de LearnHub. Les messages sont enregistrés dans ce navigateur et consultables par le super-administrateur.</p>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="col-lg-7">' +
+                        '<div class="content">' +
+                            '<h2 class="h5 mb-3"><i class="fas fa-paper-plane me-2"></i>M\'écrire</h2>' +
+                            '<div id="contact-message" class="d-none"></div>' +
+                            '<form id="form-contact">' +
+                                '<div class="row g-3">' +
+                                    '<div class="col-md-6"><label class="form-label" for="contact-nom">Votre nom</label>' +
+                                        '<input class="form-control" id="contact-nom" required minlength="2" autocomplete="name"></div>' +
+                                    '<div class="col-md-6"><label class="form-label" for="contact-email">Votre e-mail</label>' +
+                                        '<input class="form-control" type="email" id="contact-email" required autocomplete="email"></div>' +
+                                '</div>' +
+                                '<div class="mt-3"><label class="form-label" for="contact-sujet">Sujet</label>' +
+                                    '<input class="form-control" id="contact-sujet" required minlength="3"></div>' +
+                                '<div class="mt-3"><label class="form-label" for="contact-message-texte">Message</label>' +
+                                    '<textarea class="form-control" id="contact-message-texte" rows="7" required minlength="10"></textarea></div>' +
+                                '<button class="btn btn-primary mt-3" type="submit"><i class="fas fa-paper-plane me-1"></i>Envoyer le message</button>' +
+                            '</form>' +
+                            '<div id="contact-actions" class="mt-3"></div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>',
+            after: function (racine) {
+                const zone = racine.querySelector('#contact-message');
+                const actions = racine.querySelector('#contact-actions');
+                const form = racine.querySelector('#form-contact');
+
+                function afficher(texte, type) {
+                    zone.className = 'alert alert-' + type + ' py-2';
+                    zone.textContent = texte;
+                }
+
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    const donnees = {
+                        nom: racine.querySelector('#contact-nom').value.trim(),
+                        email: racine.querySelector('#contact-email').value.trim(),
+                        sujet: racine.querySelector('#contact-sujet').value.trim(),
+                        message: racine.querySelector('#contact-message-texte').value.trim()
+                    };
+                    if (donnees.nom.length < 2) {
+                        afficher('Indiquez votre nom.', 'danger');
+                        return;
+                    }
+                    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(donnees.email)) {
+                        afficher('Adresse e-mail invalide.', 'danger');
+                        return;
+                    }
+                    if (donnees.sujet.length < 3) {
+                        afficher('Précisez un sujet.', 'danger');
+                        return;
+                    }
+                    if (donnees.message.length < 10) {
+                        afficher('Votre message est trop court (10 caractères minimum).', 'danger');
+                        return;
+                    }
+                    const enregistre = store.messages.add(donnees);
+                    if (!enregistre) {
+                        afficher('Enregistrement impossible (stockage du navigateur indisponible).', 'danger');
+                        return;
+                    }
+                    form.reset();
+                    afficher('Merci ' + donnees.nom + ', votre message a été enregistré.', 'success');
+                    if (emailValide) {
+                        const lien = 'mailto:' + developpeur.email +
+                            '?subject=' + encodeURIComponent('[LearnHub] ' + donnees.sujet) +
+                            '&body=' + encodeURIComponent(donnees.message + '\n\n— ' + donnees.nom + ' <' + donnees.email + '>');
+                        actions.innerHTML = '<a class="btn btn-outline-primary btn-sm" href="' + esc(lien) + '">' +
+                            '<i class="fas fa-envelope me-1"></i>Ouvrir dans ma messagerie</a>' +
+                            '<p class="small text-muted mt-2 mb-0">Vous pouvez aussi envoyer ce message directement par e-mail.</p>';
+                    } else {
+                        actions.innerHTML = '<p class="small text-muted mb-0">Le message reste consultable dans la super-administration de ce navigateur.</p>';
+                    }
+                });
+            }
+        };
+    }
+
     function vueExercices(parametres) {
         const user = auth.current();
         const exoCible = parametres ? parametres.get('exo') : null;
@@ -655,6 +868,15 @@
                 texte += ' ' + (exercice.quotes || []).map(function (q) { return q.text.replace(/<[^>]+>/g, ' '); }).join(' ');
             }
             entrees.push({ type: 'Exercice', titre: exercice.titre, texte: texte, url: '#/exercices' });
+        });
+        store.lecons.all().forEach(function (lecon) {
+            const matiere = data.getMatiere(lecon.matiere);
+            entrees.push({
+                type: 'Leçon',
+                titre: lecon.titre,
+                texte: [lecon.titre, lecon.resume, matiere ? matiere.nom : '', (lecon.objectifs || []).join(' '), lecon.contenu].join(' '),
+                url: '#/lecon/' + lecon.id
+            });
         });
         store.ressources.all().forEach(function (ressource) {
             entrees.push({
@@ -998,6 +1220,7 @@
                 return exercice ? { id: id, titre: exercice.titre, type: exercice.type } : null;
             }).filter(Boolean);
             const chapitres = (seance.chapitres || []).map(function (id) { return data.getChapitre(id); }).filter(Boolean);
+            const lecons = (seance.lecons || []).map(function (id) { return store.lecons.get(id); }).filter(Boolean);
             const faits = exercices.filter(function (ex) { return scoreExercice(ex.id) !== null; }).length;
             const moyenne = exercices.length
                 ? Math.round(exercices.reduce(function (acc, ex) {
@@ -1025,6 +1248,15 @@
                         return '<li class="border-bottom py-1"><a href="#/chapitre/' + esc(chapitre.id) + '">' +
                             '<i class="fas fa-book-open me-1 text-primary"></i>' + esc(chapitre.titre) + '</a>' +
                             '<span class="text-muted small ms-2">' + esc(chapitre.matiereNom || '') + '</span></li>';
+                      }).join('') + '</ul>'
+                    : '') +
+                (lecons.length
+                    ? '<h3 class="h6">Leçons à étudier</h3>' +
+                      '<ul class="list-unstyled mb-3">' + lecons.map(function (lecon) {
+                        const matiere = data.getMatiere(lecon.matiere);
+                        return '<li class="border-bottom py-1"><a href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
+                            '<i class="fas fa-book-open me-1 text-primary"></i>' + esc(lecon.titre) + '</a>' +
+                            (matiere ? '<span class="text-muted small ms-2">' + esc(matiere.nom) + '</span>' : '') + '</li>';
                       }).join('') + '</ul>'
                     : '') +
                 (exercices.length
@@ -1125,6 +1357,9 @@
         const totalSupers = comptes.filter(function (c) { return c.role === 'superadmin'; }).length;
         const totalClasses = store.classes.all().length;
         const totalSeances = store.seances.all().length;
+        const messages = store.messages.all().slice().sort(function (a, b) {
+            return new Date(b.date) - new Date(a.date);
+        });
 
         const lignes = comptes.map(function (compte) {
             const infos = infosEspaceCompte(compte);
@@ -1210,6 +1445,26 @@
                         '<tbody>' + lignes + '</tbody>' +
                     '</table></div>' +
                     '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Les comptes et leurs données restent stockés dans ce navigateur. Le rôle « super-admin » ne peut être attribué que depuis cette page.</p>' +
+                '</div>' +
+                '<div class="admin-panel mt-4" id="messages-panel">' +
+                    '<h2 class="h5 mb-3"><i class="fas fa-inbox me-2"></i>Messages reçus (' + messages.length + ')</h2>' +
+                    (messages.length
+                        ? '<div class="list-group">' + messages.map(function (message) {
+                            return '<div class="list-group-item">' +
+                                '<div class="d-flex flex-wrap justify-content-between align-items-start gap-2">' +
+                                    '<div>' +
+                                        '<div class="fw-semibold">' + esc(message.sujet) + '</div>' +
+                                        '<div class="small text-muted">' + esc(message.nom) + ' · ' +
+                                            '<a href="mailto:' + esc(message.email) + '">' + esc(message.email) + '</a> · ' +
+                                            new Date(message.date).toLocaleString('fr-FR') + '</div>' +
+                                    '</div>' +
+                                    '<button class="btn btn-sm btn-outline-danger" data-action="supprimer-message" data-id="' + esc(message.id) + '" title="Supprimer le message">' +
+                                        '<i class="fas fa-trash"></i></button>' +
+                                '</div>' +
+                                '<p class="mb-0 mt-2 small" style="white-space:pre-line">' + esc(message.message) + '</p>' +
+                            '</div>';
+                        }).join('') + '</div>'
+                        : '<p class="text-muted mb-0">Aucun message. Les visiteurs peuvent écrire depuis la page <a href="#/contact">Contact</a>.</p>') +
                 '</div>' +
             '</div>',
             after: function (racine) {
@@ -1345,6 +1600,18 @@
                     document.body.removeChild(lien);
                     URL.revokeObjectURL(lien.href);
                 });
+
+                const panneauMessages = racine.querySelector('#messages-panel');
+                if (panneauMessages) {
+                    panneauMessages.addEventListener('click', function (event) {
+                        const bouton = event.target.closest('button[data-action="supprimer-message"]');
+                        if (!bouton) return;
+                        if (!window.confirm('Supprimer ce message ?')) return;
+                        store.messages.remove(bouton.dataset.id);
+                        toast('Message supprimé.');
+                        router();
+                    });
+                }
             }
         };
     }
@@ -1352,6 +1619,7 @@
     const SECTIONS_ADMIN = [
         { slug: 'dashboard', titre: 'Tableau de bord', icone: 'fa-tachometer-alt' },
         { slug: 'classes', titre: 'Classes', icone: 'fa-users-rectangle' },
+        { slug: 'lecons', titre: 'Leçons', icone: 'fa-book-open' },
         { slug: 'seances', titre: 'Séances', icone: 'fa-calendar-days' },
         { slug: 'exercices', titre: 'Exercices', icone: 'fa-tasks' },
         { slug: 'ressources', titre: 'Ressources', icone: 'fa-file-pdf' },
@@ -1434,6 +1702,9 @@
             case 'niveau': return vueNiveau(segments[1]);
             case 'chapitre': return vueChapitre(segments[1]);
             case 'cours': return vueCours(segments[1], segments[2]);
+            case 'lecons': return vueLecons();
+            case 'lecon': return vueLecon(segments[1]);
+            case 'contact': return vueContact();
             case 'exercices': return vueExercices(parametres);
             case 'seances': return vueSeances();
             case 'recherche': return vueRecherche(parametres);

@@ -71,3 +71,47 @@
         padding: 14px;
     }
 }
+
+/* Éditeur de leçon (mise en forme riche) */
+.rich-editor {
+    min-height: 260px;
+    max-height: 520px;
+    overflow-y: auto;
+    background-color: #fff;
+    line-height: 1.6;
+}
+
+.rich-editor:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.rich-editor h2 { font-size: 1.35rem; margin: 1rem 0 0.5rem; }
+.rich-editor h3 { font-size: 1.15rem; margin: 0.9rem 0 0.4rem; }
+.rich-editor blockquote {
+    border-left: 4px solid #dee2e6;
+    margin: 0.75rem 0;
+    padding-left: 1rem;
+    color: #495057;
+}
+.rich-editor ul,
+.rich-editor ol { padding-left: 1.5rem; }
+.rich-editor p:last-child { margin-bottom: 0; }
+
+.rich-toolbar .btn {
+    padding: 0.15rem 0.45rem;
+}
+
+/* Rendu d'une leçon côté élève */
+.lecon-contenu h2 { font-size: 1.4rem; margin: 1.25rem 0 0.5rem; }
+.lecon-contenu h3 { font-size: 1.15rem; margin: 1rem 0 0.4rem; }
+.lecon-contenu blockquote {
+    border-left: 4px solid #dee2e6;
+    margin: 1rem 0;
+    padding-left: 1rem;
+    color: #495057;
+}
+.lecon-contenu ul,
+.lecon-contenu ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+.lecon-contenu p { margin-bottom: 0.9rem; }
+.lecon-contenu a { color: #6a1b9a; text-decoration: underline; }
