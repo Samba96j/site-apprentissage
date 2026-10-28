@@ -17,3 +17,4 @@ desktop.ini
 scripts/node_modules/
 scripts/.env
 scripts/.import-state.json
+scripts/.migration-r2.json

@@ -67,6 +67,19 @@ Le script :
 - remplit **titre, auteur, matière et niveau** depuis le catalogue `database.db` (rapprochement sur le nom de fichier) ;
 - supprime les doublons créés par un import de test sur R2 (`--garder-doublons` pour les conserver).
 
+## Migrer les fichiers de Supabase Storage vers R2
+
+Si des livres ont d'abord été envoyés sur Supabase Storage (quota gratuit : 1 Go), ce script les transfère sur R2 et met à jour les URL :
+
+```powershell
+node migrer-vers-r2.js --dry-run          # liste ce qui serait transféré
+node migrer-vers-r2.js --limit 5          # test sur 5 fichiers
+node migrer-vers-r2.js                    # migration complète
+node migrer-vers-r2.js --sans-suppression # garde les fichiers sur Supabase
+```
+
+Il télécharge chaque fichier, l'envoie sur R2, met à jour la ligne en base, puis supprime le fichier d'origine dans Supabase Storage (quota libéré). La progression est enregistrée dans `.migration-r2.json` : en cas de coupure, relancez simplement la commande.
+
 ## Options
 
 | Option | Effet |
