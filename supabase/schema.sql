@@ -171,8 +171,23 @@ create table if not exists public.documents (
     url text not null,
     taille text,
     auteur text,
+    visibilite text not null default 'public',
     created_at timestamptz not null default now()
 );
+
+-- Visibilité : 'public' (tout le monde), 'eleves' (comptes connectés),
+-- 'enseignants' (admin et super-admin).
+alter table public.documents add column if not exists visibilite text not null default 'public';
+
+do $$
+begin
+    if not exists (select 1 from pg_constraint where conname = 'documents_visibilite_check') then
+        alter table public.documents
+            add constraint documents_visibilite_check
+            check (visibilite in ('public', 'eleves', 'enseignants'));
+    end if;
+end;
+$$;
 
 create index if not exists idx_documents_matiere on public.documents (matiere);
 create index if not exists idx_documents_niveau on public.documents (niveau);
@@ -620,7 +635,11 @@ create policy messages_delete on public.messages
 -- Bibliothèque publique ------------------------------------------------------
 drop policy if exists documents_select on public.documents;
 create policy documents_select on public.documents
-    for select using (true);
+    for select using (
+        visibilite = 'public'
+        or (auth.uid() is not null and visibilite = 'eleves')
+        or (visibilite = 'enseignants' and public.mon_role() in ('admin', 'superadmin'))
+    );
 
 drop policy if exists documents_write on public.documents;
 create policy documents_write on public.documents

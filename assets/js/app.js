@@ -729,6 +729,11 @@
                     const badges = [];
                     if (document.matiere) badges.push('<span class="badge text-bg-primary">' + esc(nomMatiere(document.matiere)) + '</span>');
                     if (document.niveau) badges.push('<span class="badge text-bg-secondary">' + esc(nomNiveau(document.niveau)) + '</span>');
+                    const visibilite = document.visibilite || 'public';
+                    if (visibilite !== 'public') {
+                        badges.push('<span class="badge text-bg-warning"><i class="fas fa-lock me-1"></i>' +
+                            (visibilite === 'enseignants' ? 'Enseignants' : 'Élèves') + '</span>');
+                    }
                     return '<div class="col">' +
                         '<div class="card h-100 border-0 shadow-sm">' +
                             '<div class="card-body d-flex flex-column">' +
@@ -770,19 +775,34 @@
                     });
                     compteur.textContent = resultats.length + ' document(s)';
                     if (!documents.length) {
-                        liste.innerHTML = '<div class="content text-center py-5">' +
-                            '<i class="fas fa-book-open fa-3x text-primary mb-3"></i>' +
-                            '<h2 class="h5">La bibliothèque est encore vide</h2>' +
-                            '<p class="text-muted">Revenez bientôt : des documents seront ajoutés.</p>' +
-                        '</div>';
+                        const connecte = !!(window.LearnHubAuth && window.LearnHubAuth.current());
+                        liste.innerHTML = connecte
+                            ? '<div class="content text-center py-5">' +
+                                '<i class="fas fa-book-open fa-3x text-primary mb-3"></i>' +
+                                '<h2 class="h5">La bibliothèque est encore vide</h2>' +
+                                '<p class="text-muted">Revenez bientôt : des documents seront ajoutés.</p>' +
+                              '</div>'
+                            : '<div class="content text-center py-5">' +
+                                '<i class="fas fa-lock fa-3x text-primary mb-3"></i>' +
+                                '<h2 class="h5">Bibliothèque réservée aux élèves</h2>' +
+                                '<p class="text-muted">Les documents sont accessibles une fois connecté avec votre compte LearnHub.</p>' +
+                                '<a class="btn btn-primary" href="#/connexion?next=bibliotheque">Se connecter</a>' +
+                              '</div>';
                         return;
                     }
                     if (!resultats.length) {
                         liste.innerHTML = '<div class="content text-center py-5 text-muted">Aucun document ne correspond à votre recherche.</div>';
                         return;
                     }
+                    const connecte = !!(window.LearnHubAuth && window.LearnHubAuth.current());
+                    const note = !connecte
+                        ? '<div class="alert alert-info mt-4 mb-0"><i class="fas fa-lock me-1"></i>' +
+                            'Certains documents sont réservés aux élèves connectés. ' +
+                            '<a class="alert-link" href="#/connexion?next=bibliotheque">Se connecter</a>' +
+                          '</div>'
+                        : '';
                     liste.innerHTML = '<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">' +
-                        resultats.map(carte).join('') + '</div>';
+                        resultats.map(carte).join('') + '</div>' + note;
                 }
 
                 const b = window.LearnHubBackend;

@@ -60,6 +60,13 @@ node importer-bibliotheque.js               # import complet
 | `--limit <n>` | N'importer que les n premiers fichiers |
 | `--dry-run` | Simuler sans rien envoyer |
 | `--reset` | Ignorer l'état de reprise et tout réimporter |
+| `--visibilite <v>` | `eleves` (défaut), `public` ou `enseignants` |
+
+## Visibilité des documents
+
+Par défaut, tout ce qui est importé est **réservé aux élèves connectés** (`--visibilite eleves`) : un visiteur non connecté ne voit rien, et ne peut pas accéder aux lignes même en appelant l'API, car la restriction est appliquée par la politique RLS de Supabase.
+
+Pour rendre certains ouvrages publics, passez `--visibilite public` lors de l'import, ou changez la visibilité dans la liste de `#/admin/bibliotheque`.
 
 ## Droits d'auteur
 

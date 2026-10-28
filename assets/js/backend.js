@@ -732,11 +732,29 @@ window.LearnHubBackend = (function () {
             type: String((donnees && donnees.type) || 'pdf').trim() || 'pdf',
             url: url,
             taille: taille,
-            auteur: String((donnees && donnees.auteur) || '').trim()
+            auteur: String((donnees && donnees.auteur) || '').trim(),
+            visibilite: ['public', 'eleves', 'enseignants'].indexOf(donnees && donnees.visibilite) !== -1
+                ? donnees.visibilite
+                : 'public'
         };
 
         const insertion = await client.from('documents').insert(ligne).select();
-        if (insertion.error) return { ok: false, error: insertion.error.message };
+        if (insertion.error) {
+            // Colonne `visibilite` absente : migration non exécutée. On réessaie
+            // sans elle pour ne pas bloquer la publication.
+            if (/visibilite/i.test(insertion.error.message || '')) {
+                const secours = Object.assign({}, ligne);
+                delete secours.visibilite;
+                const seconde = await client.from('documents').insert(secours).select();
+                if (seconde.error) return { ok: false, error: seconde.error.message };
+                return {
+                    ok: true,
+                    document: seconde.data && seconde.data[0],
+                    avertissement: 'Document publié, mais la restriction de visibilité n\'est pas installée : exécutez supabase/migration-bibliotheque-visibilite.sql.'
+                };
+            }
+            return { ok: false, error: insertion.error.message };
+        }
         return { ok: true, document: insertion.data && insertion.data[0] };
     }
 
@@ -755,6 +773,17 @@ window.LearnHubBackend = (function () {
                     .catch(function () { /* l'objet peut déjà être absent */ });
             }
         }
+        return { ok: true };
+    }
+
+    async function mettreAJourDocument(id, champs) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        if (!id) return { ok: false, error: 'Document introuvable.' };
+        const autorise = {};
+        if (champs && champs.visibilite) autorise.visibilite = champs.visibilite;
+        if (!Object.keys(autorise).length) return { ok: false, error: 'Rien à modifier.' };
+        const resultat = await client.from('documents').update(autorise).eq('id', id);
+        if (resultat.error) return { ok: false, error: resultat.error.message };
         return { ok: true };
     }
 
@@ -787,6 +816,7 @@ window.LearnHubBackend = (function () {
         listerDocuments: listerDocuments,
         ajouterDocument: ajouterDocument,
         supprimerDocument: supprimerDocument,
+        mettreAJourDocument: mettreAJourDocument,
         erreur: function () { return derniereErreur; }
     };
 })();

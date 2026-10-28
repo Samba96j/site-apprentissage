@@ -1763,17 +1763,23 @@ window.LearnHubAdmin = (function () {
                 }
                 liste.innerHTML =
                     '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
-                        '<thead><tr><th>Titre</th><th>Matière</th><th>Niveau</th><th>Format</th><th>Taille</th><th class="text-end">Actions</th></tr></thead>' +
+                        '<thead><tr><th>Titre</th><th>Matière</th><th>Niveau</th><th>Format</th><th>Taille</th><th>Visibilité</th><th class="text-end">Actions</th></tr></thead>' +
                         '<tbody>' + documents.map(function (doc) {
                             const matiere = window.LearnHubData.getMatiere(doc.matiere);
                             const niveau = window.LearnHubData.niveaux.find(function (n) { return n.slug === doc.niveau; });
+                            const visibilite = doc.visibilite || 'public';
                             return '<tr>' +
                                 '<td class="fw-semibold">' + esc(doc.titre) +
                                     (doc.auteur ? '<div class="small text-muted">' + esc(doc.auteur) + '</div>' : '') + '</td>' +
-                                '<td class="small">' + esc(matiere ? matiere.nom : '—') + '</td>' +
-                                '<td class="small">' + esc(niveau ? niveau.nom : '—') + '</td>' +
+                                '<td class="small">' + esc(matiere ? matiere.nom : (doc.matiere || '—')) + '</td>' +
+                                '<td class="small">' + esc(niveau ? niveau.nom : (doc.niveau || '—')) + '</td>' +
                                 '<td class="small">' + esc(doc.type || 'pdf') + '</td>' +
                                 '<td class="small text-muted">' + esc(doc.taille || '—') + '</td>' +
+                                '<td><select class="form-select form-select-sm" data-action="visibilite" data-id="' + esc(doc.id) + '" style="min-width:150px">' +
+                                    '<option value="public"' + (visibilite === 'public' ? ' selected' : '') + '>Tout public</option>' +
+                                    '<option value="eleves"' + (visibilite === 'eleves' ? ' selected' : '') + '>Élèves connectés</option>' +
+                                    '<option value="enseignants"' + (visibilite === 'enseignants' ? ' selected' : '') + '>Enseignants</option>' +
+                                '</select></td>' +
                                 '<td class="text-end text-nowrap">' +
                                     '<a class="btn btn-sm btn-outline-primary me-1" href="' + esc(doc.url) + '" target="_blank" rel="noopener" title="Ouvrir"><i class="fas fa-eye"></i></a>' +
                                     '<button class="btn btn-sm btn-outline-danger" data-action="supprimer-document" data-id="' + esc(doc.id) + '" title="Supprimer"><i class="fas fa-trash"></i></button>' +
@@ -1811,6 +1817,12 @@ window.LearnHubAdmin = (function () {
                             '</select></div>' +
                         '<div class="col-md-4"><label class="form-label" for="lot-auteur">Auteur / source</label>' +
                             '<input type="text" class="form-control" id="lot-auteur" placeholder="Facultatif"></div>' +
+                        '<div class="col-md-4"><label class="form-label" for="lot-visibilite">Visibilité</label>' +
+                            '<select class="form-select" id="lot-visibilite">' +
+                                '<option value="eleves" selected>Élèves connectés</option>' +
+                                '<option value="public">Tout public</option>' +
+                                '<option value="enseignants">Enseignants seulement</option>' +
+                            '</select></div>' +
                     '</div>' +
                     '<div class="d-flex gap-2 mt-3">' +
                         '<button class="btn btn-primary" id="lancer-lot"><i class="fas fa-upload me-1"></i>Importer</button>' +
@@ -1847,6 +1859,7 @@ window.LearnHubAdmin = (function () {
                 const matiere = zoneLot.querySelector('#lot-matiere').value;
                 const niveau = zoneLot.querySelector('#lot-niveau').value;
                 const auteur = zoneLot.querySelector('#lot-auteur').value;
+                const visibilite = zoneLot.querySelector('#lot-visibilite').value;
 
                 bouton.disabled = true;
                 bouton.innerHTML = '<i class="fas fa-circle-notch fa-spin me-1"></i>Import en cours…';
@@ -1866,6 +1879,7 @@ window.LearnHubAdmin = (function () {
                         matiere: matiere,
                         niveau: niveau,
                         type: typeDepuisNom(fichier.name),
+                        visibilite: visibilite,
                         description: '',
                         fichier: fichier,
                         url: ''
@@ -1929,6 +1943,12 @@ window.LearnHubAdmin = (function () {
                                 '<option value="word">Word / Texte</option>' +
                                 '<option value="autre">Autre</option>' +
                             '</select></div>' +
+                        '<div class="col-md-4"><label class="form-label" for="doc-visibilite">Visibilité</label>' +
+                            '<select class="form-select" id="doc-visibilite">' +
+                                '<option value="eleves" selected>Élèves connectés</option>' +
+                                '<option value="public">Tout public</option>' +
+                                '<option value="enseignants">Enseignants seulement</option>' +
+                            '</select></div>' +
                         '<div class="col-12"><label class="form-label" for="doc-description">Description</label>' +
                             '<textarea class="form-control" id="doc-description" rows="2"></textarea></div>' +
                         '<div class="col-md-6"><label class="form-label" for="doc-fichier">Fichier (PDF, DOC, TXT…)</label>' +
@@ -1972,6 +1992,7 @@ window.LearnHubAdmin = (function () {
                     matiere: formulaire.querySelector('#doc-matiere').value,
                     niveau: formulaire.querySelector('#doc-niveau').value,
                     type: formulaire.querySelector('#doc-type').value,
+                    visibilite: formulaire.querySelector('#doc-visibilite').value,
                     description: formulaire.querySelector('#doc-description').value,
                     fichier: fichier || null,
                     url: url
@@ -1989,6 +2010,19 @@ window.LearnHubAdmin = (function () {
                 message(zoneMessage, 'Document publié dans la bibliothèque.', 'success');
                 rafraichir();
             });
+        });
+
+        liste.addEventListener('change', async function (event) {
+            const select = event.target.closest('select[data-action="visibilite"]');
+            if (!select) return;
+            select.disabled = true;
+            const resultat = await b.mettreAJourDocument(select.dataset.id, { visibilite: select.value });
+            select.disabled = false;
+            if (!resultat.ok) {
+                message(zoneMessage, resultat.error, 'danger');
+                return;
+            }
+            message(zoneMessage, 'Visibilité mise à jour.', 'success');
         });
 
         liste.addEventListener('click', async function (event) {

@@ -32,12 +32,14 @@ function lireArguments() {
         limite: 0,
         simulation: false,
         reinitialiser: false,
-        dossierCatalogue: 'pdf'
+        dossierCatalogue: 'pdf',
+        visibilite: 'eleves'
     };
     for (let i = 0; i < args.length; i++) {
         const a = args[i];
         if (a === '--source') options.source = args[++i];
         else if (a === '--limit') options.limite = Number(args[++i]) || 0;
+        else if (a === '--visibilite') options.visibilite = args[++i];
         else if (a === '--dry-run' || a === '--simulation') options.simulation = true;
         else if (a === '--reset') options.reinitialiser = true;
         else if (a === '--help' || a === '-h') options.aide = true;
@@ -251,7 +253,7 @@ async function connecterSupabase(env) {
     return { url: url, jeton: donnees.access_token };
 }
 
-async function enregistrerDocument(session, env, entree, urlPublique) {
+async function enregistrerDocument(session, env, entree, urlPublique, visibilite) {
     const identifiant = 'doc-' + crypto.createHash('sha1').update(entree.fichier).digest('hex').slice(0, 18);
     const ligne = {
         id: identifiant,
@@ -262,7 +264,8 @@ async function enregistrerDocument(session, env, entree, urlPublique) {
         type: entree.type,
         url: urlPublique,
         taille: entree.taille,
-        auteur: entree.auteur || null
+        auteur: entree.auteur || null,
+        visibilite: visibilite || 'eleves'
     };
     const reponse = await fetch(session.url + '/rest/v1/documents?on_conflict=id', {
         method: 'POST',
@@ -310,6 +313,7 @@ async function principal() {
             '  --source <dossier>  Projet contenant database.db et le dossier des livres',
             '                      (défaut : BIBLIO_SOURCE du .env)',
             '  --limit <n>         N\'importer que les n premiers fichiers',
+            '  --visibilite <v>    public | eleves | enseignants (défaut : eleves)',
             '  --dry-run           Simuler sans rien envoyer',
             '  --reset             Ignorer l\'état de reprise et tout réimporter'
         ].join('\n'));
@@ -342,6 +346,8 @@ async function principal() {
     const poidsTotal = entrees.reduce(function (acc, e) { return acc + e.tailleOctets; }, 0);
 
     console.log(entrees.length + ' fichier(s), ' + formaterTaille(poidsTotal) + ' à envoyer.');
+    console.log('Visibilité : ' + options.visibilite +
+        (options.visibilite === 'eleves' ? ' (comptes connectés uniquement)' : ''));
     if (options.simulation) {
         entrees.slice(0, 10).forEach(function (e) {
             console.log('  · ' + e.fichier + '  →  « ' + e.titre + ' »  [' + e.matiere + '/' + e.niveau + '/' + e.type + ']');
@@ -378,7 +384,7 @@ async function principal() {
             try {
                 const cle = await envoyerVersR2(client, env, entree);
                 const urlPublique = String(env.R2_PUBLIC_BASE).replace(/\/+$/, '') + '/' + cle;
-                await enregistrerDocument(session, env, entree, urlPublique);
+                await enregistrerDocument(session, env, entree, urlPublique, options.visibilite);
                 etat.faits[entree.fichier] = { cle: cle, url: urlPublique, quand: new Date().toISOString() };
                 ecrireEtat(fichierEtat, etat);
                 fait = true;

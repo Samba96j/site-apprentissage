@@ -122,7 +122,7 @@ GitHub Pages ne peut pas exécuter de code serveur, mais le site appelle une **A
 - Configuration : [assets/js/supabase-config.js](assets/js/supabase-config.js) (`backend`, `supabaseUrl`, `supabaseKey`). La clé `publishable`/`anon` est publique ; **ne jamais** mettre la clé `secret`/`service_role` dans le site.
 - Schéma, politiques RLS et guide : [supabase/README.md](supabase/README.md) et [supabase/schema.sql](supabase/schema.sql).
 - Visiteur non connecté : catalogue public local (comme avant) et bibliothèque publique.
-- Bibliothèque : page `#/bibliotheque` (recherche + filtres matière/niveau/format) ; gestion dans `#/admin/bibliotheque`, avec ajout unitaire ou **import par lot** (plusieurs fichiers, envoi séquentiel avec progression). Fichiers hébergés dans Supabase Storage (bucket `documents`).
+- Bibliothèque : page `#/bibliotheque` (recherche + filtres matière/niveau/format) ; gestion dans `#/admin/bibliotheque`, avec ajout unitaire ou **import par lot** (plusieurs fichiers, envoi séquentiel avec progression). Chaque document a une visibilité : **élèves connectés** (par défaut), tout public, ou enseignants seulement. Fichiers hébergés dans Supabase Storage (bucket `documents`) ou Cloudflare R2 pour les gros volumes.
 - Utilisateur connecté : espace, classes, leçons, exercices, séances et résultats chargés depuis Supabase et synchronisés à l'enregistrement.
 - Élève : rejoint une classe avec son code ; l'enseignant voit les résultats sur un autre appareil.
 - Comptes : inscription/connexion par e-mail ; mot de passe géré par Supabase. Le super-administrateur gère les comptes (création, rôle, suppression) depuis `#/superadmin`.

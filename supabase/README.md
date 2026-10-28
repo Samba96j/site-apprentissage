@@ -19,7 +19,8 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 - [migration-seances-text-ids.sql](migration-seances-text-ids.sql) — colonnes de `seances` en `text[]` ;
 - [migration-profil-trigger.sql](migration-profil-trigger.sql) — déclencheur des profils : attribution du rôle `superadmin` depuis le SQL Editor, suppression d'une classe peuplée, et blocage de l'affectation directe à une classe ;
 - [migration-comptes-admin.sql](migration-comptes-admin.sql) — fonctions `admin_supprimer_compte` et `admin_changer_role` qui permettent la gestion des comptes depuis la page Super-administration ;
-- [migration-bibliotheque.sql](migration-bibliotheque.sql) — table `documents` et bucket de stockage `documents` de la bibliothèque publique.
+- [migration-bibliotheque.sql](migration-bibliotheque.sql) — table `documents` et bucket de stockage `documents` de la bibliothèque publique ;
+- [migration-bibliotheque-visibilite.sql](migration-bibliotheque-visibilite.sql) — colonne `visibilite` (public / élèves / enseignants) et politique RLS correspondante.
 
 ## 3. Authentification
 
@@ -62,13 +63,23 @@ Ces deux valeurs seront placées dans un fichier `assets/js/supabase-config.js` 
 
 ### Bibliothèque et stockage
 
-Les fichiers sont hébergés dans le bucket Supabase Storage **`documents`** (public, 5 Go gratuits). Les métadonnées (titre, matière, niveau, format, auteur, taille) sont dans la table `documents`.
+Les fichiers sont hébergés dans le bucket Supabase Storage **`documents`** (public, 5 Go gratuits) — ou dans **Cloudflare R2** pour les imports volumineux (voir `scripts/`). Les métadonnées (titre, matière, niveau, format, auteur, taille, visibilité) sont dans la table `documents`.
 
-- Lecture : tout le monde, connecté ou non (page `#/bibliotheque`).
+**Visibilité** (colonne `visibilite`) :
+
+| Valeur | Qui voit le document |
+|---|---|
+| `public` | Tout le monde, même sans compte |
+| `eleves` | Comptes connectés (élèves, enseignants, super-admin) — **valeur par défaut** |
+| `enseignants` | Rôles `admin` et `superadmin` uniquement |
+
+La restriction est appliquée par la politique RLS `documents_select`, pas seulement par l'interface : un visiteur non connecté ne peut pas lire les lignes `eleves`, même en appelant l'API directement.
+
 - Écriture : rôles `admin` et `superadmin` uniquement (page `#/admin/bibliotheque`).
 - Formats acceptés : PDF, DOC/DOCX, TXT, ODT, EPUB, ou un lien externe.
-- **Import par lot** : sélectionnez plusieurs fichiers d'un coup ; ils sont envoyés un par un avec une barre de progression, le titre étant repris du nom du fichier (`03_les-fractions.pdf` → « Les fractions »). La matière, le niveau et l'auteur choisis s'appliquent à tout le lot.
+- **Import par lot** : sélectionnez plusieurs fichiers d'un coup ; ils sont envoyés un par un avec une barre de progression, le titre étant repris du nom du fichier (`03_les-fractions.pdf` → « Les fractions »). La matière, le niveau, l'auteur et la visibilité choisis s'appliquent à tout le lot.
 - La suppression retire la ligne **et** le fichier du bucket.
+- La visibilité de chaque document se change directement dans la liste admin.
 
 ## 6. Sécurité (RLS)
 
