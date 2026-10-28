@@ -569,6 +569,115 @@ window.LearnHubBackend = (function () {
         });
     }
 
+    /* -------------------------- Gestion des comptes ----------------------- */
+
+    // Un second client, sans persistance, permet de créer un compte sans
+    // remplacer la session du super-administrateur en cours.
+    function clientTemporaire() {
+        return window.supabase.createClient(url, cle, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false,
+                storageKey: 'learnhub.creation.' + Date.now()
+            }
+        });
+    }
+
+    async function creerCompte(donnees) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        const email = String(donnees.email || '').trim().toLowerCase();
+        const username = String(donnees.username || '').trim();
+        const motDePasse = String(donnees.password || '');
+        const role = donnees.role === 'superadmin' || donnees.role === 'admin' ? donnees.role : 'eleve';
+
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, error: 'Adresse e-mail invalide.' };
+        if (username.length < 3) return { ok: false, error: "Le nom d'utilisateur doit contenir au moins 3 caractères." };
+        if (motDePasse.length < 6) return { ok: false, error: 'Le mot de passe doit contenir au moins 6 caractères.' };
+
+        const provisoire = clientTemporaire();
+        // Le déclencheur refuse le rôle super-admin à l'inscription : on crée un
+        // compte élève puis on promeut, ce qui laisse une trace contrôlée.
+        const cree = await provisoire.auth.signUp({
+            email: email,
+            password: motDePasse,
+            options: { data: { username: username, role: role === 'superadmin' ? 'eleve' : role } }
+        });
+        if (cree.error) return { ok: false, error: traduireErreur(cree.error) };
+
+        const utilisateur = cree.data && cree.data.user;
+        if (!utilisateur) return { ok: false, error: 'Création impossible : réponse inattendue de Supabase.' };
+        if (!cree.data.session) {
+            return {
+                ok: false,
+                error: 'Compte créé mais la confirmation par e-mail est activée : l\'utilisateur devra confirmer son adresse avant de se connecter.'
+            };
+        }
+
+        if (role === 'superadmin') {
+            const promotion = await client.rpc('admin_changer_role', { p_id: utilisateur.id, p_role: 'superadmin' });
+            await initSession();
+            const compte = utilisateurs.find(function (u) { return u.id === utilisateur.id; }) || null;
+            if (promotion.error) {
+                return {
+                    ok: true,
+                    compte: compte,
+                    avertissement: 'Compte créé en élève : la promotion super-admin a échoué (' + traduireErreurAdmin(promotion.error) + ').'
+                };
+            }
+            return { ok: true, compte: compte };
+        }
+
+        await initSession();
+        const compte = utilisateurs.find(function (u) { return u.id === utilisateur.id; }) || null;
+        return { ok: true, compte: compte };
+    }
+
+    function traduireErreurAdmin(erreur) {
+        const message = (erreur && erreur.message) || '';
+        if (/could not find the function|function .* does not exist/i.test(message)) {
+            return 'fonction serveur manquante, exécutez supabase/migration-comptes-admin.sql dans le SQL Editor';
+        }
+        if (/Réservé au super-administrateur/i.test(message)) {
+            return 'action réservée au super-administrateur';
+        }
+        return message || 'action impossible';
+    }
+
+    async function supprimerCompte(id) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        if (!id) return { ok: false, error: 'Compte introuvable.' };
+        if (profil && profil.id === id) return { ok: false, error: 'Impossible de supprimer votre propre compte.' };
+        const resultat = await client.rpc('admin_supprimer_compte', { p_id: id });
+        if (resultat.error) {
+            return { ok: false, error: traduireErreurAdmin(resultat.error) };
+        }
+        await initSession();
+        return { ok: true };
+    }
+
+    async function changerRole(id, role) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        if (['eleve', 'admin', 'superadmin'].indexOf(role) === -1) return { ok: false, error: 'Rôle inconnu.' };
+        if (profil && profil.id === id && role !== 'superadmin') {
+            return { ok: false, error: 'Vous ne pouvez pas retirer votre propre rôle super-administrateur.' };
+        }
+        const resultat = await client.rpc('admin_changer_role', { p_id: id, p_role: role });
+        if (resultat.error) return { ok: false, error: traduireErreurAdmin(resultat.error) };
+        await initSession();
+        return { ok: true };
+    }
+
+    async function renommerCompte(id, username) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        const nom = String(username || '').trim();
+        if (nom.length < 3) return { ok: false, error: "Le nom d'utilisateur doit contenir au moins 3 caractères." };
+        const resultat = await client.from('profiles').update({ username: nom }).eq('id', id);
+        if (resultat.error) return { ok: false, error: resultat.error.message };
+        await initSession();
+        return { ok: true };
+    }
+
     return {
         disponible: disponible,
         estActif: estActif,
@@ -591,6 +700,10 @@ window.LearnHubBackend = (function () {
         ajouterTentative: ajouterTentative,
         effacerProgression: effacerProgression,
         ajouterMessage: ajouterMessage,
+        creerCompte: creerCompte,
+        supprimerCompte: supprimerCompte,
+        changerRole: changerRole,
+        renommerCompte: renommerCompte,
         erreur: function () { return derniereErreur; }
     };
 })();

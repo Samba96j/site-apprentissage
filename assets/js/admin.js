@@ -749,7 +749,7 @@ window.LearnHubAdmin = (function () {
                             '<td class="text-muted small">' + esc(user.email) + '</td>' +
                             '<td class="small">' + esc(classe ? classe.nom : '—') + '</td>' +
                             '<td>' +
-                                '<select class="form-select form-select-sm" data-action="role" data-username="' + esc(user.username) + '" style="max-width:120px" ' + (backendActif ? 'disabled title="Géré dans Supabase"' : '') + '>' +
+                                '<select class="form-select form-select-sm" data-action="role" data-username="' + esc(user.username) + '" style="max-width:120px" ' + (backendActif ? 'disabled title="Géré par le super-administrateur"' : '') + '>' +
                                     '<option value="eleve" ' + (user.role === 'eleve' ? 'selected' : '') + '>Élève</option>' +
                                     '<option value="admin" ' + (user.role === 'admin' ? 'selected' : '') + '>Admin</option>' +
                                 '</select>' +
@@ -758,14 +758,14 @@ window.LearnHubAdmin = (function () {
                             '<td>' + (moyenne === null ? '—' : moyenne + ' %') + '</td>' +
                             '<td class="text-end text-nowrap">' +
                                 '<button class="btn btn-sm btn-outline-secondary me-1" data-action="reinitialiser" data-username="' + esc(user.username) + '" title="Réinitialiser la progression"><i class="fas fa-rotate-left"></i></button>' +
-                                '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-username="' + esc(user.username) + '" title="Supprimer le compte" ' + (backendActif ? 'disabled' : '') + '><i class="fas fa-trash"></i></button>' +
+                                '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-username="' + esc(user.username) + '" title="Supprimer le compte" ' + (backendActif ? 'disabled title="Géré par le super-administrateur"' : '') + '><i class="fas fa-trash"></i></button>' +
                             '</td>' +
                         '</tr>';
                     }).join('') + '</tbody>' +
                 '</table></div>' +
                 '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Seuls les élèves rattachés à vos classes apparaissent ici. ' +
                     (backendActif
-                        ? 'Les comptes sont synchronisés avec Supabase ; rôles et suppressions se gèrent dans le tableau de bord Supabase.'
+                        ? 'Les rôles et les suppressions de comptes sont réservés au super-administrateur (page <a href="#/superadmin">Super-administration</a>).'
                         : 'Les comptes sont enregistrés dans le navigateur : ils ne sont pas partagés entre appareils.') +
                 '</p>';
         }
@@ -914,7 +914,7 @@ window.LearnHubAdmin = (function () {
                 ? '<div class="admin-panel border border-success">' +
                     '<h4 class="mb-2 text-success"><i class="fas fa-cloud me-2"></i>Backend Supabase actif</h4>' +
                     '<p class="small mb-1">Données synchronisées avec <code>' + esc(window.LearnHubConfig.supabaseUrl) + '</code>.</p>' +
-                    '<p class="small text-muted mb-0">Comptes, classes, leçons, exercices, séances et résultats sont partagés entre appareils. Les rôles et suppressions de comptes se gèrent dans le tableau de bord Supabase.</p>' +
+                    '<p class="small text-muted mb-0">Comptes, classes, leçons, exercices, séances et résultats sont partagés entre appareils. La gestion des comptes (création, rôle, suppression) est réservée au super-administrateur.</p>' +
                   '</div>'
                 : '') +
             '<div class="admin-panel">' +

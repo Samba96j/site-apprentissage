@@ -504,9 +504,16 @@ window.LearnHubAuth = (function () {
         write(KEYS.session, null);
     }
 
-    function setRole(username, role) {
-        if (backend()) {
-            return { ok: false, error: 'La gestion des rôles se fait dans Supabase pour le moment.' };
+    async function setRole(username, role) {
+        const b = backend();
+        if (b) {
+            const acteur = current();
+            if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
+                return { ok: false, error: 'Action réservée au super-administrateur.' };
+            }
+            const cible = users().find(function (u) { return u.username === username; });
+            if (!cible) return { ok: false, error: 'Utilisateur introuvable.' };
+            return b.changerRole(cible.id, role);
         }
         if ([ROLES.ADMIN, ROLES.ELEVE, ROLES.SUPERADMIN].indexOf(role) === -1) {
             return { ok: false, error: 'Rôle inconnu.' };
@@ -561,8 +568,13 @@ window.LearnHubAuth = (function () {
     }
 
     async function creerCompte(data) {
-        if (backend()) {
-            return { ok: false, error: 'La création de comptes se fait par l\'inscription du site (ou dans le tableau de bord Supabase).' };
+        const b = backend();
+        if (b) {
+            const acteur = current();
+            if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
+                return { ok: false, error: 'Action réservée au super-administrateur.' };
+            }
+            return b.creerCompte(data);
         }
         const acteur = current();
         if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
@@ -605,9 +617,19 @@ window.LearnHubAuth = (function () {
         return { ok: true, compte: { username: username, email: email, role: role } };
     }
 
-    function removeUser(username) {
-        if (backend()) {
-            return { ok: false, error: 'La suppression de comptes se fait dans le tableau de bord Supabase.' };
+    async function removeUser(username) {
+        const b = backend();
+        if (b) {
+            const acteur = current();
+            if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
+                return { ok: false, error: 'Action réservée au super-administrateur.' };
+            }
+            const cible = users().find(function (u) { return u.username === username; });
+            if (!cible) return { ok: false, error: 'Utilisateur introuvable.' };
+            if (cible.username === acteur.username) {
+                return { ok: false, error: 'Impossible de supprimer votre propre compte.' };
+            }
+            return b.supprimerCompte(cible.id);
         }
         const acteur = current();
         if (acteur && acteur.username === username) {
@@ -640,9 +662,22 @@ window.LearnHubAuth = (function () {
      * Met à jour le nom d'utilisateur et l'e-mail du super-administrateur connecté.
      * L'historique de progression et la session suivent le renommage.
      */
-    function mettreAJourIdentifiants(username, data) {
-        if (backend()) {
-            return { ok: false, error: 'Modifiez vos identifiants dans le tableau de bord Supabase.' };
+    async function mettreAJourIdentifiants(username, data) {
+        const b = backend();
+        if (b) {
+            const acteur = current();
+            if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
+                return { ok: false, error: 'Action réservée au super-administrateur.' };
+            }
+            if (acteur.username !== username) {
+                return { ok: false, error: 'Vous ne pouvez modifier que votre propre compte.' };
+            }
+            const cible = users().find(function (u) { return u.username === username; });
+            if (!cible) return { ok: false, error: 'Compte introuvable.' };
+            const nouveauNom = String(data.username || cible.username).trim();
+            const resultat = await b.renommerCompte(cible.id, nouveauNom);
+            if (!resultat.ok) return resultat;
+            return { ok: true, username: nouveauNom };
         }
         const acteur = current();
         if (!acteur || acteur.role !== ROLES.SUPERADMIN) {

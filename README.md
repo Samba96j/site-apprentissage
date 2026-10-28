@@ -124,8 +124,8 @@ GitHub Pages ne peut pas exécuter de code serveur, mais le site appelle une **A
 - Visiteur non connecté : catalogue public local (comme avant).
 - Utilisateur connecté : espace, classes, leçons, exercices, séances et résultats chargés depuis Supabase et synchronisés à l'enregistrement.
 - Élève : rejoint une classe avec son code ; l'enseignant voit les résultats sur un autre appareil.
-- Comptes : inscription/connexion par e-mail ; mot de passe géré par Supabase. Les rôles et suppressions se font dans le tableau de bord Supabase (Edge Function à prévoir pour les automatiser).
-- Après une mise à jour du schéma, ré-exécuter `supabase/schema.sql` (script idempotent). Pour un projet créé avant certaines corrections, exécuter une fois [supabase/migration-seances-text-ids.sql](supabase/migration-seances-text-ids.sql) et [supabase/migration-profil-trigger.sql](supabase/migration-profil-trigger.sql).
+- Comptes : inscription/connexion par e-mail ; mot de passe géré par Supabase. Le super-administrateur gère les comptes (création, rôle, suppression) depuis `#/superadmin`.
+- Après une mise à jour du schéma, ré-exécuter `supabase/schema.sql` (script idempotent). Pour un projet créé avant certaines corrections, exécuter une fois [supabase/migration-seances-text-ids.sql](supabase/migration-seances-text-ids.sql), [supabase/migration-profil-trigger.sql](supabase/migration-profil-trigger.sql) et [supabase/migration-comptes-admin.sql](supabase/migration-comptes-admin.sql).
 - Inscription : Supabase envoie un e-mail de confirmation tant que **Authentication → Providers → Email → Confirm email** reste activé. Le service d'e-mail intégré est limité à quelques messages par heure (« email rate limit exceeded »). Pour un usage réel, désactiver la confirmation ou brancher un SMTP personnalisé (Resend, Brevo…).
 
 Les données locales existantes ne peuvent pas être transférées automatiquement : les mots de passe locaux sont hachés dans le navigateur. Chaque personne recrée son compte Supabase ; les contenus et résultats pourront être importés par un écran dédié (à venir).

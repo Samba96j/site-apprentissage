@@ -17,7 +17,8 @@ Le site reste hébergé sur **GitHub Pages**. Supabase fournit uniquement l'auth
 Si le projet a été créé avec une première version du schéma, exécuter une fois les scripts de migration (idempotents) :
 
 - [migration-seances-text-ids.sql](migration-seances-text-ids.sql) — colonnes de `seances` en `text[]` ;
-- [migration-profil-trigger.sql](migration-profil-trigger.sql) — déclencheur des profils : attribution du rôle `superadmin` depuis le SQL Editor, suppression d'une classe peuplée, et blocage de l'affectation directe à une classe.
+- [migration-profil-trigger.sql](migration-profil-trigger.sql) — déclencheur des profils : attribution du rôle `superadmin` depuis le SQL Editor, suppression d'une classe peuplée, et blocage de l'affectation directe à une classe ;
+- [migration-comptes-admin.sql](migration-comptes-admin.sql) — fonctions `admin_supprimer_compte` et `admin_changer_role` qui permettent la gestion des comptes depuis la page Super-administration.
 
 ## 3. Authentification
 
@@ -102,11 +103,16 @@ where username = 'votre_pseudo';
 
 En mode backend, les actions qui exigent la clé `service_role` (créer un compte sans changer de session, supprimer un compte d'authentification) sont désactivées dans l'interface : elles se font depuis le dashboard Supabase. La création de compte passe par l'inscription normale, la suppression par **Authentication → Users**.
 
-### Opérations réservées au serveur
+### Gestion des comptes (page Super-administration)
 
-Deux actions du super-administrateur nécessitent la clé `service_role`, qui ne doit jamais être dans le navigateur :
+Le super-administrateur dispose d'un CRUD complet depuis `#/superadmin` :
 
-- **Créer un compte** sans changer la session en cours ;
-- **Supprimer un compte** d'authentification.
+| Action | Mécanisme |
+|---|---|
+| **Créer** | `auth.signUp` sur un client Supabase secondaire (sans persistance) : la session du super-admin n'est pas remplacée ; le déclencheur `creer_profil` crée le profil et, pour un enseignant, son espace. |
+| **Changer le rôle** | RPC `admin_changer_role` (crée un espace si le compte devient enseignant). |
+| **Renommer** | `update profiles set username` (autorisé par la RLS pour un super-admin). |
+| **Supprimer** | RPC `admin_supprimer_compte` (`delete from auth.users`, cascade sur le profil, l'espace et les contenus). |
+| **Réinitialiser la progression** | `delete from attempts` (politique RLS dédiée). |
 
-Elles pourront être exposées par une **Edge Function Supabase** (`supabase/functions/admin-comptes`) qui vérifie le rôle super-admin avant d'agir.
+Les deux RPC sont `security definer` et vérifient `public.mon_role() = 'superadmin'` : un enseignant ou un élève ne peut pas les appeler. Aucune clé `service_role` n'est nécessaire.
