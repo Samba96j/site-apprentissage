@@ -1227,7 +1227,7 @@ window.LearnHubData = (function () {
             embleme: 'fa-earth-africa',
             variante: 'violet',
             image: 'assets/images/carrousel/slide-1.jpg',
-            credit: 'Photo : Ndahiro derrick — CC BY 4.0',
+            credit: 'Photo : Dorothy Voorhees — CC BY-SA 2.0',
             cta: { libelle: 'Explorer les matières', href: '#/matieres' }
         },
         {
@@ -1237,7 +1237,7 @@ window.LearnHubData = (function () {
             embleme: 'fa-brain',
             variante: 'orange',
             image: 'assets/images/carrousel/slide-2.jpg',
-            credit: 'Photo : Heidy Garcia — CC BY 4.0',
+            credit: 'Photo : Boydiop2 — CC BY-SA 4.0',
             cta: { libelle: "S'entraîner maintenant", href: '#/exercices' }
         },
         {
