@@ -645,7 +645,8 @@
 
     function vueContact() {
         const developpeur = data.developpeur || {};
-        const emailValide = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(developpeur.email || ''));
+        const endpoint = String(developpeur.formulaire || '').trim();
+        const serviceActif = /^https:\/\/.+/i.test(endpoint);
 
         return {
             titre: 'Contact',
@@ -659,11 +660,11 @@
                                 '<p class="text-muted mb-0">' + esc(developpeur.titre || '') + '</p>' +
                             '</div>' +
                             '<p class="mb-2">' + esc(developpeur.role || '') + '</p>' +
-                            (emailValide
-                                ? '<p class="mb-2"><i class="fas fa-envelope me-2"></i><a href="mailto:' + esc(developpeur.email) + '">' + esc(developpeur.email) + '</a></p>'
-                                : '<p class="text-muted small mb-2"><i class="fas fa-envelope me-2"></i>Adresse e-mail non publiée sur le site.</p>') +
+                            '<p class="text-muted small mb-2"><i class="fas fa-shield-halved me-2"></i>Aucune adresse e-mail n\'est publiée sur le site.</p>' +
                             '<hr>' +
-                            '<p class="text-muted small mb-0"><i class="fas fa-circle-info me-1"></i>Formulaire de contact de LearnHub. Les messages sont enregistrés dans ce navigateur et consultables par le super-administrateur.</p>' +
+                            (serviceActif
+                                ? '<p class="text-muted small mb-0"><i class="fas fa-circle-info me-1"></i>Votre message est transmis via un service de formulaire sécurisé. Une copie reste consultable dans la super-administration.</p>'
+                                : '<p class="text-muted small mb-0"><i class="fas fa-circle-info me-1"></i>Le service d\'envoi n\'est pas encore configuré : les messages sont enregistrés localement et visibles dans la super-administration.</p>') +
                         '</div>' +
                     '</div>' +
                     '<div class="col-lg-7">' +
@@ -727,18 +728,36 @@
                         afficher('Enregistrement impossible (stockage du navigateur indisponible).', 'danger');
                         return;
                     }
+
+                    if (serviceActif) {
+                        const bouton = form.querySelector('button[type="submit"]');
+                        bouton.disabled = true;
+                        const corps = new FormData();
+                        corps.append('nom', donnees.nom);
+                        corps.append('email', donnees.email);
+                        corps.append('sujet', donnees.sujet);
+                        corps.append('message', donnees.message);
+                        corps.append('_subject', '[LearnHub] ' + donnees.sujet);
+                        fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json' },
+                            body: corps
+                        }).then(function (reponse) {
+                            if (!reponse.ok) throw new Error('HTTP ' + reponse.status);
+                            form.reset();
+                            afficher('Merci ' + donnees.nom + ', votre message a été transmis.', 'success');
+                            actions.innerHTML = '<p class="small text-muted mb-0">Une réponse vous sera adressée à ' + esc(donnees.email) + '.</p>';
+                        }).catch(function () {
+                            afficher('Votre message a été enregistré, mais l\'envoi distant a échoué. Réessayez dans un instant.', 'warning');
+                        }).then(function () {
+                            bouton.disabled = false;
+                        });
+                        return;
+                    }
+
                     form.reset();
                     afficher('Merci ' + donnees.nom + ', votre message a été enregistré.', 'success');
-                    if (emailValide) {
-                        const lien = 'mailto:' + developpeur.email +
-                            '?subject=' + encodeURIComponent('[LearnHub] ' + donnees.sujet) +
-                            '&body=' + encodeURIComponent(donnees.message + '\n\n— ' + donnees.nom + ' <' + donnees.email + '>');
-                        actions.innerHTML = '<a class="btn btn-outline-primary btn-sm" href="' + esc(lien) + '">' +
-                            '<i class="fas fa-envelope me-1"></i>Ouvrir dans ma messagerie</a>' +
-                            '<p class="small text-muted mt-2 mb-0">Vous pouvez aussi envoyer ce message directement par e-mail.</p>';
-                    } else {
-                        actions.innerHTML = '<p class="small text-muted mb-0">Le message reste consultable dans la super-administration de ce navigateur.</p>';
-                    }
+                    actions.innerHTML = '<p class="small text-muted mb-0">Le service d\'envoi n\'est pas encore configuré : le message reste consultable dans la super-administration de ce navigateur.</p>';
                 });
             }
         };

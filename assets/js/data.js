@@ -6,12 +6,13 @@
 window.LearnHubData = (function () {
     'use strict';
 
-    // Coordonnées affichées sur la page #/contact. Renseigner `email` pour
-    // activer le bouton « Ouvrir dans ma messagerie » (envoi via le client mail).
+    // Formulaire de contact : renseigner l'endpoint d'un service (Formspree, Getform…)
+    // pour recevoir les messages sans publier l'adresse e-mail.
+    // Exemple : formulaire: 'https://formspree.io/f/abcdwxyz'
     const developpeur = {
         nom: 'M.BA',
         titre: 'Ingénieur en génie logiciel',
-        email: 'moyizaba@gmail.com',
+        formulaire: '',
         role: 'Conception et développement de la plateforme LearnHub'
     };
 
