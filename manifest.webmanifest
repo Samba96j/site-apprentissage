@@ -1,0 +1,25 @@
+{
+    "name": "LearnHub — Apprendre sans limites",
+    "short_name": "LearnHub",
+    "description": "Cours, exercices interactifs et bibliothèque numérique du collège au supérieur.",
+    "lang": "fr",
+    "start_url": "./index.html",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#311B4F",
+    "icons": [
+        {
+            "src": "assets/images/favicon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "assets/images/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ]
+}

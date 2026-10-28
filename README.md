@@ -192,6 +192,51 @@ puis ouvrir <http://localhost:8000>.
 
 > Un serveur local est recommandé : certains navigateurs limitent le stockage local et l'API de hachage lorsqu'une page est ouverte via `file://`.
 
+## Publier et partager le site
+
+Le site est **déjà public** : <https://samba96j.github.io/site-apprentissage/>. Toute personne qui possède le lien peut l'ouvrir, sans compte. GitHub Pages redéploie automatiquement à chaque `git push` sur `main` (une minute environ).
+
+### Aperçu des liens (WhatsApp, Facebook, LinkedIn, X, Telegram…)
+
+Le `<head>` de [index.html](index.html) contient les balises **Open Graph** et **Twitter Card** : un lien collé dans WhatsApp, Messenger, Facebook, LinkedIn, Telegram, Discord ou Slack s'affiche avec un titre, un résumé et l'image `assets/images/og-image.jpg` (1200 × 630 px, 100 Ko — le format attendu par les réseaux).
+
+| Élément | Où le modifier |
+|---|---|
+| Titre / description de l'aperçu | `og:title`, `og:description` dans [index.html](index.html) |
+| Image de l'aperçu | `assets/images/og-image.jpg` (+ `og:image:width` / `og:image:height`) |
+| Favicon et icône mobile | `assets/images/favicon-32.png`, `favicon-192.png`, `apple-touch-icon.png`, `icon-512.png`, `manifest.webmanifest` |
+| Référencement | `robots.txt`, `sitemap.xml`, données structurées JSON-LD dans [index.html](index.html) |
+
+> Les réseaux **gardent l'aperçu en cache**. Après avoir changé un titre ou l'image, forcez la relecture :
+> - Facebook / Messenger : <https://developers.facebook.com/tools/debug/> → « Scrape again »
+> - LinkedIn : <https://www.linkedin.com/post-inspector/>
+> - X : <https://cards-dev.twitter.com/validator>
+> - WhatsApp : l'aperçu se rafraîchit en renvoyant le lien (ou en ajoutant `?v=2` à la fin).
+
+### Boutons de partage intégrés
+
+Le pied de page affiche une barre « Partager LearnHub » : WhatsApp, Facebook, LinkedIn, X, Telegram, e-mail, copie du lien, et le partage natif du téléphone quand il existe. Le lien partagé suit la page en cours : depuis `#/matiere/maths`, c'est ce chapitre qui est partagé.
+
+### Bonnes pratiques par réseau
+
+- **WhatsApp (groupe ou statut)** : collez simplement `https://samba96j.github.io/site-apprentissage/`, l'aperçu se génère tout seul.
+- **Facebook** : lien cliquable dans la publication, l'aperçu vient des balises Open Graph.
+- **Instagram** : les liens ne sont **pas cliquables** dans les posts. Placez le lien dans la **bio** (ou « lien en story ») et renvoyez-y depuis vos publications.
+- **LinkedIn** : lien cliquable dans le post ou la section « Site web » du profil.
+- **TikTok / YouTube / Snapchat** : lien en bio ou dans la description.
+
+### Recherche Google
+
+`robots.txt` et `sitemap.xml` sont fournis. Pour accélérer l'indexation : [Google Search Console](https://search.google.com/search-console) → ajouter la propriété `https://samba96j.github.io/site-apprentissage/` → « Indexation » → « Sitemaps » → envoyer `sitemap.xml`.
+
+### Domaine personnalisé (optionnel)
+
+Un domaine du type `learnhub.sn` donne un lien plus court et plus crédible :
+
+1. Acheter le domaine, puis créer un enregistrement `CNAME` vers `samba96j.github.io`.
+2. Dans le dépôt GitHub : *Settings → Pages → Custom domain*, puis cocher **Enforce HTTPS**.
+3. Créer un fichier `CNAME` à la racine contenant le domaine, et remplacer les URL absolues (`canonical`, `og:url`, `og:image`, `sitemap.xml`, `robots.txt`) par le nouveau domaine.
+
 ## Ajouter du contenu
 
 - **Un chapitre** : ajouter une entrée dans `matieres[].chapitres` de [data.js](assets/js/data.js) (`id`, `niveau`, `titre`, `resume`, `objectifs`, `points`, `duree`).

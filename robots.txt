@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://samba96j.github.io/site-apprentissage/sitemap.xml

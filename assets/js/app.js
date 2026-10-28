@@ -118,6 +118,103 @@
         '</nav>';
     }
 
+    const TEXTE_PARTAGE = 'LearnHub — cours, exercices interactifs et bibliothèque numérique, du collège au supérieur';
+
+    /** URL à partager : la page canonique, plus la route courante (partage d'un chapitre, d'une matière…). */
+    function urlPartage() {
+        const canonique = document.querySelector('link[rel="canonical"]');
+        const base = (canonique && canonique.href) || (location.origin + location.pathname);
+        const hash = location.hash && location.hash !== '#/' ? location.hash : '';
+        return base + hash;
+    }
+
+    function blocPartage() {
+        const reseaux = [
+            ['whatsapp', 'fa-whatsapp', 'Partager sur WhatsApp'],
+            ['facebook', 'fa-facebook-f', 'Partager sur Facebook'],
+            ['linkedin', 'fa-linkedin-in', 'Partager sur LinkedIn'],
+            ['x', 'fa-twitter', 'Partager sur X'],
+            ['telegram', 'fa-telegram', 'Partager sur Telegram'],
+            ['email', 'fa-envelope', 'Partager par e-mail']
+        ];
+        return '<div class="partage-pied" id="partage-pied">' +
+            '<span class="partage-titre"><i class="fas fa-share-nodes me-2"></i>Partager LearnHub</span>' +
+            '<div class="partage-liens">' +
+                reseaux.map(function (reseau) {
+                    return '<a class="partage-lien" data-partage="' + reseau[0] + '" href="#/" target="_blank" rel="noopener"' +
+                        ' title="' + reseau[2] + '" aria-label="' + reseau[2] + '"><i class="fab ' + reseau[1] + '"></i></a>';
+                }).join('') +
+                '<button class="partage-lien" type="button" data-partage="copier" title="Copier le lien du site" aria-label="Copier le lien du site">' +
+                    '<i class="fas fa-link"></i></button>' +
+                (navigator.share
+                    ? '<button class="partage-lien" type="button" data-partage="natif" title="Partager avec une autre application" aria-label="Partager avec une autre application">' +
+                        '<i class="fas fa-share-nodes"></i></button>'
+                    : '') +
+            '</div>' +
+        '</div>';
+    }
+
+    function liensPartage() {
+        const url = urlPartage();
+        return {
+            whatsapp: 'https://wa.me/?text=' + encodeURIComponent(TEXTE_PARTAGE + ' ' + url),
+            facebook: 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url),
+            linkedin: 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(url),
+            x: 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(TEXTE_PARTAGE) + '&url=' + encodeURIComponent(url),
+            telegram: 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(TEXTE_PARTAGE),
+            email: 'mailto:?subject=' + encodeURIComponent('Découvrir LearnHub') +
+                '&body=' + encodeURIComponent(TEXTE_PARTAGE + '\n' + url)
+        };
+    }
+
+    function actualiserPartage() {
+        const liens = liensPartage();
+        document.querySelectorAll('#partage-pied [data-partage]').forEach(function (element) {
+            if (liens[element.dataset.partage]) element.setAttribute('href', liens[element.dataset.partage]);
+        });
+    }
+
+    function copierLien(url) {
+        const reussi = function () { toast('Lien copié : collez-le dans WhatsApp, Facebook, LinkedIn…'); };
+        const echoue = function () { toast('Copie impossible. Le lien est : ' + url, 'warning'); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(reussi).catch(function () { copieDeSecours(url, reussi, echoue); });
+            return;
+        }
+        copieDeSecours(url, reussi, echoue);
+    }
+
+    function copieDeSecours(url, reussi, echoue) {
+        const champ = document.createElement('textarea');
+        champ.value = url;
+        champ.setAttribute('readonly', 'readonly');
+        champ.style.position = 'fixed';
+        champ.style.opacity = '0';
+        document.body.appendChild(champ);
+        champ.select();
+        let copie = false;
+        try { copie = document.execCommand('copy'); } catch (erreur) { copie = false; }
+        document.body.removeChild(champ);
+        if (copie) reussi(); else echoue();
+    }
+
+    function brancherPartage() {
+        const zone = document.getElementById('partage-pied');
+        if (!zone || zone.dataset.branche === '1') return;
+        zone.dataset.branche = '1';
+        zone.addEventListener('click', function (event) {
+            const bouton = event.target.closest('[data-partage]');
+            if (!bouton || bouton.tagName === 'A') return;
+            if (bouton.dataset.partage === 'copier') {
+                copierLien(urlPartage());
+                return;
+            }
+            if (bouton.dataset.partage === 'natif' && navigator.share) {
+                navigator.share({ title: 'LearnHub', text: TEXTE_PARTAGE, url: urlPartage() }).catch(function () {});
+            }
+        });
+    }
+
     function htmlPied() {
         const backendActif = !!(window.LearnHubBackend && window.LearnHubBackend.disponible());
         return '<footer class="mt-5">' +
@@ -172,6 +269,7 @@
                     '</div>' +
                 '</div>' +
                 '<hr class="border-light opacity-25">' +
+                blocPartage() +
                 '<div class="d-flex flex-wrap justify-content-between small text-white-50">' +
                     '<span>&copy; ' + new Date().getFullYear() + ' LearnHub.</span>' +
                     '<span>Développé par <a class="link-light text-decoration-none" href="#/contact">' +
@@ -2204,6 +2302,7 @@
         app.innerHTML = vue.html;
         document.title = vue.titre + ' — LearnHub';
         majEntete(segments);
+        actualiserPartage();
 
         if (typeof vue.after === 'function') {
             vue.after(app);
@@ -2230,6 +2329,8 @@
     function monterEnteteEtPied() {
         document.getElementById('nav-principal').innerHTML = htmlEntete();
         document.getElementById('pied-principal').innerHTML = htmlPied();
+        actualiserPartage();
+        brancherPartage();
 
         const champ = document.getElementById('champ-recherche');
         document.getElementById('form-recherche').addEventListener('submit', function (event) {
