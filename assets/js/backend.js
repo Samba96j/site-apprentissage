@@ -351,7 +351,7 @@ window.LearnHubBackend = (function () {
     function traduireErreur(erreur) {
         const message = (erreur && erreur.message) || '';
         if (/email rate limit exceeded|over_email_send_rate_limit|too many requests/i.test(message)) {
-            return 'Trop de tentatives : Supabase limite l’envoi d’e-mails (quelques-uns par heure, service intégré). Réessayez dans une heure, ou désactivez « Confirm email » dans Authentication → Providers → Email.';
+            return 'Trop de tentatives : Supabase limite l’envoi d’e-mails (quelques-uns par heure, service intégré). Réessayez plus tard, ou désactivez « Confirm email » dans Authentication → Sign In / Providers → Email.';
         }
         if (/you can only request this after (\d+) seconds/i.test(message)) {
             const secondes = message.match(/after (\d+) seconds/i)[1];
@@ -368,12 +368,25 @@ window.LearnHubBackend = (function () {
     async function connecter(email, motDePasse) {
         if (!disponible()) return { ok: false, error: 'Backend indisponible.' };
         const resultat = await client.auth.signInWithPassword({ email: email, password: motDePasse });
-        if (resultat.error) return { ok: false, error: traduireErreur(resultat.error) };
+        if (resultat.error) {
+            const brut = (resultat.error.message || '');
+            const renvoi = { ok: false, error: traduireErreur(resultat.error) };
+            if (/email not confirmed/i.test(brut)) renvoi.nonConfirme = email;
+            if (/rate limit|too many requests/i.test(brut)) renvoi.limite = true;
+            return renvoi;
+        }
         const profilCharge = await initSession();
         if (!profilCharge) {
             await client.auth.signOut();
             return { ok: false, error: 'Profil introuvable. Le schéma Supabase est-il bien installé ?' };
         }
+        return { ok: true };
+    }
+
+    async function renvoyerConfirmation(email) {
+        if (!disponible()) return { ok: false, error: 'Backend indisponible.' };
+        const resultat = await client.auth.resend({ type: 'signup', email: email });
+        if (resultat.error) return { ok: false, error: traduireErreur(resultat.error) };
         return { ok: true };
     }
 
@@ -567,6 +580,7 @@ window.LearnHubBackend = (function () {
         listeEspaces: listeEspaces,
         connecter: connecter,
         inscrire: inscrire,
+        renvoyerConfirmation: renvoyerConfirmation,
         deconnecter: deconnecter,
         changerMotDePasse: changerMotDePasse,
         rejoindreClasse: rejoindreClasse,

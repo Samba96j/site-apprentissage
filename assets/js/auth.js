@@ -419,6 +419,16 @@ window.LearnHubAuth = (function () {
         return { ok: true };
     }
 
+    async function renvoyerConfirmation(email) {
+        const b = backend();
+        if (!b) return { ok: false, error: 'Disponible uniquement avec le backend.' };
+        const cible = String(email || '').trim();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cible)) {
+            return { ok: false, error: 'Adresse e-mail invalide.' };
+        }
+        return b.renvoyerConfirmation(cible);
+    }
+
     async function login(username, password) {
         const b = backend();
         if (b) {
@@ -430,7 +440,6 @@ window.LearnHubAuth = (function () {
             if (!resultat.ok) return resultat;
             return { ok: true, user: current() };
         }
-
         const saisie = String(username || '').trim().toLowerCase();
         const user = findUser(saisie) || users().find(function (u) { return u.email.toLowerCase() === saisie; }) || null;
         if (!user) return { ok: false, error: 'Identifiants incorrects.' };
@@ -879,6 +888,7 @@ window.LearnHubAuth = (function () {
         renommerEspace: renommerEspace,
         login: login,
         register: register,
+        renvoyerConfirmation: renvoyerConfirmation,
         logout: logout,
         setRole: setRole,
         creerCompte: creerCompte,

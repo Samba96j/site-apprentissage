@@ -971,65 +971,108 @@
         const suivant = parametres.get('next') || '';
         const backendActif = !!(window.LearnHubBackend && window.LearnHubBackend.disponible());
 
+        function champ(id, libelle, icone, type, options) {
+            const reglages = options || {};
+            return '<div class="auth-field' + (reglages.pleineLargeur ? ' auth-field--full' : '') + '">' +
+                '<label for="' + id + '">' + libelle + '</label>' +
+                '<div class="auth-input">' +
+                    '<i class="fas fa-' + icone + '"></i>' +
+                    '<input id="' + id + '" type="' + (type || 'text') + '"' +
+                        (reglages.autocomplete ? ' autocomplete="' + reglages.autocomplete + '"' : '') +
+                        (reglages.requis === false ? '' : ' required') + '>' +
+                    (reglages.motDePasse
+                        ? '<button type="button" data-voir="' + id + '" aria-label="Afficher le mot de passe"><i class="fas fa-eye"></i></button>'
+                        : '') +
+                '</div>' +
+                (reglages.aide ? '<span class="auth-hint">' + reglages.aide + '</span>' : '') +
+            '</div>';
+        }
+
         return {
             titre: 'Connexion',
-            html: '<div class="container py-4">' +
-                '<div class="row justify-content-center">' +
-                    '<div class="col-lg-7 col-xl-6">' +
-                        '<div class="auth-container">' +
-                            '<div class="auth-header">' +
-                                '<i class="fas fa-user-circle auth-icon"></i>' +
-                                '<h1 class="h4 mb-1">' + (mode === 'inscription' ? 'Créer un compte' : 'Connexion') + '</h1>' +
-                                '<p class="text-muted mb-0">' + (mode === 'inscription'
-                                    ? (backendActif ? 'Un e-mail de confirmation peut être demandé.' : 'Vos scores seront conservés dans ce navigateur.')
-                                    : 'Accédez à votre progression et à votre espace personnel.') + '</p>' +
-                            '</div>' +
-                            '<ul class="nav nav-pills nav-fill mb-3" role="tablist" id="onglets-auth">' +
-                                '<li class="nav-item"><button class="nav-link ' + (mode === 'connexion' ? 'active' : '') + '" data-mode="connexion" type="button">Connexion</button></li>' +
-                                '<li class="nav-item"><button class="nav-link ' + (mode === 'inscription' ? 'active' : '') + '" data-mode="inscription" type="button">Inscription</button></li>' +
-                            '</ul>' +
-                            '<div id="auth-message" class="d-none"></div>' +
-                            '<form id="form-connexion" class="' + (mode === 'inscription' ? 'd-none' : '') + '">' +
-                                '<div class="mb-3"><label class="form-label" for="login-username">' + (backendActif ? 'E-mail' : 'Nom d\'utilisateur ou e-mail') + '</label>' +
-                                    '<input class="form-control" type="' + (backendActif ? 'email' : 'text') + '" id="login-username" autocomplete="username" required>' +
-                                    (backendActif ? '<div class="form-text">Utilisez l\'adresse e-mail de votre compte.</div>' : '') + '</div>' +
-                                '<div class="mb-3"><label class="form-label" for="login-password">Mot de passe</label>' +
-                                    '<input class="form-control" type="password" id="login-password" autocomplete="current-password" required></div>' +
-                                '<button class="btn btn-primary w-100" type="submit">Se connecter</button>' +
-                            '</form>' +
-                            '<form id="form-inscription" class="' + (mode === 'connexion' ? 'd-none' : '') + '">' +
-                                '<div class="mb-3"><label class="form-label" for="reg-username">Nom d\'utilisateur</label>' +
-                                    '<input class="form-control" id="reg-username" autocomplete="username" required></div>' +
-                                '<div class="mb-3"><label class="form-label" for="reg-email">E-mail</label>' +
-                                    '<input class="form-control" type="email" id="reg-email" autocomplete="email" required></div>' +
-                                '<div class="mb-3"><label class="form-label" for="reg-password">Mot de passe</label>' +
-                                    '<input class="form-control" type="password" id="reg-password" autocomplete="new-password" required>' +
-                                    '<div class="form-text">Six caractères minimum.</div></div>' +
-                                '<div class="mb-3"><label class="form-label" for="reg-confirm">Confirmer le mot de passe</label>' +
-                                    '<input class="form-control" type="password" id="reg-confirm" autocomplete="new-password" required></div>' +
-                                '<div class="form-check mb-3">' +
-                                    '<input class="form-check-input" type="checkbox" id="reg-enseignant">' +
-                                    '<label class="form-check-label" for="reg-enseignant">Je suis enseignant : créer mon propre espace administrateur</label>' +
-                                '</div>' +
-                                '<button class="btn btn-primary w-100" type="submit">Créer mon compte</button>' +
-                            '</form>' +
-                            '<hr class="my-4">' +
-                            '<p class="small text-muted mb-0"><i class="fas fa-lock me-1"></i>' + (backendActif
-                                ? 'Connectez-vous avec l\'adresse e-mail et le mot de passe de votre compte LearnHub. Aucun identifiant n\'est affiché ici afin de protéger les espaces.'
-                                : 'Les identifiants sont fournis par l\'administrateur de la plateforme. Ils ne sont pas affichés ici afin de protéger les espaces.') + '</p>' +
-                        '</div>' +
+            html: '<div class="container auth-page">' +
+                '<div class="auth-card' + (mode === 'inscription' ? ' auth-card--large' : '') + '">' +
+                    '<div class="auth-head">' +
+                        '<span class="auth-logo"><i class="fas fa-graduation-cap"></i></span>' +
+                        '<h1 class="auth-title">' + (mode === 'inscription' ? 'Créer un compte' : 'Bon retour !') + '</h1>' +
+                        '<p class="auth-sub">' + (mode === 'inscription'
+                            ? (backendActif ? 'Vos cours et votre progression vous suivent sur tous vos appareils.' : 'Vos scores seront conservés dans ce navigateur.')
+                            : 'Accédez à votre progression et à votre espace personnel.') + '</p>' +
                     '</div>' +
+                    '<div class="auth-switch" role="tablist">' +
+                        '<button class="' + (mode === 'connexion' ? 'active' : '') + '" data-mode="connexion" type="button" role="tab">Connexion</button>' +
+                        '<button class="' + (mode === 'inscription' ? 'active' : '') + '" data-mode="inscription" type="button" role="tab">Inscription</button>' +
+                    '</div>' +
+                    '<div id="auth-message" class="d-none"></div>' +
+                    '<form id="form-connexion" class="' + (mode === 'inscription' ? 'd-none' : '') + '">' +
+                        '<div class="auth-field">' +
+                            '<label for="login-username">' + (backendActif ? 'E-mail' : 'Nom d\'utilisateur ou e-mail') + '</label>' +
+                            '<div class="auth-input">' +
+                                '<i class="fas fa-' + (backendActif ? 'envelope' : 'user') + '"></i>' +
+                                '<input id="login-username" type="' + (backendActif ? 'email' : 'text') + '" autocomplete="username" required>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="auth-field">' +
+                            '<label for="login-password">Mot de passe</label>' +
+                            '<div class="auth-input">' +
+                                '<i class="fas fa-lock"></i>' +
+                                '<input id="login-password" type="password" autocomplete="current-password" required>' +
+                                '<button type="button" data-voir="login-password" aria-label="Afficher le mot de passe"><i class="fas fa-eye"></i></button>' +
+                            '</div>' +
+                        '</div>' +
+                        '<button class="btn btn-primary w-100" type="submit">Se connecter <i class="fas fa-arrow-right ms-1"></i></button>' +
+                    '</form>' +
+                    '<form id="form-inscription" class="' + (mode === 'connexion' ? 'd-none' : '') + '">' +
+                        '<div class="auth-grid">' +
+                            champ('reg-username', 'Nom d\'utilisateur', 'user', 'text', { autocomplete: 'username' }) +
+                            champ('reg-email', 'E-mail', 'envelope', 'email', { autocomplete: 'email' }) +
+                            champ('reg-password', 'Mot de passe', 'lock', 'password', { autocomplete: 'new-password', motDePasse: true, aide: '6 caractères minimum.' }) +
+                            champ('reg-confirm', 'Confirmer', 'lock', 'password', { autocomplete: 'new-password', motDePasse: true }) +
+                        '</div>' +
+                        '<label class="auth-check" for="reg-enseignant">' +
+                            '<input type="checkbox" id="reg-enseignant">' +
+                            '<span>Je suis enseignant : créer mon espace et mes classes</span>' +
+                        '</label>' +
+                        '<button class="btn btn-primary w-100" type="submit">Créer mon compte <i class="fas fa-arrow-right ms-1"></i></button>' +
+                    '</form>' +
+                    '<p class="auth-note"><i class="fas fa-shield-halved"></i>' + (backendActif
+                        ? 'E-mail et mot de passe de votre compte LearnHub. Aucun identifiant n\'est affiché sur cette page.'
+                        : 'Identifiants fournis par l\'administrateur de la plateforme.') + '</p>' +
                 '</div>' +
             '</div>',
             after: function (racine) {
                 const zoneMessage = racine.querySelector('#auth-message');
                 const formConnexion = racine.querySelector('#form-connexion');
                 const formInscription = racine.querySelector('#form-inscription');
+                const carte = racine.querySelector('.auth-card');
+                let emailAConfirmer = '';
 
-                function afficherMessage(texte, type) {
-                    zoneMessage.className = 'alert alert-' + type + ' py-2';
+                function afficherMessage(texte, type, options) {
+                    zoneMessage.className = 'alert alert-' + type;
                     zoneMessage.textContent = texte;
+                    const reglages = options || {};
+                    if (!reglages.action) return;
+                    const boutonAction = document.createElement('button');
+                    boutonAction.type = 'button';
+                    boutonAction.className = 'btn btn-link btn-sm p-0 ms-1 align-baseline';
+                    boutonAction.textContent = reglages.action;
+                    boutonAction.addEventListener('click', function () {
+                        boutonAction.disabled = true;
+                        reglages.onClick(boutonAction);
+                    });
+                    zoneMessage.appendChild(boutonAction);
                 }
+
+                racine.querySelectorAll('[data-voir]').forEach(function (bouton) {
+                    bouton.addEventListener('click', function () {
+                        const cible = racine.querySelector('#' + bouton.dataset.voir);
+                        if (!cible) return;
+                        const visible = cible.type === 'password';
+                        cible.type = visible ? 'text' : 'password';
+                        bouton.innerHTML = '<i class="fas fa-eye' + (visible ? '-slash' : '') + '"></i>';
+                        bouton.setAttribute('aria-label', visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+                    });
+                });
 
                 racine.querySelectorAll('[data-mode]').forEach(function (bouton) {
                     bouton.addEventListener('click', function () {
@@ -1038,7 +1081,17 @@
                         const inscription = bouton.dataset.mode === 'inscription';
                         formConnexion.classList.toggle('d-none', inscription);
                         formInscription.classList.toggle('d-none', !inscription);
+                        carte.classList.toggle('auth-card--large', inscription);
                         zoneMessage.className = 'd-none';
+                        zoneMessage.textContent = '';
+                        const titre = racine.querySelector('.auth-title');
+                        if (titre) titre.textContent = inscription ? 'Créer un compte' : 'Bon retour !';
+                        const sousTitre = racine.querySelector('.auth-sub');
+                        if (sousTitre) {
+                            sousTitre.textContent = inscription
+                                ? (backendActif ? 'Vos cours et votre progression vous suivent sur tous vos appareils.' : 'Vos scores seront conservés dans ce navigateur.')
+                                : 'Accédez à votre progression et à votre espace personnel.';
+                        }
                     });
                 });
 
@@ -1051,6 +1104,22 @@
                     const resultat = await auth.login(identifiant, motDePasse);
                     bouton.disabled = false;
                     if (!resultat.ok) {
+                        if (resultat.nonConfirme) {
+                            emailAConfirmer = resultat.nonConfirme;
+                            afficherMessage('Ce compte n\'est pas encore confirmé.', 'warning', {
+                                action: 'Renvoyer l\'e-mail de confirmation',
+                                onClick: async function (cible) {
+                                    const envoi = await auth.renvoyerConfirmation(emailAConfirmer);
+                                    cible.disabled = false;
+                                    if (!envoi.ok) {
+                                        afficherMessage(envoi.error, 'danger');
+                                        return;
+                                    }
+                                    afficherMessage('E-mail renvoyé à ' + emailAConfirmer + '. Cliquez sur le lien reçu, puis connectez-vous.', 'success');
+                                }
+                            });
+                            return;
+                        }
                         afficherMessage(resultat.error, 'danger');
                         return;
                     }
@@ -1081,7 +1150,19 @@
                         return;
                     }
                     if (resultat.confirmation) {
-                        afficherMessage('Compte créé. Vérifiez votre e-mail pour le confirmer, puis connectez-vous.', 'success');
+                        emailAConfirmer = donnees.email;
+                        afficherMessage('Compte créé. Confirmez votre adresse, puis connectez-vous.', 'success', {
+                            action: 'Renvoyer l\'e-mail',
+                            onClick: async function (cible) {
+                                const envoi = await auth.renvoyerConfirmation(emailAConfirmer);
+                                cible.disabled = false;
+                                if (!envoi.ok) {
+                                    afficherMessage(envoi.error, 'danger');
+                                    return;
+                                }
+                                afficherMessage('E-mail renvoyé à ' + emailAConfirmer + '.', 'success');
+                            }
+                        });
                         formInscription.reset();
                         return;
                     }
