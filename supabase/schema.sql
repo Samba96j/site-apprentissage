@@ -110,13 +110,35 @@ create table if not exists public.seances (
     date date not null,
     duree int not null default 60,
     publie boolean not null default true,
-    classe_ids uuid[] not null default '{}',
+    classe_ids text[] not null default '{}',
     chapter_ids text[] not null default '{}',
     lesson_ids text[] not null default '{}',
     exercise_ids text[] not null default '{}',
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
+
+-- Migration : les premières versions du schéma utilisaient uuid[] pour ces
+-- colonnes. Les identifiants de contenu sont textuels, on convertit donc.
+do $$
+declare
+    col text;
+begin
+    foreach col in array array['classe_ids', 'chapter_ids', 'lesson_ids', 'exercise_ids'] loop
+        if exists (
+            select 1 from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'seances'
+              and column_name = col
+              and udt_name <> '_text'
+        ) then
+            execute format('alter table public.seances alter column %I drop default', col);
+            execute format('alter table public.seances alter column %I type text[] using %I::text[]', col, col);
+            execute format('alter table public.seances alter column %I set default ''{}''::text[]', col);
+        end if;
+    end loop;
+end;
+$$;
 
 create table if not exists public.attempts (
     id text primary key,
@@ -438,6 +460,22 @@ create policy attempts_insert on public.attempts
 drop policy if exists attempts_select on public.attempts;
 create policy attempts_select on public.attempts
     for select using (
+        user_id = auth.uid()
+        or public.mon_role() = 'superadmin'
+        or (
+            public.mon_role() = 'admin' and exists (
+                select 1
+                from public.profiles p
+                left join public.classes c on c.id = p.classe_id
+                where p.id = attempts.user_id
+                  and c.espace_id = public.mon_espace()
+            )
+        )
+    );
+
+drop policy if exists attempts_delete on public.attempts;
+create policy attempts_delete on public.attempts
+    for delete using (
         user_id = auth.uid()
         or public.mon_role() = 'superadmin'
         or (

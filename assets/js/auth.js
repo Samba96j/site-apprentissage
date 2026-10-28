@@ -31,6 +31,11 @@ window.LearnHubAuth = (function () {
         { username: SUPER_ADMIN_AMORCAGE.username, email: SUPER_ADMIN_AMORCAGE.email, password: SUPER_ADMIN_AMORCAGE.password, role: ROLES.SUPERADMIN }
     ];
 
+    function backend() {
+        const b = window.LearnHubBackend;
+        return b && b.disponible() ? b : null;
+    }
+
     function read(key, fallback) {
         try {
             const raw = localStorage.getItem(key);
@@ -96,6 +101,7 @@ window.LearnHubAuth = (function () {
 
     /** Vrai si le super-administrateur connecté utilise encore le mot de passe d'amorçage. */
     async function motDePasseParDefaut() {
+        if (backend()) return false;
         const user = current();
         if (!user || user.role !== ROLES.SUPERADMIN) return false;
         const compte = findUser(user.username);
@@ -114,6 +120,12 @@ window.LearnHubAuth = (function () {
     }
 
     async function init() {
+        const b = backend();
+        if (b) {
+            await b.initSession();
+            return true;
+        }
+
         const users = read(KEYS.users, null);
         if (!users) {
             const seed = [];
@@ -186,6 +198,8 @@ window.LearnHubAuth = (function () {
     }
 
     function users() {
+        const b = backend();
+        if (b) return b.utilisateursCache();
         return read(KEYS.users, []);
     }
 
@@ -195,6 +209,22 @@ window.LearnHubAuth = (function () {
     }
 
     function current() {
+        const b = backend();
+        if (b) {
+            const p = b.profilCourant();
+            if (!p) return null;
+            const espace = b.listeEspaces().find(function (e) { return e.id === p.espace_id; });
+            return {
+                username: p.username,
+                email: p.email,
+                role: p.role,
+                espaceId: p.espace_id || null,
+                espaceNom: espace ? espace.nom : null,
+                classeId: p.classe_id || null,
+                loginAt: new Date().toISOString()
+            };
+        }
+
         const session = read(KEYS.session, null);
         if (!session) return null;
         const user = findUser(session.username);
@@ -225,6 +255,17 @@ window.LearnHubAuth = (function () {
      * classe de l'élève. `null` correspond à la bibliothèque publique.
      */
     function espaceActif() {
+        const b = backend();
+        if (b) {
+            const p = b.profilCourant();
+            if (!p) return null;
+            if (p.espace_id) return p.espace_id;
+            if (!p.classe_id) return null;
+            const store = window.LearnHubStore;
+            const classe = store && store.classes ? store.classes.get(p.classe_id) : null;
+            return classe ? classe.espaceId : null;
+        }
+
         const user = current();
         if (!user) return null;
         if (user.role === ROLES.ADMIN) return user.espaceId || null;
@@ -235,6 +276,14 @@ window.LearnHubAuth = (function () {
     }
 
     function maClasse() {
+        const b = backend();
+        if (b) {
+            const p = b.profilCourant();
+            if (!p || !p.classe_id) return null;
+            const store = window.LearnHubStore;
+            return store && store.classes ? store.classes.get(p.classe_id) : null;
+        }
+
         const user = current();
         if (!user || !user.classeId) return null;
         const store = window.LearnHubStore;
@@ -242,6 +291,31 @@ window.LearnHubAuth = (function () {
     }
 
     function monEspace() {
+        const b = backend();
+        if (b) {
+            const p = b.profilCourant();
+            if (!p) return null;
+            if (p.role === ROLES.SUPERADMIN) {
+                return { id: null, nom: 'Super-administration', role: ROLES.SUPERADMIN };
+            }
+            if (p.role === ROLES.ADMIN) {
+                const espace = b.listeEspaces().find(function (e) { return e.id === p.espace_id; });
+                return {
+                    id: p.espace_id,
+                    nom: espace ? espace.nom : 'Mon espace',
+                    role: ROLES.ADMIN
+                };
+            }
+            const classe = maClasse();
+            if (!classe) return null;
+            const parent = b.listeEspaces().find(function (e) { return e.id === classe.espaceId; });
+            return {
+                id: classe.espaceId,
+                nom: parent ? parent.nom : 'Espace enseignant',
+                role: ROLES.ELEVE
+            };
+        }
+
         const user = current();
         if (!user) return null;
         if (user.role === ROLES.ADMIN) {
@@ -263,7 +337,10 @@ window.LearnHubAuth = (function () {
         };
     }
 
-    function rejoindreClasse(code) {
+    async function rejoindreClasse(code) {
+        const b = backend();
+        if (b) return b.rejoindreClasse(code);
+
         const user = current();
         if (!user) return { ok: false, error: 'Connectez-vous pour rejoindre une classe.' };
         if (user.role !== ROLES.ELEVE) return { ok: false, error: 'Seuls les élèves peuvent rejoindre une classe.' };
@@ -277,7 +354,10 @@ window.LearnHubAuth = (function () {
         return { ok: true, classe: classe };
     }
 
-    function quitterClasse() {
+    async function quitterClasse() {
+        const b = backend();
+        if (b) return b.quitterClasse();
+
         const user = current();
         if (!user) return { ok: false, error: 'Connectez-vous pour gérer votre classe.' };
         const liste = users();
@@ -288,6 +368,7 @@ window.LearnHubAuth = (function () {
     }
 
     function detacherClasse(classeId) {
+        if (backend()) return false; // la clé étrangère met classe_id à NULL à la suppression
         const liste = users();
         let modifie = false;
         liste.forEach(function (u) {
@@ -308,6 +389,9 @@ window.LearnHubAuth = (function () {
     }
 
     function retirerDeClasse(username) {
+        const b = backend();
+        if (b) return b.retirerDeClasse(username);
+
         const liste = users();
         const cible = liste.find(function (u) { return u.username === username; });
         if (!cible) return { ok: false, error: 'Élève introuvable.' };
@@ -317,6 +401,9 @@ window.LearnHubAuth = (function () {
     }
 
     function renommerEspace(nom) {
+        const b = backend();
+        if (b) return b.renommerEspace(nom);
+
         const user = current();
         if (!user || user.role !== ROLES.ADMIN) {
             return { ok: false, error: 'Seul un administrateur peut nommer son espace.' };
@@ -333,6 +420,17 @@ window.LearnHubAuth = (function () {
     }
 
     async function login(username, password) {
+        const b = backend();
+        if (b) {
+            const identifiant = String(username || '').trim();
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(identifiant)) {
+                return { ok: false, error: 'Utilisez votre adresse e-mail pour vous connecter.' };
+            }
+            const resultat = await b.connecter(identifiant, password);
+            if (!resultat.ok) return resultat;
+            return { ok: true, user: current() };
+        }
+
         const saisie = String(username || '').trim().toLowerCase();
         const user = findUser(saisie) || users().find(function (u) { return u.email.toLowerCase() === saisie; }) || null;
         if (!user) return { ok: false, error: 'Identifiants incorrects.' };
@@ -343,6 +441,17 @@ window.LearnHubAuth = (function () {
     }
 
     async function register(data) {
+        const b = backend();
+        if (b) {
+            const username = String(data.username || '').trim();
+            const email = String(data.email || '').trim();
+            const password = String(data.password || '');
+            if (username.length < 3) return { ok: false, error: "Le nom d'utilisateur doit contenir au moins 3 caractères." };
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, error: 'Adresse e-mail invalide.' };
+            if (password.length < 6) return { ok: false, error: 'Le mot de passe doit contenir au moins 6 caractères.' };
+            return b.inscrire({ username: username, email: email, password: password, enseignant: !!data.enseignant });
+        }
+
         const username = String(data.username || '').trim();
         const email = String(data.email || '').trim();
         const password = String(data.password || '');
@@ -380,11 +489,16 @@ window.LearnHubAuth = (function () {
         return { ok: true };
     }
 
-    function logout() {
+    async function logout() {
+        const b = backend();
+        if (b) await b.deconnecter();
         write(KEYS.session, null);
     }
 
     function setRole(username, role) {
+        if (backend()) {
+            return { ok: false, error: 'La gestion des rôles se fait dans Supabase pour le moment.' };
+        }
         if ([ROLES.ADMIN, ROLES.ELEVE, ROLES.SUPERADMIN].indexOf(role) === -1) {
             return { ok: false, error: 'Rôle inconnu.' };
         }
@@ -438,6 +552,9 @@ window.LearnHubAuth = (function () {
     }
 
     async function creerCompte(data) {
+        if (backend()) {
+            return { ok: false, error: 'La création de comptes se fait par l\'inscription du site (ou dans le tableau de bord Supabase).' };
+        }
         const acteur = current();
         if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
             return { ok: false, error: 'Action réservée au super-administrateur.' };
@@ -480,6 +597,9 @@ window.LearnHubAuth = (function () {
     }
 
     function removeUser(username) {
+        if (backend()) {
+            return { ok: false, error: 'La suppression de comptes se fait dans le tableau de bord Supabase.' };
+        }
         const acteur = current();
         if (acteur && acteur.username === username) {
             return { ok: false, error: 'Impossible de supprimer votre propre compte.' };
@@ -512,6 +632,9 @@ window.LearnHubAuth = (function () {
      * L'historique de progression et la session suivent le renommage.
      */
     function mettreAJourIdentifiants(username, data) {
+        if (backend()) {
+            return { ok: false, error: 'Modifiez vos identifiants dans le tableau de bord Supabase.' };
+        }
         const acteur = current();
         if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
             return { ok: false, error: 'Action réservée au super-administrateur.' };
@@ -564,6 +687,9 @@ window.LearnHubAuth = (function () {
     }
 
     async function changePassword(username, currentPassword, newPassword) {
+        const b = backend();
+        if (b) return b.changerMotDePasse(currentPassword, newPassword);
+
         const user = findUser(username);
         if (!user) return { ok: false, error: 'Utilisateur introuvable.' };
         if (!(await verifierEmpreinte(user, currentPassword))) {
@@ -585,11 +711,20 @@ window.LearnHubAuth = (function () {
     /* ----------------------------- Progression ----------------------------- */
 
     function allProgress() {
+        const b = backend();
+        if (b && b.estActif()) {
+            return JSON.parse(JSON.stringify(b.progressionCache()));
+        }
         return read(KEYS.progress, {});
     }
 
     function attempts(username) {
         if (!username) return [];
+        const b = backend();
+        if (b && b.estActif()) {
+            const liste = b.progressionCache()[username];
+            return Array.isArray(liste) ? liste.slice() : [];
+        }
         const progress = allProgress();
         return Array.isArray(progress[username]) ? progress[username] : [];
     }
@@ -606,6 +741,13 @@ window.LearnHubAuth = (function () {
             total: Number(data.total) || 0,
             date: new Date().toISOString()
         };
+        const b = backend();
+        if (b && b.estActif()) {
+            const progress = b.progressionCache();
+            progress[user.username] = (progress[user.username] || []).concat([tentative]);
+            b.ajouterTentative(tentative);
+            return { ok: true, tentative: tentative };
+        }
         const progress = allProgress();
         progress[user.username] = (progress[user.username] || []).concat([tentative]);
         write(KEYS.progress, progress);
@@ -617,6 +759,15 @@ window.LearnHubAuth = (function () {
     }
 
     function clearProgress(username) {
+        const b = backend();
+        if (b && b.estActif()) {
+            if (username) {
+                b.effacerProgression(username);
+            } else {
+                Object.keys(b.progressionCache()).forEach(function (cle) { b.effacerProgression(cle); });
+            }
+            return { ok: true };
+        }
         const progress = allProgress();
         if (username) {
             delete progress[username];

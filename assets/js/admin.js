@@ -721,6 +721,7 @@ window.LearnHubAdmin = (function () {
     /* -------------------------------- Utilisateurs -------------------------------- */
 
     function renderUtilisateurs(racine) {
+        const backendActif = !!(window.LearnHubBackend && window.LearnHubBackend.estActif());
         racine.innerHTML =
             '<div id="admin-message" class="d-none"></div>' +
             '<h2 class="mb-3"><i class="fas fa-users me-2"></i>Utilisateurs</h2>' +
@@ -748,7 +749,7 @@ window.LearnHubAdmin = (function () {
                             '<td class="text-muted small">' + esc(user.email) + '</td>' +
                             '<td class="small">' + esc(classe ? classe.nom : '—') + '</td>' +
                             '<td>' +
-                                '<select class="form-select form-select-sm" data-action="role" data-username="' + esc(user.username) + '" style="max-width:120px">' +
+                                '<select class="form-select form-select-sm" data-action="role" data-username="' + esc(user.username) + '" style="max-width:120px" ' + (backendActif ? 'disabled title="Géré dans Supabase"' : '') + '>' +
                                     '<option value="eleve" ' + (user.role === 'eleve' ? 'selected' : '') + '>Élève</option>' +
                                     '<option value="admin" ' + (user.role === 'admin' ? 'selected' : '') + '>Admin</option>' +
                                 '</select>' +
@@ -757,12 +758,16 @@ window.LearnHubAdmin = (function () {
                             '<td>' + (moyenne === null ? '—' : moyenne + ' %') + '</td>' +
                             '<td class="text-end text-nowrap">' +
                                 '<button class="btn btn-sm btn-outline-secondary me-1" data-action="reinitialiser" data-username="' + esc(user.username) + '" title="Réinitialiser la progression"><i class="fas fa-rotate-left"></i></button>' +
-                                '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-username="' + esc(user.username) + '" title="Supprimer le compte"><i class="fas fa-trash"></i></button>' +
+                                '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-username="' + esc(user.username) + '" title="Supprimer le compte" ' + (backendActif ? 'disabled' : '') + '><i class="fas fa-trash"></i></button>' +
                             '</td>' +
                         '</tr>';
                     }).join('') + '</tbody>' +
                 '</table></div>' +
-                '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Seuls les élèves rattachés à vos classes apparaissent ici. Les comptes sont enregistrés dans le navigateur : ils ne sont pas partagés entre appareils.</p>';
+                '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Seuls les élèves rattachés à vos classes apparaissent ici. ' +
+                    (backendActif
+                        ? 'Les comptes sont synchronisés avec Supabase ; rôles et suppressions se gèrent dans le tableau de bord Supabase.'
+                        : 'Les comptes sont enregistrés dans le navigateur : ils ne sont pas partagés entre appareils.') +
+                '</p>';
         }
 
         liste.addEventListener('change', function (event) {
@@ -900,10 +905,18 @@ window.LearnHubAdmin = (function () {
         const settings = window.LearnHubStore.settings.get();
         const courant = window.LearnHubAuth.current();
         const espace = window.LearnHubAuth.monEspace();
+        const backendActif = !!(window.LearnHubBackend && window.LearnHubBackend.estActif());
 
         racine.innerHTML =
             '<div id="admin-message" class="d-none"></div>' +
             '<h2 class="mb-3"><i class="fas fa-cogs me-2"></i>Paramètres</h2>' +
+            (backendActif
+                ? '<div class="admin-panel border border-success">' +
+                    '<h4 class="mb-2 text-success"><i class="fas fa-cloud me-2"></i>Backend Supabase actif</h4>' +
+                    '<p class="small mb-1">Données synchronisées avec <code>' + esc(window.LearnHubConfig.supabaseUrl) + '</code>.</p>' +
+                    '<p class="small text-muted mb-0">Comptes, classes, leçons, exercices, séances et résultats sont partagés entre appareils. Les rôles et suppressions de comptes se gèrent dans le tableau de bord Supabase.</p>' +
+                  '</div>'
+                : '') +
             '<div class="admin-panel">' +
                 '<h4 class="mb-3"><i class="fas fa-door-open me-2"></i>Mon espace</h4>' +
                 '<p class="text-muted small">Chaque administrateur travaille dans son propre espace : exercices, ressources, classes et séances sont cloisonnés.</p>' +
@@ -955,8 +968,8 @@ window.LearnHubAdmin = (function () {
 
         const zoneMessage = racine.querySelector('#admin-message');
 
-        racine.querySelector('#renommer-espace').addEventListener('click', function () {
-            const resultat = window.LearnHubAuth.renommerEspace(racine.querySelector('#espace-nom').value);
+        racine.querySelector('#renommer-espace').addEventListener('click', async function () {
+            const resultat = await window.LearnHubAuth.renommerEspace(racine.querySelector('#espace-nom').value);
             message(zoneMessage, resultat.ok ? 'Nom de l\'espace enregistré.' : resultat.error, resultat.ok ? 'success' : 'danger');
         });
 

@@ -24,19 +24,19 @@ Site web éducatif statique qui regroupe des cours, des fiches de révision et d
 
 ## Comptes et identifiants
 
-| Rôle | Identifiant | Mot de passe |
-|---|---|---|
-| Élève (démo) | `etudiant` | `motdepasse` |
-| Administrateur | défini dans `COMPTES_DEMO` ([auth.js](assets/js/auth.js)) | idem |
-| Super-administrateur | défini dans `SUPER_ADMIN_AMORCAGE` ([auth.js](assets/js/auth.js)) | idem |
+Avec le backend Supabase activé (voir plus bas), les comptes sont créés par l'inscription du site (e-mail + mot de passe) et stockés dans Supabase. La page de connexion **n'affiche aucun identifiant**.
 
-Pour éviter tout accès non désiré, la page de connexion **n'affiche plus aucun identifiant** : le formulaire reste utilisable avec les coordonnées définies dans le code. Personnalisez `SUPER_ADMIN_AMORCAGE` avant publication, puis changez le mot de passe depuis `#/superadmin` → « Mes identifiants super-admin » (une alerte rouge s'affiche tant que le mot de passe d'amorçage est encore actif).
+- Les rôles (`eleve`, `admin`, `superadmin`) sont dans la table `profiles`.
+- Le rôle `superadmin` ne peut pas être obtenu à l'inscription : il se donne manuellement dans le SQL Editor :
+  `update public.profiles set role = 'superadmin' where username = 'votre_pseudo';`
+- La suppression d'un compte et le changement de rôle passent par le tableau de bord Supabase (clé `service_role` côté serveur uniquement).
+- La création de compte publique peut être désactivée dans **Authentication → Sign In / Providers**.
 
-> **Limite du site statique.** Comptes, rôles et règles d'accès vivent dans le navigateur. Masquer les identifiants dans l'interface évite les accès accidentels, mais ne remplace pas une authentification serveur : toute personne qui lit le JavaScript peut retrouver les valeurs du code. Pour une réelle protection, ajoutez un backend (Supabase, Firebase, API…) et vérifiez les rôles côté serveur.
+Sans backend (mode local, `backend: false`), les comptes de démonstration restent définis dans `COMPTES_DEMO` / `SUPER_ADMIN_AMORCAGE` de [auth.js](assets/js/auth.js) et sont stockés dans le navigateur.
 
 ## Contact du développeur
 
-La page `#/contact` présente **M.BA — Ingénieur en génie logiciel** et un formulaire (nom, e-mail, sujet, message). Les messages sont enregistrés dans le navigateur et listés dans `#/superadmin` → « Messages reçus », avec suppression possible.
+La page `#/contact` présente **M.BA — Ingénieur en génie logiciel** et un formulaire (nom, e-mail, sujet, message). Les messages sont envoyés via Formspree et une copie est enregistrée dans Supabase, consultable dans `#/superadmin` → « Messages reçus » (suppression possible).
 
 Aucune adresse e-mail n'est publiée sur le site. Le formulaire passe par un service externe :
 
@@ -117,9 +117,17 @@ Les contenus publics livrés avec le site restent visibles pour les visiteurs et
 
 ## Backend Supabase (multi-appareils)
 
-GitHub Pages ne peut pas exécuter de code serveur, mais le site peut appeler une **API distante**. Le dossier [supabase/](supabase/README.md) contient le schéma SQL complet (tables, profils, espaces, classes, leçons, exercices, séances, résultats, messages), les politiques **RLS** et la procédure de mise en place.
+GitHub Pages ne peut pas exécuter de code serveur, mais le site appelle une **API distante**. Supabase fournit l'authentification, la base PostgreSQL et l'API ; le site reste hébergé sur GitHub Pages.
 
-Tant que l'intégration n'est pas terminée, l'application continue de fonctionner en **mode local** : comptes, classes et progression sont stockés dans le navigateur de chaque appareil. Les mots de passe locaux étant hachés côté navigateur, ils ne peuvent pas être transférés : chaque utilisateur recréera son compte Supabase (les contenus et résultats pourront être importés).
+- Configuration : [assets/js/supabase-config.js](assets/js/supabase-config.js) (`backend`, `supabaseUrl`, `supabaseKey`). La clé `publishable`/`anon` est publique ; **ne jamais** mettre la clé `secret`/`service_role` dans le site.
+- Schéma, politiques RLS et guide : [supabase/README.md](supabase/README.md) et [supabase/schema.sql](supabase/schema.sql).
+- Visiteur non connecté : catalogue public local (comme avant).
+- Utilisateur connecté : espace, classes, leçons, exercices, séances et résultats chargés depuis Supabase et synchronisés à l'enregistrement.
+- Élève : rejoint une classe avec son code ; l'enseignant voit les résultats sur un autre appareil.
+- Comptes : inscription/connexion par e-mail ; mot de passe géré par Supabase. Les rôles et suppressions se font dans le tableau de bord Supabase (Edge Function à prévoir pour les automatiser).
+- Après une mise à jour du schéma, ré-exécuter `supabase/schema.sql` (script idempotent). Pour un projet créé avant la correction des colonnes de `seances`, exécuter une fois [supabase/migration-seances-text-ids.sql](supabase/migration-seances-text-ids.sql).
+
+Les données locales existantes ne peuvent pas être transférées automatiquement : les mots de passe locaux sont hachés dans le navigateur. Chaque personne recrée son compte Supabase ; les contenus et résultats pourront être importés par un écran dédié (à venir).
 
 ## Lancer le site
 

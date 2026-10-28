@@ -118,13 +118,18 @@
     }
 
     function htmlPied() {
+        const backendActif = !!(window.LearnHubBackend && window.LearnHubBackend.disponible());
         return '<footer class="mt-5">' +
             '<div class="container">' +
                 '<div class="row">' +
                     '<div class="col-lg-4 mb-4">' +
                         '<h5 class="d-flex align-items-center"><i class="fas fa-graduation-cap me-2"></i>LearnHub</h5>' +
                         '<p class="mb-2">Plateforme éducative pour tous les niveaux et tous les domaines de connaissance.</p>' +
-                        '<p class="small text-white-50 mb-0">Site statique : les comptes et la progression sont enregistrés dans votre navigateur.</p>' +
+                        '<p class="small text-white-50 mb-0">' +
+                            (backendActif
+                                ? 'Comptes et progression synchronisés avec Supabase.'
+                                : 'Site statique : les comptes et la progression sont enregistrés dans votre navigateur.') +
+                        '</p>' +
                     '</div>' +
                     '<div class="col-6 col-lg-2 mb-4">' +
                         '<h6>Matières</h6>' +
@@ -202,8 +207,8 @@
             zoneAuth.innerHTML = htmlZoneAuth();
             const deconnexion = document.getElementById('bouton-deconnexion');
             if (deconnexion) {
-                deconnexion.addEventListener('click', function () {
-                    auth.logout();
+                deconnexion.addEventListener('click', async function () {
+                    await auth.logout();
                     toast('Vous êtes déconnecté.');
                     naviguer('#/');
                     majEntete(segments);
@@ -964,6 +969,7 @@
     function vueConnexion(parametres) {
         const mode = parametres.get('mode') === 'inscription' ? 'inscription' : 'connexion';
         const suivant = parametres.get('next') || '';
+        const backendActif = !!(window.LearnHubBackend && window.LearnHubBackend.disponible());
 
         return {
             titre: 'Connexion',
@@ -974,7 +980,9 @@
                             '<div class="auth-header">' +
                                 '<i class="fas fa-user-circle auth-icon"></i>' +
                                 '<h1 class="h4 mb-1">' + (mode === 'inscription' ? 'Créer un compte' : 'Connexion') + '</h1>' +
-                                '<p class="text-muted mb-0">' + (mode === 'inscription' ? 'Vos scores seront conservés dans ce navigateur.' : 'Accédez à votre progression et à votre espace personnel.') + '</p>' +
+                                '<p class="text-muted mb-0">' + (mode === 'inscription'
+                                    ? (backendActif ? 'Un e-mail de confirmation peut être demandé.' : 'Vos scores seront conservés dans ce navigateur.')
+                                    : 'Accédez à votre progression et à votre espace personnel.') + '</p>' +
                             '</div>' +
                             '<ul class="nav nav-pills nav-fill mb-3" role="tablist" id="onglets-auth">' +
                                 '<li class="nav-item"><button class="nav-link ' + (mode === 'connexion' ? 'active' : '') + '" data-mode="connexion" type="button">Connexion</button></li>' +
@@ -982,8 +990,9 @@
                             '</ul>' +
                             '<div id="auth-message" class="d-none"></div>' +
                             '<form id="form-connexion" class="' + (mode === 'inscription' ? 'd-none' : '') + '">' +
-                                '<div class="mb-3"><label class="form-label" for="login-username">Nom d\'utilisateur ou e-mail</label>' +
-                                    '<input class="form-control" id="login-username" autocomplete="username" required></div>' +
+                                '<div class="mb-3"><label class="form-label" for="login-username">' + (backendActif ? 'E-mail' : 'Nom d\'utilisateur ou e-mail') + '</label>' +
+                                    '<input class="form-control" type="' + (backendActif ? 'email' : 'text') + '" id="login-username" autocomplete="username" required>' +
+                                    (backendActif ? '<div class="form-text">Utilisez l\'adresse e-mail de votre compte.</div>' : '') + '</div>' +
                                 '<div class="mb-3"><label class="form-label" for="login-password">Mot de passe</label>' +
                                     '<input class="form-control" type="password" id="login-password" autocomplete="current-password" required></div>' +
                                 '<button class="btn btn-primary w-100" type="submit">Se connecter</button>' +
@@ -1069,7 +1078,12 @@
                         afficherMessage(resultat.error, 'danger');
                         return;
                     }
-                    const connexion = await auth.login(donnees.username, donnees.password);
+                    if (resultat.confirmation) {
+                        afficherMessage('Compte créé. Vérifiez votre e-mail pour le confirmer, puis connectez-vous.', 'success');
+                        formInscription.reset();
+                        return;
+                    }
+                    const connexion = await auth.login(donnees.email, donnees.password);
                     if (connexion.ok) {
                         toast('Compte créé, bienvenue !');
                         majEntete([]);
@@ -1178,23 +1192,27 @@
 
                 const formClasse = racine.querySelector('#form-classe');
                 if (formClasse) {
-                    formClasse.addEventListener('submit', function (event) {
+                    formClasse.addEventListener('submit', async function (event) {
                         event.preventDefault();
-                        const resultat = auth.rejoindreClasse(racine.querySelector('#code-classe').value);
+                        const resultat = await auth.rejoindreClasse(racine.querySelector('#code-classe').value);
                         if (!resultat.ok) {
                             toast(resultat.error, 'danger');
                             return;
                         }
-                        toast('Classe rejointe : ' + resultat.classe.nom);
+                        toast('Classe rejointe.');
                         router();
                     });
                 }
 
                 const quitter = racine.querySelector('#quitter-classe');
                 if (quitter) {
-                    quitter.addEventListener('click', function () {
+                    quitter.addEventListener('click', async function () {
                         if (!window.confirm('Quitter votre classe ? Vous n\'aurez plus accès à ses séances.')) return;
-                        auth.quitterClasse();
+                        const resultat = await auth.quitterClasse();
+                        if (!resultat.ok) {
+                            toast(resultat.error, 'danger');
+                            return;
+                        }
                         toast('Vous avez quitté la classe.');
                         router();
                     });
@@ -1354,6 +1372,7 @@
 
     function vueSuperAdmin() {
         const user = auth.current();
+        const backendActif = !!(window.LearnHubBackend && window.LearnHubBackend.estActif());
         if (!auth.isSuperAdmin()) {
             return {
                 titre: 'Super-administration',
@@ -1393,14 +1412,14 @@
             return '<tr>' +
                 '<td class="fw-semibold">' + esc(compte.username) + (moi ? ' <span class="badge bg-info text-dark">vous</span>' : '') + '</td>' +
                 '<td class="text-muted small">' + esc(compte.email) + '</td>' +
-                '<td><select class="form-select form-select-sm" data-action="role" data-username="' + esc(compte.username) + '" data-role="' + esc(compte.role) + '" style="min-width:150px" ' + (moi ? 'disabled' : '') + '>' + options + '</select></td>' +
+                '<td><select class="form-select form-select-sm" data-action="role" data-username="' + esc(compte.username) + '" data-role="' + esc(compte.role) + '" style="min-width:150px" ' + (moi || backendActif ? 'disabled' : '') + '>' + options + '</select></td>' +
                 '<td class="small">' + esc(infos.espace) + '</td>' +
                 '<td class="small">' + esc(infos.classe) + '</td>' +
                 '<td>' + tentatives.length + '</td>' +
                 '<td>' + (moyenne === null ? '—' : moyenne + ' %') + '</td>' +
                 '<td class="text-end text-nowrap">' +
                     '<button class="btn btn-sm btn-outline-secondary me-1" data-action="reinitialiser" data-username="' + esc(compte.username) + '" title="Réinitialiser la progression" ' + (tentatives.length ? '' : 'disabled') + '><i class="fas fa-rotate-left"></i></button>' +
-                    '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-username="' + esc(compte.username) + '" title="Supprimer le compte" ' + (moi ? 'disabled' : '') + '><i class="fas fa-trash"></i></button>' +
+                    '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-username="' + esc(compte.username) + '" title="Supprimer le compte" ' + (moi || backendActif ? 'disabled' : '') + '><i class="fas fa-trash"></i></button>' +
                 '</td>' +
             '</tr>';
         }).join('');
@@ -1425,14 +1444,16 @@
                 '</div>' +
                 '<div class="content mb-4">' +
                     '<h2 class="h5 mb-3"><i class="fas fa-id-card me-2"></i>Mes identifiants super-admin</h2>' +
-                    '<p class="text-muted small">Remplacez les identifiants de démonstration par les vôtres. Le nom d\'utilisateur ou l\'e-mail servent à la connexion.</p>' +
-                    '<form class="row g-3 align-items-end" id="form-identifiants">' +
-                        '<div class="col-md-4"><label class="form-label" for="super-username">Nom d\'utilisateur</label>' +
-                            '<input class="form-control" id="super-username" required minlength="3" value="' + esc(user.username) + '"></div>' +
-                        '<div class="col-md-4"><label class="form-label" for="super-email">E-mail</label>' +
-                            '<input class="form-control" type="email" id="super-email" required value="' + esc(user.email) + '"></div>' +
-                        '<div class="col-md-4"><button class="btn btn-primary w-100" type="submit"><i class="fas fa-floppy-disk me-1"></i>Enregistrer mes identifiants</button></div>' +
-                    '</form>' +
+                    (backendActif
+                        ? '<p class="text-muted small">Avec Supabase, le nom d\'utilisateur et l\'e-mail se modifient dans le tableau de bord (table <code>profiles</code> / Authentication). Le mot de passe peut être changé ci-dessous.</p>'
+                        : '<p class="text-muted small">Remplacez les identifiants de démonstration par les vôtres. Le nom d\'utilisateur ou l\'e-mail servent à la connexion.</p>' +
+                          '<form class="row g-3 align-items-end" id="form-identifiants">' +
+                              '<div class="col-md-4"><label class="form-label" for="super-username">Nom d\'utilisateur</label>' +
+                                  '<input class="form-control" id="super-username" required minlength="3" value="' + esc(user.username) + '"></div>' +
+                              '<div class="col-md-4"><label class="form-label" for="super-email">E-mail</label>' +
+                                  '<input class="form-control" type="email" id="super-email" required value="' + esc(user.email) + '"></div>' +
+                              '<div class="col-md-4"><button class="btn btn-primary w-100" type="submit"><i class="fas fa-floppy-disk me-1"></i>Enregistrer mes identifiants</button></div>' +
+                          '</form>') +
                     '<hr>' +
                     '<form class="row g-3 align-items-end" id="form-mdp-super">' +
                         '<div class="col-md-4"><label class="form-label" for="super-mdp-actuel">Mot de passe actuel</label>' +
@@ -1444,18 +1465,21 @@
                 '</div>' +
                 '<div class="content mb-4">' +
                     '<h2 class="h5 mb-3"><i class="fas fa-user-plus me-2"></i>Créer un compte</h2>' +
-                    '<p class="text-muted small">' + totalClasses + ' classe(s) et ' + totalSeances + ' séance(s) sur la plateforme. Un compte enseignant reçoit automatiquement son propre espace et la bibliothèque de démonstration.</p>' +
-                    '<form class="row g-3 align-items-end" id="form-compte">' +
-                        '<div class="col-md-3"><label class="form-label" for="compte-username">Nom d\'utilisateur</label>' +
-                            '<input class="form-control" id="compte-username" required minlength="3" autocomplete="off"></div>' +
-                        '<div class="col-md-3"><label class="form-label" for="compte-email">E-mail</label>' +
-                            '<input class="form-control" type="email" id="compte-email" required autocomplete="off"></div>' +
-                        '<div class="col-md-2"><label class="form-label" for="compte-password">Mot de passe</label>' +
-                            '<input class="form-control" type="password" id="compte-password" required minlength="6" autocomplete="new-password"></div>' +
-                        '<div class="col-md-2"><label class="form-label" for="compte-role">Rôle</label>' +
-                            '<select class="form-select" id="compte-role"><option value="eleve">Élève</option><option value="admin">Enseignant</option></select></div>' +
-                        '<div class="col-md-2"><button class="btn btn-primary w-100" type="submit"><i class="fas fa-plus me-1"></i>Créer</button></div>' +
-                    '</form>' +
+                    '<p class="text-muted small">' + totalClasses + ' classe(s) et ' + totalSeances + ' séance(s) sur la plateforme.</p>' +
+                    (backendActif
+                        ? '<div class="alert alert-info py-2 mb-0"><i class="fas fa-circle-info me-1"></i>' +
+                            'Avec Supabase, la création et la suppression de comptes passent par l\'inscription du site ou le tableau de bord Supabase (clé <code>service_role</code> requise).</div>'
+                        : '<form class="row g-3 align-items-end" id="form-compte">' +
+                            '<div class="col-md-3"><label class="form-label" for="compte-username">Nom d\'utilisateur</label>' +
+                                '<input class="form-control" id="compte-username" required minlength="3" autocomplete="off"></div>' +
+                            '<div class="col-md-3"><label class="form-label" for="compte-email">E-mail</label>' +
+                                '<input class="form-control" type="email" id="compte-email" required autocomplete="off"></div>' +
+                            '<div class="col-md-2"><label class="form-label" for="compte-password">Mot de passe</label>' +
+                                '<input class="form-control" type="password" id="compte-password" required minlength="6" autocomplete="new-password"></div>' +
+                            '<div class="col-md-2"><label class="form-label" for="compte-role">Rôle</label>' +
+                                '<select class="form-select" id="compte-role"><option value="eleve">Élève</option><option value="admin">Enseignant</option></select></div>' +
+                            '<div class="col-md-2"><button class="btn btn-primary w-100" type="submit"><i class="fas fa-plus me-1"></i>Créer</button></div>' +
+                          '</form>') +
                 '</div>' +
                 '<div class="admin-panel">' +
                     '<h2 class="h5 mb-3"><i class="fas fa-address-book me-2"></i>Tous les comptes (' + comptes.length + ')</h2>' +
@@ -1463,7 +1487,11 @@
                         '<thead><tr><th>Utilisateur</th><th>E-mail</th><th>Rôle</th><th>Espace</th><th>Classe</th><th>Tentatives</th><th>Moyenne</th><th class="text-end">Actions</th></tr></thead>' +
                         '<tbody>' + lignes + '</tbody>' +
                     '</table></div>' +
-                    '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Les comptes et leurs données restent stockés dans ce navigateur. Le rôle « super-admin » ne peut être attribué que depuis cette page.</p>' +
+                    '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>' +
+                        (backendActif
+                            ? 'Comptes synchronisés avec Supabase. Les rôles et suppressions se gèrent dans le tableau de bord Supabase.'
+                            : 'Les comptes et leurs données restent stockés dans ce navigateur. Le rôle « super-admin » ne peut être attribué que depuis cette page.') +
+                    '</p>' +
                 '</div>' +
                 '<div class="admin-panel mt-4" id="messages-panel">' +
                     '<h2 class="h5 mb-3"><i class="fas fa-inbox me-2"></i>Messages reçus (' + messages.length + ')</h2>' +
@@ -1505,19 +1533,22 @@
                         'Remplacez-le dans « Mes identifiants super-admin » ci-dessous pour protéger cet espace.';
                 });
 
-                racine.querySelector('#form-identifiants').addEventListener('submit', function (event) {
-                    event.preventDefault();
-                    const resultat = auth.mettreAJourIdentifiants(user.username, {
-                        username: racine.querySelector('#super-username').value,
-                        email: racine.querySelector('#super-email').value
+                const formIdentifiants = racine.querySelector('#form-identifiants');
+                if (formIdentifiants) {
+                    formIdentifiants.addEventListener('submit', function (event) {
+                        event.preventDefault();
+                        const resultat = auth.mettreAJourIdentifiants(user.username, {
+                            username: racine.querySelector('#super-username').value,
+                            email: racine.querySelector('#super-email').value
+                        });
+                        if (!resultat.ok) {
+                            afficher(resultat.error, 'danger');
+                            return;
+                        }
+                        toast('Identifiants mis à jour : ' + resultat.username);
+                        router();
                     });
-                    if (!resultat.ok) {
-                        afficher(resultat.error, 'danger');
-                        return;
-                    }
-                    toast('Identifiants mis à jour : ' + resultat.username);
-                    router();
-                });
+                }
 
                 racine.querySelector('#form-mdp-super').addEventListener('submit', async function (event) {
                     event.preventDefault();
@@ -1534,28 +1565,36 @@
                     event.target.reset();
                 });
 
-                racine.querySelector('#form-compte').addEventListener('submit', async function (event) {
-                    event.preventDefault();
-                    const bouton = event.target.querySelector('button[type="submit"]');
-                    bouton.disabled = true;
-                    const resultat = await auth.creerCompte({
-                        username: racine.querySelector('#compte-username').value,
-                        email: racine.querySelector('#compte-email').value,
-                        password: racine.querySelector('#compte-password').value,
-                        role: racine.querySelector('#compte-role').value
+                const formCompte = racine.querySelector('#form-compte');
+                if (formCompte) {
+                    formCompte.addEventListener('submit', async function (event) {
+                        event.preventDefault();
+                        const bouton = event.target.querySelector('button[type="submit"]');
+                        bouton.disabled = true;
+                        const resultat = await auth.creerCompte({
+                            username: racine.querySelector('#compte-username').value,
+                            email: racine.querySelector('#compte-email').value,
+                            password: racine.querySelector('#compte-password').value,
+                            role: racine.querySelector('#compte-role').value
+                        });
+                        bouton.disabled = false;
+                        if (!resultat.ok) {
+                            afficher(resultat.error, 'danger');
+                            return;
+                        }
+                        toast('Compte créé : ' + resultat.compte.username);
+                        router();
                     });
-                    bouton.disabled = false;
-                    if (!resultat.ok) {
-                        afficher(resultat.error, 'danger');
-                        return;
-                    }
-                    toast('Compte créé : ' + resultat.compte.username);
-                    router();
-                });
+                }
 
                 table.addEventListener('change', function (event) {
                     const select = event.target.closest('select[data-action="role"]');
                     if (!select) return;
+                    if (backendActif) {
+                        afficher('Avec Supabase, les rôles se modifient dans le tableau de bord (table profiles).', 'danger');
+                        select.value = select.dataset.role;
+                        return;
+                    }
                     const resultat = auth.setRole(select.dataset.username, select.value);
                     if (!resultat.ok) {
                         afficher(resultat.error, 'danger');
@@ -1577,6 +1616,10 @@
                         toast('Progression réinitialisée.');
                         router();
                     } else if (bouton.dataset.action === 'supprimer') {
+                        if (backendActif) {
+                            afficher('La suppression de comptes se fait dans le tableau de bord Supabase.', 'danger');
+                            return;
+                        }
                         if (!window.confirm('Supprimer définitivement le compte ' + username + ' ?')) return;
                         const resultat = auth.removeUser(username);
                         if (!resultat.ok) {
@@ -1794,6 +1837,9 @@
     }
 
     function demarrer() {
+        window.addEventListener('learnhub:backend-error', function (event) {
+            toast('Synchronisation Supabase impossible : ' + event.detail, 'danger');
+        });
         store.seedIfNeeded();
         monterEnteteEtPied();
         majEntete([]);

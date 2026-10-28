@@ -27,6 +27,12 @@ window.LearnHubStore = (function () {
     };
 
     function read(key, fallback) {
+        const backend = window.LearnHubBackend;
+        if (backend && backend.estActif() && backend.cacheDonnees() &&
+            Object.prototype.hasOwnProperty.call(backend.cacheDonnees(), key)) {
+            // Copie : les appelants modifient souvent la liste avant de la réenregistrer.
+            return clone(backend.cacheDonnees()[key]);
+        }
         try {
             const raw = localStorage.getItem(key);
             if (!raw) return fallback;
@@ -38,6 +44,14 @@ window.LearnHubStore = (function () {
     }
 
     function write(key, value) {
+        const backend = window.LearnHubBackend;
+        if (backend && backend.estActif() && backend.cacheDonnees() &&
+            Object.prototype.hasOwnProperty.call(backend.cacheDonnees(), key)) {
+            const ancienne = backend.cacheDonnees()[key] || [];
+            backend.cacheDonnees()[key] = clone(value);
+            backend.synchroniser(key, ancienne, value);
+            return true;
+        }
         try {
             localStorage.setItem(key, JSON.stringify(value));
             return true;
@@ -107,6 +121,9 @@ window.LearnHubStore = (function () {
     }
 
     function seedIfNeeded() {
+        const backend = window.LearnHubBackend;
+        if (backend && backend.estActif()) return;
+
         const version = Number(read(KEYS.seeded, 0));
         if (!version) {
             write(KEYS.exercices, clone(window.LearnHubData.exercicesSeed));
@@ -569,7 +586,12 @@ window.LearnHubStore = (function () {
                 date: new Date().toISOString()
             };
             liste.push(message);
-            return write(KEYS.messages, liste) ? message : null;
+            const enregistre = write(KEYS.messages, liste);
+            const backend = window.LearnHubBackend;
+            if (enregistre && backend && backend.disponible() && !backend.estActif()) {
+                backend.ajouterMessage(message);
+            }
+            return enregistre ? message : null;
         },
         remove: function (id) {
             return write(KEYS.messages, this.all().filter(function (m) { return m.id !== id; }));

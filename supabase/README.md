@@ -14,6 +14,8 @@ Le site reste hébergé sur **GitHub Pages**. Supabase fournit uniquement l'auth
 2. Coller l'intégralité de [schema.sql](schema.sql).
 3. **Run**. Le script crée les tables, les index, les fonctions, les déclencheurs et les politiques RLS (Row Level Security).
 
+Si le projet a été créé avec une première version du schéma (colonnes de `seances` en `uuid[]`), exécuter une fois [migration-seances-text-ids.sql](migration-seances-text-ids.sql). Le script est idempotent.
+
 ## 3. Authentification
 
 - **Authentication → Providers → Email** : activer.
@@ -69,13 +71,33 @@ Les comptes actuels sont stockés dans le navigateur avec un mot de passe **hach
 
 Un écran d'import pourra être ajouté dans `#/admin/parametres` lors de l'intégration.
 
-## 8. Étapes suivantes (intégration frontend)
+## 8. Intégration frontend (réalisée)
 
-1. Ajouter `assets/js/supabase-config.js` (URL + clé anon) et le SDK `@supabase/supabase-js` via CDN.
-2. Brancher l'authentification : `signUp` / `signInWithPassword` / `signOut`, profil chargé depuis `profiles`.
-3. Remplacer la lecture/écriture `localStorage` de `store.js` par des appels Supabase, avec cache en mémoire pour garder les vues synchrones.
-4. Conserver le mode local comme repli si la configuration est absente.
-5. Tester les scénarios : enseignant crée une classe sur un appareil → élève la rejoint depuis un autre.
+| Fichier | Rôle |
+|---|---|
+| `assets/js/supabase-config.js` | URL du projet, clé publique et interrupteur `backend` |
+| `assets/js/backend.js` | Adaptateur Supabase : session, cache mémoire, écritures, RPC, messages |
+| `assets/js/store.js` | Lit/écrit le cache distant quand une session est active, sinon `localStorage` |
+| `assets/js/auth.js` | Délègue l'authentification et la progression à `backend.js` |
+
+Fonctionnement :
+
+- **Visiteur non connecté** : le catalogue public (chapitres, exercices de démonstration) est servi localement ; le formulaire de contact écrit dans `messages`.
+- **Utilisateur connecté** : les données de son espace sont chargées dans un cache mémoire, ce qui laisse toutes les vues synchrones ; chaque écriture met le cache à jour puis synchronise la table Supabase correspondante.
+- **Déconnexion** : le cache est vidé, l'application revient au mode local.
+- Sans `supabase-config.js` valide (`backend: false`, URL ou clé vide), l'application fonctionne intégralement en `localStorage` comme avant.
+
+### Compte super-administrateur
+
+Le rôle `superadmin` s'attribue uniquement en SQL :
+
+```sql
+update public.profiles
+set role = 'superadmin'
+where username = 'votre_pseudo';
+```
+
+En mode backend, les actions qui exigent la clé `service_role` (créer un compte sans changer de session, supprimer un compte d'authentification) sont désactivées dans l'interface : elles se font depuis le dashboard Supabase. La création de compte passe par l'inscription normale, la suppression par **Authentication → Users**.
 
 ### Opérations réservées au serveur
 
@@ -84,4 +106,4 @@ Deux actions du super-administrateur nécessitent la clé `service_role`, qui ne
 - **Créer un compte** sans changer la session en cours ;
 - **Supprimer un compte** d'authentification.
 
-Elles seront exposées par une **Edge Function Supabase** (`supabase/functions/admin-comptes`) qui vérifie le rôle super-admin avant d'agir. En attendant, la création de compte passe par l'inscription normale et la suppression se fait dans le dashboard Supabase.
+Elles pourront être exposées par une **Edge Function Supabase** (`supabase/functions/admin-comptes`) qui vérifie le rôle super-admin avant d'agir.
