@@ -111,8 +111,15 @@ Les contenus publics livrés avec le site restent visibles pour les visiteurs et
 │   │   ├── admin.js            # Back-office
 │   │   └── app.js              # Routage et vues
 │   └── images/
+├── supabase/                   # Schéma SQL et guide du backend Supabase
 └── eleve/                      # Anciennes pages, redirigées vers les nouvelles routes
 ```
+
+## Backend Supabase (multi-appareils)
+
+GitHub Pages ne peut pas exécuter de code serveur, mais le site peut appeler une **API distante**. Le dossier [supabase/](supabase/README.md) contient le schéma SQL complet (tables, profils, espaces, classes, leçons, exercices, séances, résultats, messages), les politiques **RLS** et la procédure de mise en place.
+
+Tant que l'intégration n'est pas terminée, l'application continue de fonctionner en **mode local** : comptes, classes et progression sont stockés dans le navigateur de chaque appareil. Les mots de passe locaux étant hachés côté navigateur, ils ne peuvent pas être transférés : chaque utilisateur recréera son compte Supabase (les contenus et résultats pourront être importés).
 
 ## Lancer le site
 
