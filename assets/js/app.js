@@ -1014,7 +1014,9 @@
                                 '<button class="btn btn-primary w-100" type="submit">Créer mon compte</button>' +
                             '</form>' +
                             '<hr class="my-4">' +
-                            '<p class="small text-muted mb-0"><i class="fas fa-lock me-1"></i>Les identifiants sont fournis par l\'administrateur de la plateforme. Ils ne sont pas affichés ici afin de protéger les espaces.</p>' +
+                            '<p class="small text-muted mb-0"><i class="fas fa-lock me-1"></i>' + (backendActif
+                                ? 'Connectez-vous avec l\'adresse e-mail et le mot de passe de votre compte LearnHub. Aucun identifiant n\'est affiché ici afin de protéger les espaces.'
+                                : 'Les identifiants sont fournis par l\'administrateur de la plateforme. Ils ne sont pas affichés ici afin de protéger les espaces.') + '</p>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
