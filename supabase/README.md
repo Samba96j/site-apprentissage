@@ -17,7 +17,7 @@ Le site reste hébergé sur **GitHub Pages**. Supabase fournit uniquement l'auth
 Si le projet a été créé avec une première version du schéma, exécuter une fois les scripts de migration (idempotents) :
 
 - [migration-seances-text-ids.sql](migration-seances-text-ids.sql) — colonnes de `seances` en `text[]` ;
-- [migration-profil-admin.sql](migration-profil-admin.sql) — permet de modifier un profil depuis le SQL Editor (attribution du rôle `superadmin`).
+- [migration-profil-trigger.sql](migration-profil-trigger.sql) — déclencheur des profils : attribution du rôle `superadmin` depuis le SQL Editor, suppression d'une classe peuplée, et blocage de l'affectation directe à une classe.
 
 ## 3. Authentification
 

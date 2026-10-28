@@ -273,7 +273,12 @@ begin
         raise exception 'Code de classe inconnu';
     end if;
 
+    -- Le code fait foi : on autorise exceptionnellement cette écriture au
+    -- déclencheur de protection, qui interdit sinon de s'auto-affecter une classe.
+    perform set_config('learnhub.bypass', 'on', true);
     update public.profiles set classe_id = v_classe where id = auth.uid();
+    perform set_config('learnhub.bypass', '', true);
+
     return v_espace;
 end;
 $$;
@@ -299,26 +304,44 @@ begin
         return new;
     end if;
 
+    -- Écriture autorisée explicitement par une fonction de confiance (rejoindre_classe).
+    if coalesce(current_setting('learnhub.bypass', true), '') = 'on' then
+        return new;
+    end if;
+
     v_role := public.mon_role();
 
     if v_role = 'superadmin' then
         return new;
     end if;
 
-    -- L'utilisateur ne peut pas changer son propre rôle ni son espace.
+    -- Rôle, espace et nom d'utilisateur ne changent jamais sans super-admin.
+    new.role := old.role;
+    new.espace_id := old.espace_id;
+    new.username := old.username;
+
+    -- Détachement d'une classe : suppression de la classe (cascade), élève
+    -- retiré par son enseignant, ou élève qui quitte sa classe.
+    if new.classe_id is null then
+        return new;
+    end if;
+
+    -- Un élève ne rejoint une classe que par le code, via rejoindre_classe().
     if auth.uid() = old.id then
-        new.role := old.role;
-        new.espace_id := old.espace_id;
+        if v_role <> 'admin' then
+            new.classe_id := old.classe_id;
+        end if;
         return new;
     end if;
 
     -- Un enseignant peut gérer ses élèves et ses propres comptes enseignants.
-    if v_role = 'admin' and new.role in ('eleve', 'admin') and (
+    if v_role = 'admin' and (
         old.espace_id = public.mon_espace()
-        or old.classe_id in (select id from public.classes where espace_id = public.mon_espace())
+        or exists (
+            select 1 from public.classes c
+            where c.id = old.classe_id and c.espace_id = public.mon_espace()
+        )
     ) then
-        new.espace_id := old.espace_id;
-        new.username := old.username;
         return new;
     end if;
 
