@@ -143,8 +143,24 @@ Elles sont définies dans [data.js](assets/js/data.js), tableau `diapositives` :
 | `icone` | Petite icône dans la pastille |
 | `embleme` | Grande icône décorative en filigrane |
 | `variante` | Dégradé : `violet`, `orange`, `vert`, `bleu`, `bordeaux` |
-| `image` | **Facultatif** : chemin d'une photo (`assets/images/…`). Si présente, elle remplace le dégradé et un voile sombre garantit la lisibilité |
+| `image` | Photo de fond (`assets/images/carrousel/…`). Un voile sombre garantit la lisibilité du texte |
+| `credit` | Mention affichée en bas de la diapositive (obligatoire pour les licences CC BY / CC BY-SA) |
 | `cta` | Bouton : `{ libelle, href }` |
+
+### Photos du carrousel
+
+Les 5 photos sont stockées dans `assets/images/carrousel/` (Wikimedia Commons, licences libres) et leurs crédits dans `assets/images/carrousel/credits.json`.
+
+Pour en changer :
+
+```powershell
+cd scripts
+node images-carrousel.js                                   # 5 photos automatiques
+node images-carrousel.js --source pixabay                  # via Pixabay (clé requise)
+node images-carrousel.js --fichier "Nom du fichier.jpg" --nom slide-3
+```
+
+Le script affiche l'auteur et la licence : reportez-les dans le champ `credit` de la diapositive concernée.
 
 Pour ajouter une diapositive, ajoutez simplement un objet au tableau. Pour utiliser une vraie photo, déposez-la dans `assets/images/` et renseignez `image: 'assets/images/mon-image.jpg'`.
 

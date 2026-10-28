@@ -410,6 +410,22 @@ body {
     z-index: 1;
 }
 
+/* Une photo remplace l'emblème décoratif */
+.diapo-image ~ .diapo-embleme {
+    display: none;
+}
+
+.diapo-credit {
+    position: absolute;
+    right: 10px;
+    bottom: 6px;
+    z-index: 3;
+    font-size: 0.62rem;
+    letter-spacing: 0.2px;
+    color: rgba(255, 255, 255, 0.75);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+
 .diapo-contenu {
     position: relative;
     z-index: 2;

@@ -1226,6 +1226,8 @@ window.LearnHubData = (function () {
             icone: 'fa-graduation-cap',
             embleme: 'fa-earth-africa',
             variante: 'violet',
+            image: 'assets/images/carrousel/slide-1.jpg',
+            credit: 'Photo : Ndahiro derrick — CC BY 4.0',
             cta: { libelle: 'Explorer les matières', href: '#/matieres' }
         },
         {
@@ -1234,6 +1236,8 @@ window.LearnHubData = (function () {
             icone: 'fa-gamepad',
             embleme: 'fa-brain',
             variante: 'orange',
+            image: 'assets/images/carrousel/slide-2.jpg',
+            credit: 'Photo : Heidy Garcia — CC BY 4.0',
             cta: { libelle: "S'entraîner maintenant", href: '#/exercices' }
         },
         {
@@ -1242,6 +1246,8 @@ window.LearnHubData = (function () {
             icone: 'fa-book-open',
             embleme: 'fa-book-bookmark',
             variante: 'vert',
+            image: 'assets/images/carrousel/slide-3.jpg',
+            credit: 'Photo : nathan williams — CC BY 2.0',
             cta: { libelle: 'Ouvrir la bibliothèque', href: '#/bibliotheque' }
         },
         {
@@ -1250,6 +1256,8 @@ window.LearnHubData = (function () {
             icone: 'fa-chart-line',
             embleme: 'fa-chart-simple',
             variante: 'bleu',
+            image: 'assets/images/carrousel/slide-4.jpg',
+            credit: 'Photo : Richard David Ramsey — domaine public',
             cta: { libelle: 'Ma progression', href: '#/profil' }
         },
         {
@@ -1258,6 +1266,8 @@ window.LearnHubData = (function () {
             icone: 'fa-chalkboard-user',
             embleme: 'fa-users-rectangle',
             variante: 'bordeaux',
+            image: 'assets/images/carrousel/slide-5.jpg',
+            credit: 'Photo : Rumuri Rutazima — CC BY 4.0',
             cta: { libelle: 'Créer mon espace', href: '#/connexion?mode=inscription' }
         }
     ];

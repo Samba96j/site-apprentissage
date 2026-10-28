@@ -254,6 +254,7 @@
                             : '') +
                     '</div>' +
                 '</div>' +
+                (slide.credit ? '<span class="diapo-credit">' + esc(slide.credit) + '</span>' : '') +
             '</div>' +
         '</div>';
     }
