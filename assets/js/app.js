@@ -103,6 +103,7 @@
                         '</li>' +
                         '<li class="nav-item"><a class="nav-link" href="#/cours/une-si-longue-lettre" data-nav="cours">Étude d\'œuvre</a></li>' +
                         '<li class="nav-item"><a class="nav-link" href="#/lecons" data-nav="lecons">Leçons</a></li>' +
+                        '<li class="nav-item"><a class="nav-link" href="#/bibliotheque" data-nav="bibliotheque">Bibliothèque</a></li>' +
                         '<li class="nav-item"><a class="nav-link" href="#/exercices" data-nav="exercices">Exercices</a></li>' +
                         '<li class="nav-item"><a class="nav-link" href="#/seances" data-nav="seances">Séances</a></li>' +
                     '</ul>' +
@@ -148,6 +149,7 @@
                         '<ul class="list-unstyled">' +
                             '<li><a href="#/cours/une-si-longue-lettre">Étude d\'œuvre</a></li>' +
                             '<li><a href="#/lecons">Leçons</a></li>' +
+                            '<li><a href="#/bibliotheque">Bibliothèque</a></li>' +
                             '<li><a href="#/exercices">Exercices</a></li>' +
                             '<li><a href="#/seances">Mes séances</a></li>' +
                             '<li><a href="#/recherche">Recherche</a></li>' +
@@ -164,6 +166,7 @@
                             '<li><a href="#/admin/seances">Séances</a></li>' +
                             '<li><a href="#/admin/exercices">Exercices</a></li>' +
                             '<li><a href="#/admin/ressources">Ressources</a></li>' +
+                            '<li><a href="#/admin/bibliotheque">Bibliothèque</a></li>' +
                             '<li><a href="#/admin/statistiques">Statistiques</a></li>' +
                         '</ul>' +
                     '</div>' +
@@ -645,6 +648,145 @@
                     '</div>' +
                 '</article>' +
             '</div>'
+        };
+    }
+
+    /* -------------------------------- Bibliothèque -------------------------------- */
+
+    const LIBELLES_DOC = { pdf: 'PDF', word: 'Word / Texte', texte: 'Texte', autre: 'Document' };
+    const ICONES_DOC = { pdf: 'fa-file-pdf', word: 'fa-file-word', texte: 'fa-file-lines', autre: 'fa-file' };
+
+    function vueBibliotheque(parametres) {
+        return {
+            titre: 'Bibliothèque',
+            html: '<div class="container py-4">' +
+                '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">' +
+                    '<div>' +
+                        '<h1 class="h3 mb-1"><i class="fas fa-book-open me-2"></i>Bibliothèque</h1>' +
+                        '<p class="text-muted mb-0">Livres, cours et documents libres pour approfondir toutes les matières.</p>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="input-group mb-3" style="max-width:520px">' +
+                    '<span class="input-group-text"><i class="fas fa-search"></i></span>' +
+                    '<input class="form-control" id="biblio-recherche" type="search" placeholder="Rechercher un titre, un auteur, une matière…" autocomplete="off">' +
+                '</div>' +
+                '<div class="d-flex flex-wrap gap-2 mb-4">' +
+                    '<select class="form-select form-select-sm" id="biblio-matiere" style="max-width:200px">' +
+                        '<option value="">Toutes les matières</option>' +
+                        data.matieres.map(function (m) { return '<option value="' + esc(m.slug) + '">' + esc(m.nom) + '</option>'; }).join('') +
+                    '</select>' +
+                    '<select class="form-select form-select-sm" id="biblio-niveau" style="max-width:180px">' +
+                        '<option value="">Tous les niveaux</option>' +
+                        data.niveaux.map(function (n) { return '<option value="' + esc(n.slug) + '">' + esc(n.nom) + '</option>'; }).join('') +
+                    '</select>' +
+                    '<select class="form-select form-select-sm" id="biblio-type" style="max-width:170px">' +
+                        '<option value="">Tous les formats</option>' +
+                        Object.keys(LIBELLES_DOC).map(function (t) { return '<option value="' + t + '">' + LIBELLES_DOC[t] + '</option>'; }).join('') +
+                    '</select>' +
+                    '<span class="text-muted small align-self-center" id="biblio-compteur"></span>' +
+                '</div>' +
+                '<div id="biblio-liste"><div class="text-center py-5 text-muted"><i class="fas fa-circle-notch fa-spin me-2"></i>Chargement de la bibliothèque…</div></div>' +
+            '</div>',
+            after: function (racine) {
+                const liste = racine.querySelector('#biblio-liste');
+                const compteur = racine.querySelector('#biblio-compteur');
+                const recherche = racine.querySelector('#biblio-recherche');
+                const filtreMatiere = racine.querySelector('#biblio-matiere');
+                const filtreNiveau = racine.querySelector('#biblio-niveau');
+                const filtreType = racine.querySelector('#biblio-type');
+                let documents = [];
+
+                function nomMatiere(slug) {
+                    const m = data.getMatiere(slug);
+                    return m ? m.nom : 'Général';
+                }
+                function nomNiveau(slug) {
+                    const n = data.niveaux.find(function (x) { return x.slug === slug; });
+                    return n ? n.nom : '';
+                }
+
+                function carte(document) {
+                    const type = LIBELLES_DOC[document.type] ? document.type : 'autre';
+                    const badges = [];
+                    if (document.matiere) badges.push('<span class="badge text-bg-primary">' + esc(nomMatiere(document.matiere)) + '</span>');
+                    if (document.niveau) badges.push('<span class="badge text-bg-secondary">' + esc(nomNiveau(document.niveau)) + '</span>');
+                    return '<div class="col">' +
+                        '<div class="card h-100 border-0 shadow-sm">' +
+                            '<div class="card-body d-flex flex-column">' +
+                                '<div class="d-flex align-items-start gap-2 mb-2">' +
+                                    '<i class="fas ' + ICONES_DOC[type] + ' fa-2x text-primary"></i>' +
+                                    '<div class="flex-grow-1">' +
+                                        '<h2 class="h6 mb-1">' + esc(document.titre) + '</h2>' +
+                                        (document.auteur ? '<div class="small text-muted">' + esc(document.auteur) + '</div>' : '') +
+                                    '</div>' +
+                                '</div>' +
+                                (document.description ? '<p class="small text-muted mb-2">' + esc(document.description) + '</p>' : '') +
+                                '<div class="d-flex flex-wrap gap-1 mb-2">' + badges.join('') +
+                                    '<span class="badge text-bg-light border">' + esc(LIBELLES_DOC[type]) + '</span>' +
+                                    (document.taille ? '<span class="badge text-bg-light border">' + esc(document.taille) + '</span>' : '') +
+                                '</div>' +
+                                '<div class="d-flex gap-2 mt-auto">' +
+                                    '<a class="btn btn-sm btn-primary" href="' + esc(document.url) + '" target="_blank" rel="noopener"><i class="fas fa-eye me-1"></i>Ouvrir</a>' +
+                                    '<a class="btn btn-sm btn-outline-secondary" href="' + esc(document.url) + '" target="_blank" rel="noopener" download="' + esc(document.titre) + '"><i class="fas fa-download me-1"></i>Télécharger</a>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+                }
+
+                function rafraichir() {
+                    const texte = recherche.value.trim().toLowerCase();
+                    const matiere = filtreMatiere.value;
+                    const niveau = filtreNiveau.value;
+                    const type = filtreType.value;
+                    const resultats = documents.filter(function (d) {
+                        if (matiere && d.matiere !== matiere) return false;
+                        if (niveau && d.niveau !== niveau) return false;
+                        if (type && (d.type || 'autre') !== type) return false;
+                        if (texte) {
+                            const hay = ((d.titre || '') + ' ' + (d.auteur || '') + ' ' + (d.description || '') + ' ' + nomMatiere(d.matiere)).toLowerCase();
+                            if (hay.indexOf(texte) === -1) return false;
+                        }
+                        return true;
+                    });
+                    compteur.textContent = resultats.length + ' document(s)';
+                    if (!documents.length) {
+                        liste.innerHTML = '<div class="content text-center py-5">' +
+                            '<i class="fas fa-book-open fa-3x text-primary mb-3"></i>' +
+                            '<h2 class="h5">La bibliothèque est encore vide</h2>' +
+                            '<p class="text-muted">Revenez bientôt : des documents seront ajoutés.</p>' +
+                        '</div>';
+                        return;
+                    }
+                    if (!resultats.length) {
+                        liste.innerHTML = '<div class="content text-center py-5 text-muted">Aucun document ne correspond à votre recherche.</div>';
+                        return;
+                    }
+                    liste.innerHTML = '<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">' +
+                        resultats.map(carte).join('') + '</div>';
+                }
+
+                const b = window.LearnHubBackend;
+                if (!b || !b.disponible()) {
+                    liste.innerHTML = '<div class="content text-center py-5 text-muted">La bibliothèque nécessite le backend Supabase (configuration absente).</div>';
+                    return;
+                }
+                b.listerDocuments().then(function (resultat) {
+                    if (!resultat.ok) {
+                        liste.innerHTML = '<div class="alert alert-danger">' + esc(resultat.error) + '</div>';
+                        return;
+                    }
+                    documents = resultat.documents;
+                    rafraichir();
+                }).catch(function () {
+                    liste.innerHTML = '<div class="alert alert-danger">Impossible de charger la bibliothèque.</div>';
+                });
+
+                [recherche, filtreMatiere, filtreNiveau, filtreType].forEach(function (element) {
+                    element.addEventListener('input', rafraichir);
+                    element.addEventListener('change', rafraichir);
+                });
+            }
         };
     }
 
@@ -1770,6 +1912,7 @@
         { slug: 'seances', titre: 'Séances', icone: 'fa-calendar-days' },
         { slug: 'exercices', titre: 'Exercices', icone: 'fa-tasks' },
         { slug: 'ressources', titre: 'Ressources', icone: 'fa-file-pdf' },
+        { slug: 'bibliotheque', titre: 'Bibliothèque', icone: 'fa-book' },
         { slug: 'utilisateurs', titre: 'Utilisateurs', icone: 'fa-users' },
         { slug: 'statistiques', titre: 'Statistiques', icone: 'fa-chart-bar' },
         { slug: 'parametres', titre: 'Paramètres', icone: 'fa-cogs' }
@@ -1851,6 +1994,7 @@
             case 'cours': return vueCours(segments[1], segments[2]);
             case 'lecons': return vueLecons();
             case 'lecon': return vueLecon(segments[1]);
+            case 'bibliotheque': return vueBibliotheque(parametres);
             case 'contact': return vueContact();
             case 'exercices': return vueExercices(parametres);
             case 'seances': return vueSeances();

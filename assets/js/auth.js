@@ -242,7 +242,7 @@ window.LearnHubAuth = (function () {
 
     function isAdmin() {
         const user = current();
-        return !!user && user.role === ROLES.ADMIN;
+        return !!user && (user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN);
     }
 
     function isSuperAdmin() {

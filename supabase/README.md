@@ -18,7 +18,8 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 
 - [migration-seances-text-ids.sql](migration-seances-text-ids.sql) — colonnes de `seances` en `text[]` ;
 - [migration-profil-trigger.sql](migration-profil-trigger.sql) — déclencheur des profils : attribution du rôle `superadmin` depuis le SQL Editor, suppression d'une classe peuplée, et blocage de l'affectation directe à une classe ;
-- [migration-comptes-admin.sql](migration-comptes-admin.sql) — fonctions `admin_supprimer_compte` et `admin_changer_role` qui permettent la gestion des comptes depuis la page Super-administration.
+- [migration-comptes-admin.sql](migration-comptes-admin.sql) — fonctions `admin_supprimer_compte` et `admin_changer_role` qui permettent la gestion des comptes depuis la page Super-administration ;
+- [migration-bibliotheque.sql](migration-bibliotheque.sql) — table `documents` et bucket de stockage `documents` de la bibliothèque publique.
 
 ## 3. Authentification
 
@@ -57,6 +58,16 @@ Ces deux valeurs seront placées dans un fichier `assets/js/supabase-config.js` 
 | `seances` | Séances : date, durée, classes, chapitres, leçons, exercices |
 | `attempts` | Résultats des élèves |
 | `messages` | Formulaire de contact (insertion publique, lecture super-admin) |
+| `documents` | Bibliothèque publique : livres et documents (lecture publique, écriture admin) |
+
+### Bibliothèque et stockage
+
+Les fichiers sont hébergés dans le bucket Supabase Storage **`documents`** (public, 5 Go gratuits). Les métadonnées (titre, matière, niveau, format, auteur, taille) sont dans la table `documents`.
+
+- Lecture : tout le monde, connecté ou non (page `#/bibliotheque`).
+- Écriture : rôles `admin` et `superadmin` uniquement (page `#/admin/bibliotheque`).
+- Formats acceptés : PDF, DOC/DOCX, TXT, ODT, EPUB, ou un lien externe.
+- La suppression retire la ligne **et** le fichier du bucket.
 
 ## 6. Sécurité (RLS)
 

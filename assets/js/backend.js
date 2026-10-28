@@ -678,6 +678,86 @@ window.LearnHubBackend = (function () {
         return { ok: true };
     }
 
+    /* -------------------------- Bibliothèque publique --------------------- */
+
+    function formatteTaille(octets) {
+        const n = Number(octets) || 0;
+        if (n < 1024) return n + ' o';
+        if (n < 1024 * 1024) return Math.round(n / 1024) + ' Ko';
+        return (n / (1024 * 1024)).toFixed(1).replace('.', ',') + ' Mo';
+    }
+
+    // Lecture publique : fonctionne aussi pour un visiteur non connecté.
+    async function listerDocuments() {
+        if (!disponible()) return { ok: false, error: 'Backend indisponible.' };
+        const resultat = await client.from('documents').select('*').order('titre', { ascending: true });
+        if (resultat.error) {
+            if (/could not find the table|relation .* does not exist/i.test(resultat.error.message || '')) {
+                return { ok: false, error: 'La bibliothèque n\'est pas installée : exécutez supabase/migration-bibliotheque.sql.' };
+            }
+            return { ok: false, error: resultat.error.message };
+        }
+        return { ok: true, documents: resultat.data || [] };
+    }
+
+    async function ajouterDocument(donnees) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        const titre = String((donnees && donnees.titre) || '').trim();
+        if (titre.length < 2) return { ok: false, error: 'Titre requis.' };
+
+        let url = String((donnees && donnees.url) || '').trim();
+        let taille = String((donnees && donnees.taille) || '').trim();
+        const fichier = donnees && donnees.fichier ? donnees.fichier : null;
+
+        if (fichier) {
+            const nom = fichier.name || 'document.pdf';
+            const extension = (nom.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const chemin = 'documents/' + Date.now().toString(36) + '-' +
+                Math.random().toString(36).slice(2, 8) + (extension ? '.' + extension : '');
+            const envoi = await client.storage.from('documents').upload(chemin, fichier, { upsert: true });
+            if (envoi.error) return { ok: false, error: envoi.error.message };
+            const publique = client.storage.from('documents').getPublicUrl(chemin);
+            url = publique && publique.data ? publique.data.publicUrl : url;
+            taille = formatteTaille(fichier.size);
+        }
+
+        if (!url) return { ok: false, error: 'Fournissez un fichier ou une URL.' };
+
+        const ligne = {
+            id: 'doc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+            titre: titre,
+            description: String((donnees && donnees.description) || '').trim(),
+            matiere: String((donnees && donnees.matiere) || '').trim(),
+            niveau: String((donnees && donnees.niveau) || '').trim(),
+            type: String((donnees && donnees.type) || 'pdf').trim() || 'pdf',
+            url: url,
+            taille: taille,
+            auteur: String((donnees && donnees.auteur) || '').trim()
+        };
+
+        const insertion = await client.from('documents').insert(ligne).select();
+        if (insertion.error) return { ok: false, error: insertion.error.message };
+        return { ok: true, document: insertion.data && insertion.data[0] };
+    }
+
+    async function supprimerDocument(id) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        if (!id) return { ok: false, error: 'Document introuvable.' };
+
+        const trouve = await client.from('documents').select('url').eq('id', id).maybeSingle();
+        const suppression = await client.from('documents').delete().eq('id', id);
+        if (suppression.error) return { ok: false, error: suppression.error.message };
+
+        if (trouve.data && trouve.data.url) {
+            const correspondance = String(trouve.data.url).match(/\/documents\/([^?#]+)/);
+            if (correspondance) {
+                client.storage.from('documents').remove([decodeURIComponent(correspondance[1])])
+                    .catch(function () { /* l'objet peut déjà être absent */ });
+            }
+        }
+        return { ok: true };
+    }
+
     return {
         disponible: disponible,
         estActif: estActif,
@@ -704,6 +784,9 @@ window.LearnHubBackend = (function () {
         supprimerCompte: supprimerCompte,
         changerRole: changerRole,
         renommerCompte: renommerCompte,
+        listerDocuments: listerDocuments,
+        ajouterDocument: ajouterDocument,
+        supprimerDocument: supprimerDocument,
         erreur: function () { return derniereErreur; }
     };
 })();

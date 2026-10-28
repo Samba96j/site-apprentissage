@@ -1695,6 +1695,182 @@ window.LearnHubAdmin = (function () {
         rafraichir();
     }
 
+    /* -------------------------------- Bibliothèque -------------------------------- */
+
+    function renderBibliotheque(racine) {
+        const b = window.LearnHubBackend;
+        const actif = !!(b && b.estActif());
+        const niveauConnecte = !!(window.LearnHubAuth && window.LearnHubAuth.current());
+
+        racine.innerHTML =
+            '<div id="admin-message" class="d-none"></div>' +
+            '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
+                '<div>' +
+                    '<h2 class="mb-0"><i class="fas fa-book me-2"></i>Bibliothèque publique</h2>' +
+                    '<p class="text-muted small mb-0">Documents visibles par tous les visiteurs sur la page <a href="#/bibliotheque" target="_blank">Bibliothèque</a>.</p>' +
+                '</div>' +
+                '<button class="btn btn-primary btn-sm" id="nouveau-document"><i class="fas fa-plus me-1"></i>Ajouter un document</button>' +
+            '</div>' +
+            (!niveauConnecte
+                ? '<div class="alert alert-warning py-2">Connectez-vous pour gérer la bibliothèque.</div>'
+                : '') +
+            '<div id="formulaire-document" class="d-none"></div>' +
+            '<div class="admin-panel"><div id="liste-documents"></div></div>';
+
+        const zoneMessage = racine.querySelector('#admin-message');
+        const formulaire = racine.querySelector('#formulaire-document');
+        const liste = racine.querySelector('#liste-documents');
+
+        if (!actif) {
+            liste.innerHTML = '<p class="text-muted mb-0">La bibliothèque nécessite le backend Supabase.</p>';
+            return;
+        }
+
+        function rafraichir() {
+            liste.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-circle-notch fa-spin me-2"></i>Chargement…</p>';
+            b.listerDocuments().then(function (resultat) {
+                if (!resultat.ok) {
+                    liste.innerHTML = '<div class="alert alert-danger mb-0">' + esc(resultat.error) + '</div>';
+                    return;
+                }
+                const documents = resultat.documents;
+                if (!documents.length) {
+                    liste.innerHTML = '<p class="text-muted mb-0">Aucun document. Cliquez sur « Ajouter un document » pour commencer.</p>';
+                    return;
+                }
+                liste.innerHTML =
+                    '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
+                        '<thead><tr><th>Titre</th><th>Matière</th><th>Niveau</th><th>Format</th><th>Taille</th><th class="text-end">Actions</th></tr></thead>' +
+                        '<tbody>' + documents.map(function (doc) {
+                            const matiere = window.LearnHubData.getMatiere(doc.matiere);
+                            const niveau = window.LearnHubData.niveaux.find(function (n) { return n.slug === doc.niveau; });
+                            return '<tr>' +
+                                '<td class="fw-semibold">' + esc(doc.titre) +
+                                    (doc.auteur ? '<div class="small text-muted">' + esc(doc.auteur) + '</div>' : '') + '</td>' +
+                                '<td class="small">' + esc(matiere ? matiere.nom : '—') + '</td>' +
+                                '<td class="small">' + esc(niveau ? niveau.nom : '—') + '</td>' +
+                                '<td class="small">' + esc(doc.type || 'pdf') + '</td>' +
+                                '<td class="small text-muted">' + esc(doc.taille || '—') + '</td>' +
+                                '<td class="text-end text-nowrap">' +
+                                    '<a class="btn btn-sm btn-outline-primary me-1" href="' + esc(doc.url) + '" target="_blank" rel="noopener" title="Ouvrir"><i class="fas fa-eye"></i></a>' +
+                                    '<button class="btn btn-sm btn-outline-danger" data-action="supprimer-document" data-id="' + esc(doc.id) + '" title="Supprimer"><i class="fas fa-trash"></i></button>' +
+                                '</td>' +
+                            '</tr>';
+                        }).join('') + '</tbody>' +
+                    '</table></div>' +
+                    '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>' +
+                        documents.length + ' document(s) · fichiers hébergés dans Supabase Storage (bucket public « documents »).</p>';
+            });
+        }
+
+        racine.querySelector('#nouveau-document').addEventListener('click', function () {
+            formulaire.classList.remove('d-none');
+            formulaire.innerHTML =
+                '<div class="admin-panel border border-primary">' +
+                    '<h4 class="mb-3">Nouveau document</h4>' +
+                    '<div class="row g-3">' +
+                        '<div class="col-md-6"><label class="form-label" for="doc-titre">Titre *</label>' +
+                            '<input type="text" class="form-control" id="doc-titre" required></div>' +
+                        '<div class="col-md-6"><label class="form-label" for="doc-auteur">Auteur / source</label>' +
+                            '<input type="text" class="form-control" id="doc-auteur" placeholder="Domaine public, OER…"></div>' +
+                        '<div class="col-md-4"><label class="form-label" for="doc-matiere">Matière</label>' +
+                            '<select class="form-select" id="doc-matiere"><option value="">Général</option>' +
+                                window.LearnHubData.matieres.map(function (m) {
+                                    return '<option value="' + esc(m.slug) + '">' + esc(m.nom) + '</option>';
+                                }).join('') +
+                            '</select></div>' +
+                        '<div class="col-md-4"><label class="form-label" for="doc-niveau">Niveau</label>' +
+                            '<select class="form-select" id="doc-niveau"><option value="">Tous</option>' +
+                                window.LearnHubData.niveaux.map(function (n) {
+                                    return '<option value="' + esc(n.slug) + '">' + esc(n.nom) + '</option>';
+                                }).join('') +
+                            '</select></div>' +
+                        '<div class="col-md-4"><label class="form-label" for="doc-type">Format</label>' +
+                            '<select class="form-select" id="doc-type">' +
+                                '<option value="pdf">PDF</option>' +
+                                '<option value="word">Word / Texte</option>' +
+                                '<option value="autre">Autre</option>' +
+                            '</select></div>' +
+                        '<div class="col-12"><label class="form-label" for="doc-description">Description</label>' +
+                            '<textarea class="form-control" id="doc-description" rows="2"></textarea></div>' +
+                        '<div class="col-md-6"><label class="form-label" for="doc-fichier">Fichier (PDF, DOC, TXT…)</label>' +
+                            '<input type="file" class="form-control" id="doc-fichier" accept=".pdf,.doc,.docx,.txt,.odt,.epub"></div>' +
+                        '<div class="col-md-6"><label class="form-label" for="doc-url">… ou lien externe (URL)</label>' +
+                            '<input type="url" class="form-control" id="doc-url" placeholder="https://…"></div>' +
+                    '</div>' +
+                    '<div class="d-flex gap-2 mt-3">' +
+                        '<button class="btn btn-primary" id="enregistrer-document"><i class="fas fa-upload me-1"></i>Publier</button>' +
+                        '<button class="btn btn-outline-secondary" id="annuler-document">Annuler</button>' +
+                    '</div>' +
+                '</div>';
+
+            formulaire.querySelector('#annuler-document').addEventListener('click', function () {
+                formulaire.classList.add('d-none');
+                formulaire.innerHTML = '';
+            });
+
+            formulaire.querySelector('#enregistrer-document').addEventListener('click', async function () {
+                const bouton = formulaire.querySelector('#enregistrer-document');
+                const fichier = formulaire.querySelector('#doc-fichier').files[0];
+                const url = formulaire.querySelector('#doc-url').value.trim();
+                const titre = formulaire.querySelector('#doc-titre').value.trim();
+
+                if (titre.length < 2) {
+                    message(zoneMessage, 'Le titre est obligatoire.', 'danger');
+                    return;
+                }
+                if (!fichier && !url) {
+                    message(zoneMessage, 'Choisissez un fichier ou saisissez une URL.', 'danger');
+                    return;
+                }
+
+                bouton.disabled = true;
+                bouton.innerHTML = '<i class="fas fa-circle-notch fa-spin me-1"></i>Envoi…';
+
+                // L'envoi d'un fichier peut prendre du temps : message d'attente.
+                const resultat = await b.ajouterDocument({
+                    titre: titre,
+                    auteur: formulaire.querySelector('#doc-auteur').value,
+                    matiere: formulaire.querySelector('#doc-matiere').value,
+                    niveau: formulaire.querySelector('#doc-niveau').value,
+                    type: formulaire.querySelector('#doc-type').value,
+                    description: formulaire.querySelector('#doc-description').value,
+                    fichier: fichier || null,
+                    url: url
+                });
+
+                bouton.disabled = false;
+                bouton.innerHTML = '<i class="fas fa-upload me-1"></i>Publier';
+
+                if (!resultat.ok) {
+                    message(zoneMessage, resultat.error, 'danger');
+                    return;
+                }
+                formulaire.classList.add('d-none');
+                formulaire.innerHTML = '';
+                message(zoneMessage, 'Document publié dans la bibliothèque.', 'success');
+                rafraichir();
+            });
+        });
+
+        liste.addEventListener('click', async function (event) {
+            const bouton = event.target.closest('button[data-action="supprimer-document"]');
+            if (!bouton) return;
+            if (!window.confirm('Retirer ce document de la bibliothèque ?')) return;
+            bouton.disabled = true;
+            const resultat = await b.supprimerDocument(bouton.dataset.id);
+            if (!resultat.ok) {
+                message(zoneMessage, resultat.error, 'danger');
+                bouton.disabled = false;
+                return;
+            }
+            message(zoneMessage, 'Document supprimé.', 'success');
+            rafraichir();
+        });
+
+        rafraichir();
+    }
+
     const SECTIONS = {
         dashboard: renderDashboard,
         classes: renderClasses,
@@ -1702,6 +1878,7 @@ window.LearnHubAdmin = (function () {
         seances: renderSeances,
         exercices: renderExercices,
         ressources: renderRessources,
+        bibliotheque: renderBibliotheque,
         utilisateurs: renderUtilisateurs,
         statistiques: renderStatistiques,
         parametres: renderParametres
