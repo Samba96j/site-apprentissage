@@ -1214,6 +1214,54 @@ window.LearnHubData = (function () {
         return getChapitres().filter(function (c) { return c.niveau === niveauSlug; });
     }
 
+    /**
+     * Diapositives du carrousel de la page d'accueil.
+     * `image` est facultatif : sans image, la diapositive s'affiche avec un
+     * dégradé et une icône (aucune dépendance externe).
+     */
+    const diapositives = [
+        {
+            titre: 'Apprendre sans limites',
+            texte: "Cours, fiches et exercices interactifs du collège à l'enseignement supérieur, réunis dans un seul espace.",
+            icone: 'fa-graduation-cap',
+            embleme: 'fa-earth-africa',
+            variante: 'violet',
+            cta: { libelle: 'Explorer les matières', href: '#/matieres' }
+        },
+        {
+            titre: 'Des exercices qui corrigent instantanément',
+            texte: 'Quiz chronométrés, associations et textes à trous : chaque réponse est expliquée.',
+            icone: 'fa-gamepad',
+            embleme: 'fa-brain',
+            variante: 'orange',
+            cta: { libelle: "S'entraîner maintenant", href: '#/exercices' }
+        },
+        {
+            titre: 'Une bibliothèque pour approfondir',
+            texte: 'Romans, annales et manuels classés par matière et par niveau, réservés aux élèves connectés.',
+            icone: 'fa-book-open',
+            embleme: 'fa-book-bookmark',
+            variante: 'vert',
+            cta: { libelle: 'Ouvrir la bibliothèque', href: '#/bibliotheque' }
+        },
+        {
+            titre: 'Suivez vos progrès, mois après mois',
+            texte: 'Moyenne, historique et badges personnels : vous savez toujours où vous en êtes.',
+            icone: 'fa-chart-line',
+            embleme: 'fa-chart-simple',
+            variante: 'bleu',
+            cta: { libelle: 'Ma progression', href: '#/profil' }
+        },
+        {
+            titre: 'Un espace pour chaque enseignant',
+            texte: 'Créez vos classes, publiez vos leçons et vos séances, suivez les résultats de vos élèves.',
+            icone: 'fa-chalkboard-user',
+            embleme: 'fa-users-rectangle',
+            variante: 'bordeaux',
+            cta: { libelle: 'Créer mon espace', href: '#/connexion?mode=inscription' }
+        }
+    ];
+
     return {
         developpeur: developpeur,
         matieres: matieres,
@@ -1221,6 +1269,7 @@ window.LearnHubData = (function () {
         cours: cours,
         exercicesSeed: exercicesSeed,
         ressourcesSeed: ressourcesSeed,
+        diapositives: diapositives,
         getMatiere: getMatiere,
         getNiveau: getNiveau,
         getCours: getCours,

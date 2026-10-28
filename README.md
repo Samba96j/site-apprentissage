@@ -131,6 +131,23 @@ GitHub Pages ne peut pas exécuter de code serveur, mais le site appelle une **A
 
 Les données locales existantes ne peuvent pas être transférées automatiquement : les mots de passe locaux sont hachés dans le navigateur. Chaque personne recrée son compte Supabase ; les contenus et résultats pourront être importés par un écran dédié (à venir).
 
+## Carrousel de la page d'accueil
+
+Les diapositives défilent automatiquement (6 s), avec indicateurs, flèches, pause au survol et respect de `prefers-reduced-motion`.
+
+Elles sont définies dans [data.js](assets/js/data.js), tableau `diapositives` :
+
+| Champ | Rôle |
+|---|---|
+| `titre`, `texte` | Contenu affiché |
+| `icone` | Petite icône dans la pastille |
+| `embleme` | Grande icône décorative en filigrane |
+| `variante` | Dégradé : `violet`, `orange`, `vert`, `bleu`, `bordeaux` |
+| `image` | **Facultatif** : chemin d'une photo (`assets/images/…`). Si présente, elle remplace le dégradé et un voile sombre garantit la lisibilité |
+| `cta` | Bouton : `{ libelle, href }` |
+
+Pour ajouter une diapositive, ajoutez simplement un objet au tableau. Pour utiliser une vraie photo, déposez-la dans `assets/images/` et renseignez `image: 'assets/images/mon-image.jpg'`.
+
 ## Import massif de livres
 
 Pour importer un dossier entier (plusieurs centaines de fichiers, plusieurs Go), utilisez le script fourni : [scripts/importer-bibliotheque.js](scripts/importer-bibliotheque.js). Il envoie les fichiers vers **Cloudflare R2** (10 Go gratuits, trafic sortant gratuit) et enregistre les métadonnées dans Supabase.

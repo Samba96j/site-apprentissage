@@ -365,6 +365,160 @@ body {
     padding: 0.8rem 2.2rem;
 }
 
+/* Carrousel de la page d'accueil */
+.carrousel-accueil {
+    margin-bottom: 2rem;
+}
+
+.carrousel-accueil .carousel-inner,
+.diapo {
+    border-radius: 0 0 30px 30px;
+}
+
+.diapo {
+    position: relative;
+    min-height: 380px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    color: #fff;
+}
+
+.diapo-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.diapo-voile {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, rgba(30, 12, 48, 0.92) 0%, rgba(30, 12, 48, 0.72) 45%, rgba(30, 12, 48, 0.28) 100%);
+}
+
+.diapo-embleme {
+    position: absolute;
+    right: 4%;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: clamp(9rem, 20vw, 17rem);
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.13);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.diapo-contenu {
+    position: relative;
+    z-index: 2;
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+}
+
+.diapo-texte {
+    max-width: 560px;
+}
+
+.diapo-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    margin-bottom: 14px;
+    border-radius: 16px;
+    font-size: 1.4rem;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(6px);
+}
+
+.diapo-titre {
+    font-size: clamp(1.5rem, 3.4vw, 2.4rem);
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 0.6rem;
+    letter-spacing: -0.5px;
+}
+
+.diapo-texte-desc {
+    font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+    line-height: 1.55;
+    margin-bottom: 1.4rem;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.diapo .btn-light {
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 0.65rem 1.5rem;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+}
+
+.diapo .btn-light:hover {
+    transform: translateY(-2px);
+}
+
+/* Dégradés de secours (aucune image requise) */
+.diapo--violet .diapo-voile { background: linear-gradient(120deg, #4a148c 0%, #6a1b9a 45%, #ab47bc 100%); }
+.diapo--orange .diapo-voile { background: linear-gradient(120deg, #bf360c 0%, #e64a19 45%, #ff7043 100%); }
+.diapo--vert .diapo-voile { background: linear-gradient(120deg, #1b5e20 0%, #2e7d32 45%, #66bb6a 100%); }
+.diapo--bleu .diapo-voile { background: linear-gradient(120deg, #0d47a1 0%, #1565c0 45%, #42a5f5 100%); }
+.diapo--bordeaux .diapo-voile { background: linear-gradient(120deg, #4a0e2e 0%, #880e4f 45%, #ad1457 100%); }
+
+/* Quand une image existe, le voile reste sombre pour la lisibilité */
+.diapo-image + .diapo-voile {
+    background: linear-gradient(100deg, rgba(24, 8, 40, 0.92) 0%, rgba(24, 8, 40, 0.7) 50%, rgba(24, 8, 40, 0.15) 100%);
+}
+
+.carrousel-accueil .carousel-indicators [data-bs-target] {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 0;
+    background-color: rgba(255, 255, 255, 0.55);
+    opacity: 1;
+}
+
+.carrousel-accueil .carousel-indicators .active {
+    background-color: #fff;
+    width: 26px;
+    border-radius: 5px;
+}
+
+.carrousel-accueil .carousel-control-prev,
+.carrousel-accueil .carousel-control-next {
+    width: 6%;
+    opacity: 0.55;
+}
+
+.carrousel-accueil .carousel-control-prev:hover,
+.carrousel-accueil .carousel-control-next:hover {
+    opacity: 1;
+}
+
+@media (max-width: 575.98px) {
+    .diapo {
+        min-height: 320px;
+    }
+    .diapo-contenu {
+        padding-top: 2rem;
+        padding-bottom: 2.6rem;
+    }
+    .carrousel-accueil .carousel-control-prev,
+    .carrousel-accueil .carousel-control-next {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .carrousel-accueil .carousel-item {
+        transition: none;
+    }
+}
+
 /* Footer */
 footer {
     background: linear-gradient(90deg, var(--dark), var(--primary));

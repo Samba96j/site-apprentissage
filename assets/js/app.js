@@ -233,9 +233,37 @@
 
     /* ------------------------------------ Vues ------------------------------------ */
 
+    function diapositive(slide, index) {
+        const variante = esc(slide.variante || 'violet');
+        const image = slide.image
+            ? '<img class="diapo-image" src="' + esc(slide.image) + '" alt="" loading="' + (index === 0 ? 'eager' : 'lazy') + '">'
+            : '';
+        return '<div class="carousel-item' + (index === 0 ? ' active' : '') + '">' +
+            '<div class="diapo diapo--' + variante + '">' +
+                image +
+                '<div class="diapo-voile"></div>' +
+                '<i class="fas ' + esc(slide.embleme || slide.icone || 'fa-graduation-cap') + ' diapo-embleme" aria-hidden="true"></i>' +
+                '<div class="container diapo-contenu">' +
+                    '<div class="diapo-texte">' +
+                        '<span class="diapo-icone"><i class="fas ' + esc(slide.icone || 'fa-graduation-cap') + '"></i></span>' +
+                        '<h2 class="diapo-titre">' + esc(slide.titre) + '</h2>' +
+                        '<p class="diapo-texte-desc">' + esc(slide.texte) + '</p>' +
+                        (slide.cta
+                            ? '<a class="btn btn-light btn-lg" href="' + esc(slide.cta.href) + '">' + esc(slide.cta.libelle) +
+                              ' <i class="fas fa-arrow-right ms-1"></i></a>'
+                            : '') +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }
+
     function vueAccueil() {
         const chapitres = data.getChapitres();
         const exercices = store.exercices.actifs();
+        const diapositives = Array.isArray(data.diapositives) && data.diapositives.length
+            ? data.diapositives
+            : [];
         const cartes = data.matieres.map(function (matiere) {
             return '<div class="col-md-6 col-lg-3">' +
                 '<div class="card h-100 domaine-card">' +
@@ -253,18 +281,27 @@
         return {
             titre: "Apprendre sans limites",
             html:
-                '<section class="hero-section py-5">' +
-                    '<div class="container py-4">' +
-                        '<div class="row justify-content-center text-center">' +
-                            '<div class="col-lg-9">' +
-                                '<h1 class="display-5 fw-bold mb-4">Apprendre sans limites</h1>' +
-                                '<p class="lead mb-4">Cours, fiches et exercices interactifs du collège à l\'enseignement supérieur, réunis dans un seul espace.</p>' +
-                                '<div class="d-flex flex-wrap gap-3 justify-content-center">' +
-                                    '<a href="#/matieres" class="btn btn-primary btn-lg">Commencer maintenant</a>' +
-                                    '<a href="#/cours/une-si-longue-lettre" class="btn btn-outline-primary btn-lg">Découvrir une étude d\'œuvre</a>' +
-                                '</div>' +
-                            '</div>' +
+                '<h1 class="visually-hidden">LearnHub — apprendre sans limites</h1>' +
+                '<section class="carrousel-accueil" aria-label="Présentation de la plateforme">' +
+                    '<div id="carrousel-learnhub" class="carousel slide" data-bs-ride="carousel" data-bs-interval="6000" data-bs-pause="hover">' +
+                        '<div class="carousel-indicators">' +
+                            diapositives.map(function (slide, index) {
+                                return '<button type="button" data-bs-target="#carrousel-learnhub" data-bs-slide-to="' + index + '"' +
+                                    (index === 0 ? ' class="active" aria-current="true"' : '') +
+                                    ' aria-label="Diapositive ' + (index + 1) + ' : ' + esc(slide.titre) + '"></button>';
+                            }).join('') +
                         '</div>' +
+                        '<div class="carousel-inner">' +
+                            diapositives.map(diapositive).join('') +
+                        '</div>' +
+                        '<button class="carousel-control-prev" type="button" data-bs-target="#carrousel-learnhub" data-bs-slide="prev">' +
+                            '<span class="carousel-control-prev-icon" aria-hidden="true"></span>' +
+                            '<span class="visually-hidden">Diapositive précédente</span>' +
+                        '</button>' +
+                        '<button class="carousel-control-next" type="button" data-bs-target="#carrousel-learnhub" data-bs-slide="next">' +
+                            '<span class="carousel-control-next-icon" aria-hidden="true"></span>' +
+                            '<span class="visually-hidden">Diapositive suivante</span>' +
+                        '</button>' +
                     '</div>' +
                 '</section>' +
                 '<section class="py-4">' +
