@@ -253,6 +253,23 @@ async function connecterSupabase(env) {
     return { url: url, jeton: donnees.access_token };
 }
 
+/** Vérifie que la colonne `visibilite` existe avant d'envoyer 1 Go de fichiers. */
+async function verifierSchema(session, env) {
+    const reponse = await fetch(session.url + '/rest/v1/documents?select=visibilite&limit=1', {
+        headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + session.jeton }
+    });
+    if (reponse.ok) return;
+    const texte = await reponse.text();
+    if (/visibilite/i.test(texte)) {
+        throw new Error(
+            'La colonne « visibilite » n\'existe pas encore dans Supabase.\n' +
+            '   Exécutez d\'abord supabase/migration-bibliotheque-visibilite.sql dans le SQL Editor,\n' +
+            '   sinon tous les fichiers seraient publiés en accès libre.'
+        );
+    }
+    throw new Error('Table documents inaccessible (' + reponse.status + ') : ' + texte.slice(0, 200));
+}
+
 async function enregistrerDocument(session, env, entree, urlPublique, visibilite) {
     const identifiant = 'doc-' + crypto.createHash('sha1').update(entree.fichier).digest('hex').slice(0, 18);
     const ligne = {
@@ -362,6 +379,7 @@ async function principal() {
 
     const client = creerClientR2(env);
     const session = await connecterSupabase(env);
+    await verifierSchema(session, env);
     console.log('Connecté à Supabase. Début de l\'envoi…\n');
 
     let reussis = 0;
