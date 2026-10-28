@@ -33,13 +33,15 @@ function lireArguments() {
         simulation: false,
         reinitialiser: false,
         dossierCatalogue: 'pdf',
-        visibilite: 'eleves'
+        visibilite: 'eleves',
+        seulement: []
     };
     for (let i = 0; i < args.length; i++) {
         const a = args[i];
         if (a === '--source') options.source = args[++i];
         else if (a === '--limit') options.limite = Number(args[++i]) || 0;
         else if (a === '--visibilite') options.visibilite = args[++i];
+        else if (a === '--seulement') options.seulement.push(String(args[++i] || '').toLowerCase());
         else if (a === '--dry-run' || a === '--simulation') options.simulation = true;
         else if (a === '--reset') options.reinitialiser = true;
         else if (a === '--help' || a === '-h') options.aide = true;
@@ -331,6 +333,8 @@ async function principal() {
             '                      (défaut : BIBLIO_SOURCE du .env)',
             '  --limit <n>         N\'importer que les n premiers fichiers',
             '  --visibilite <v>    public | eleves | enseignants (défaut : eleves)',
+            '  --seulement <motif> N\'importer que les fichiers dont le nom contient ce texte',
+            '                      (répétable : --seulement electronique --seulement neville)',
             '  --dry-run           Simuler sans rien envoyer',
             '  --reset             Ignorer l\'état de reprise et tout réimporter'
         ].join('\n'));
@@ -359,7 +363,13 @@ async function principal() {
     console.log('');
 
     const toutes = construireEntrees(source, options.dossierCatalogue);
-    const entrees = options.limite ? toutes.slice(0, options.limite) : toutes;
+    const filtrees = options.seulement.length
+        ? toutes.filter(function (e) {
+            const nom = e.fichier.toLowerCase();
+            return options.seulement.some(function (motif) { return nom.indexOf(motif) !== -1; });
+        })
+        : toutes;
+    const entrees = options.limite ? filtrees.slice(0, options.limite) : filtrees;
     const poidsTotal = entrees.reduce(function (acc, e) { return acc + e.tailleOctets; }, 0);
 
     console.log(entrees.length + ' fichier(s), ' + formaterTaille(poidsTotal) + ' à envoyer.');

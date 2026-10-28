@@ -32,11 +32,13 @@ function chargerEnv(fichier) {
 
 function lireArguments() {
     const args = process.argv.slice(2);
-    const options = { simulation: false, visibilite: 'eleves', supprimerDoublonsR2: true };
+    const options = { simulation: false, visibilite: 'eleves', supprimerDoublonsR2: false };
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--dry-run' || args[i] === '--simulation') options.simulation = true;
         else if (args[i] === '--visibilite') options.visibilite = args[++i];
-        else if (args[i] === '--garder-doublons') options.supprimerDoublonsR2 = false;
+        // Suppression des doublons d'import : désormais désactivée par défaut,
+        // car l'ensemble de la bibliothèque est hébergée sur R2.
+        else if (args[i] === '--supprimer-doublons-r2') options.supprimerDoublonsR2 = true;
     }
     return options;
 }
