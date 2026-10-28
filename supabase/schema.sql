@@ -293,6 +293,12 @@ as $$
 declare
     v_role text;
 begin
+    -- Console SQL et service_role : aucun utilisateur authentifié, on laisse passer
+    -- (nécessaire pour attribuer le rôle superadmin et gérer les comptes).
+    if auth.uid() is null then
+        return new;
+    end if;
+
     v_role := public.mon_role();
 
     if v_role = 'superadmin' then

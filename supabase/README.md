@@ -14,7 +14,10 @@ Le site reste hébergé sur **GitHub Pages**. Supabase fournit uniquement l'auth
 2. Coller l'intégralité de [schema.sql](schema.sql).
 3. **Run**. Le script crée les tables, les index, les fonctions, les déclencheurs et les politiques RLS (Row Level Security).
 
-Si le projet a été créé avec une première version du schéma (colonnes de `seances` en `uuid[]`), exécuter une fois [migration-seances-text-ids.sql](migration-seances-text-ids.sql). Le script est idempotent.
+Si le projet a été créé avec une première version du schéma, exécuter une fois les scripts de migration (idempotents) :
+
+- [migration-seances-text-ids.sql](migration-seances-text-ids.sql) — colonnes de `seances` en `text[]` ;
+- [migration-profil-admin.sql](migration-profil-admin.sql) — permet de modifier un profil depuis le SQL Editor (attribution du rôle `superadmin`).
 
 ## 3. Authentification
 
