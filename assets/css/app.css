@@ -144,3 +144,108 @@
 .list-group-item-action:hover {
     background-color: rgba(106, 27, 154, 0.05);
 }
+
+/* ------------------------- Bannière étoilée (IAFA FAMA) ------------------------- */
+
+.ia-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.25rem;
+    padding: 2.75rem 1.5rem 2.25rem;
+    text-align: center;
+    color: #fff;
+    background:
+        radial-gradient(circle at 18% 18%, rgba(138, 92, 246, 0.55) 0%, rgba(23, 10, 40, 0) 55%),
+        radial-gradient(circle at 82% 78%, rgba(236, 72, 153, 0.35) 0%, rgba(23, 10, 40, 0) 55%),
+        linear-gradient(140deg, #2b1445 0%, #1b0d2e 55%, #12071f 100%);
+    box-shadow: 0 18px 40px rgba(23, 10, 40, 0.35);
+}
+
+.ia-hero .etoile {
+    position: absolute;
+    display: block;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+    opacity: 0.2;
+    animation-name: ia-scintille;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+    pointer-events: none;
+}
+
+@keyframes ia-scintille {
+    0%, 100% { opacity: 0.12; transform: scale(0.6); }
+    50% { opacity: 1; transform: scale(1.35); }
+}
+
+.ia-hero-contenu {
+    position: relative;
+    z-index: 2;
+}
+
+.ia-hero-etoiles {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+    color: #ffd76a;
+    font-size: 0.85rem;
+}
+
+.ia-hero-etoiles i:nth-child(2) {
+    font-size: 1.15rem;
+    transform: translateY(-3px);
+    animation: ia-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes ia-pulse {
+    0%, 100% { opacity: 0.55; transform: translateY(-3px) scale(0.9); }
+    50% { opacity: 1; transform: translateY(-3px) scale(1.15); }
+}
+
+.ia-hero-titre {
+    font-size: clamp(1.7rem, 6vw, 2.9rem);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #fff6d6 0%, #ffd76a 25%, #ffffff 50%, #ffd76a 75%, #fff6d6 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: ia-eclat 7s linear infinite;
+}
+
+@keyframes ia-eclat {
+    to { background-position: 200% center; }
+}
+
+.ia-hero-soustitre {
+    color: rgba(255, 255, 255, 0.82);
+    max-width: 46rem;
+    margin: 0 auto;
+    font-size: 0.95rem;
+}
+
+.ia-hero-badge {
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    padding: 0.15rem 0.6rem;
+    border: 1px solid rgba(255, 215, 106, 0.55);
+    border-radius: 999px;
+    color: #ffd76a;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ia-hero .etoile,
+    .ia-hero-titre,
+    .ia-hero-etoiles i:nth-child(2) {
+        animation: none;
+    }
+    .ia-hero .etoile { opacity: 0.45; }
+}

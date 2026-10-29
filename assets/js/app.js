@@ -1968,18 +1968,52 @@
         '</article>';
     }
 
+    function etoilesDeco(nombre) {
+        // Générateur déterministe : les positions restent stables entre deux rendus.
+        let graine = 20261029;
+        function suivant() {
+            graine = (graine * 16807) % 2147483647;
+            return graine / 2147483647;
+        }
+        const morceaux = [];
+        for (let i = 0; i < nombre; i += 1) {
+            const x = (2 + suivant() * 96).toFixed(2);
+            const y = (2 + suivant() * 96).toFixed(2);
+            const taille = (1.2 + suivant() * 2.6).toFixed(1);
+            const delai = (suivant() * 4.5).toFixed(1);
+            const duree = (2.4 + suivant() * 2.8).toFixed(1);
+            morceaux.push('<span class="etoile" aria-hidden="true" style="left:' + x + '%;top:' + y + '%;width:' +
+                taille + 'px;height:' + taille + 'px;animation-delay:' + delai + 's;animation-duration:' + duree + 's"></span>');
+        }
+        return morceaux.join('');
+    }
+
+    function heroIA(sousTitre) {
+        return '<section class="ia-hero mb-4" aria-label="' + esc(NOM_IA) + '">' +
+            etoilesDeco(48) +
+            '<div class="ia-hero-contenu">' +
+                '<div class="ia-hero-etoiles" aria-hidden="true">' +
+                    '<i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>' +
+                '</div>' +
+                '<span class="ia-hero-badge">Intelligence artificielle</span>' +
+                '<h1 class="ia-hero-titre">' + esc(NOM_IA) + '</h1>' +
+                '<p class="ia-hero-soustitre">' + esc(sousTitre) + '</p>' +
+            '</div>' +
+        '</section>';
+    }
+
     function vueIA(parametres) {
         const user = auth.current();
         if (!user) {
             return {
                 titre: NOM_IA + ' — IA',
-                html: '<div class="container py-5"><div class="content text-center">' +
-                    '<i class="fas fa-wand-magic-sparkles fa-3x text-primary mb-3"></i>' +
-                    '<h1 class="h4 mb-2">' + NOM_IA + ' <span class="badge bg-primary align-middle fs-6">IA</span></h1>' +
-                    '<p class="text-muted small mb-3">' + esc(DESCRIPTION_IA) + '</p>' +
-                    '<p class="text-muted">Connectez-vous pour générer et conserver vos fiches.</p>' +
-                    '<a class="btn btn-primary" href="#/connexion?next=ia">Se connecter</a>' +
-                '</div></div>'
+                html: '<div class="container py-4">' +
+                    heroIA(DESCRIPTION_IA) +
+                    '<div class="content text-center">' +
+                        '<p class="text-muted">Connectez-vous pour générer et conserver vos fiches.</p>' +
+                        '<a class="btn btn-primary" href="#/connexion?next=ia">Se connecter</a>' +
+                    '</div>' +
+                '</div>'
             };
         }
 
@@ -1995,12 +2029,8 @@
         return {
             titre: NOM_IA + ' — IA',
             html: '<div class="container py-4">' +
-                '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">' +
-                    '<div>' +
-                        '<h1 class="h3 mb-1"><i class="fas fa-wand-magic-sparkles me-2"></i>' + NOM_IA +
-                            ' <span class="badge bg-primary align-middle fs-6">IA</span></h1>' +
-                        '<p class="text-muted mb-0">' + esc(DESCRIPTION_IA) + '</p>' +
-                    '</div>' +
+                heroIA(DESCRIPTION_IA) +
+                '<div class="d-flex flex-wrap justify-content-end align-items-center gap-2 mb-3">' +
                     '<a class="btn btn-outline-secondary btn-sm" href="#/profil"><i class="fas fa-chart-line me-1"></i>Ma progression</a>' +
                 '</div>' +
                 '<div class="alert alert-warning small"><i class="fas fa-triangle-exclamation me-1"></i>' +
