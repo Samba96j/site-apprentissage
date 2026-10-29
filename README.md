@@ -162,7 +162,7 @@ Autres fournisseurs gratuits, si besoin :
 
 #### 2. Configurer Supabase
 
-1. Exécuter [supabase/migration-ia.sql](supabase/migration-ia.sql) dans le **SQL Editor**.
+1. Exécuter [supabase/migration-ia.sql](supabase/migration-ia.sql) **puis** [supabase/migration-ia-quota.sql](supabase/migration-ia-quota.sql) dans le **SQL Editor**.
 2. Ajouter les secrets : **Project Settings → Edge Functions → Secrets** (ou **Edge Functions → Manage secrets**), puis créer :
    - `AI_PROVIDER` = `gemini`
    - `GEMINI_API_KEY` = la clé `AIza…`
@@ -196,7 +196,7 @@ Après reconnexion sur le site, ouvrir `#/ia` et lancer une étude. Si la fiche 
 | « La clé IA est refusée par le fournisseur » | Clé révoquée, copiée partiellement, ou bloquée pour le service (`API_KEY_SERVICE_BLOCKED`) : activer la **Generative Language API** et autoriser la clé dans Google Cloud, ou recréer une clé sur <https://aistudio.google.com/apikey> |
 | « Modèle introuvable chez le fournisseur » | Modèle retiré (ex. `gemini-2.5-flash` n'est plus ouvert aux nouveaux comptes) ou `AI_MODEL` erroné ; la fonction bascule automatiquement sur `gemini-3.5-flash` |
 | « Service IA indisponible » | Nom de fonction erroné, fonction en erreur, quota du fournisseur atteint |
-| « Limite de N générations par jour atteinte » | Quota `IA_LIMITE_JOUR` du compte (30 par défaut) |
+| « Limite de N générations par jour atteinte » | Quota `IA_LIMITE_JOUR` / `IA_LIMITE_QUESTIONS`, ou plafond `IA_LIMITE_GLOBALE` |
 | « Session expirée » | Se reconnecter |
 
 Journaux utiles : **Edge Functions → ia → Logs**, ou `supabase functions logs ia`.
@@ -210,7 +210,11 @@ Variables optionnelles :
 | `AI_MODEL` | Modèle à utiliser (ex. `gemini-3.5-flash`). En cas de modèle introuvable ou retiré, la fonction essaie automatiquement des modèles de repli |
 | `AI_BASE_URL` | Autre point d'entrée compatible OpenAI |
 | `AI_API_KEY` | Clé générique, prioritaire sur la variable du fournisseur |
-| `IA_LIMITE_JOUR` | Nombre d'études générées par jour et par compte (30 par défaut) |
+| `IA_LIMITE_JOUR` | Fiches d'étude par jour et par compte (30 par défaut) |
+| `IA_LIMITE_QUESTIONS` | Recherches/questions par jour et par compte (60 par défaut) |
+| `IA_LIMITE_GLOBALE` | Plafond quotidien tous comptes confondus (300 par défaut) |
+
+**Quota tenu par la base.** Le compteur vit dans la table `ia_quotas` et n'est mis à jour que par les fonctions `ia_consommer()` / `ia_liberer()`. Un appel direct à la fonction, sans passer par le site, ne remet donc pas le compteur à zéro — contrairement à un décompte basé sur les lignes enregistrées. La réservation est rendue automatiquement si le fournisseur échoue. Les deux modes sont comptés séparément, et `IA_LIMITE_GLOBALE` borne l'usage total du projet (comptes multiples, abus).
 
 Sans clé configurée, la page reste utilisable en **mode démonstration** : la présentation type d'une fiche est affichée et clairement signalée comme exemple.
 

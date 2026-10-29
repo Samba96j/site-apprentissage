@@ -9,7 +9,8 @@
  *   supabase secrets set AI_PROVIDER=gemini GEMINI_API_KEY=…
  *   supabase functions deploy ia
  *
- * Variables optionnelles : AI_MODEL, AI_BASE_URL, AI_API_KEY, IA_LIMITE_JOUR.
+ * Variables optionnelles : AI_MODEL, AI_BASE_URL, AI_API_KEY,
+ * IA_LIMITE_JOUR (études/jour), IA_LIMITE_QUESTIONS, IA_LIMITE_GLOBALE.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -38,7 +39,7 @@ const CORS = {
 };
 
 /** Sert à vérifier depuis l'extérieur quelle version du code est déployée. */
-const VERSION = '2026-10-29';
+const VERSION = '2026-10-29.2';
 
 const FOURNISSEURS: Record<string, { url: string; modele: string; variable: string }> = {
   gemini: {
@@ -395,22 +396,38 @@ Deno.serve(async (requete: Request) => {
     }, 503);
   }
 
-  if (mode === 'etude') {
-    const limite = Number(Deno.env.get('IA_LIMITE_JOUR') || 30) || 30;
-    const debutJour = new Date();
-    debutJour.setUTCHours(0, 0, 0, 0);
-    const { count } = await supabase
-      .from('ia_contenus')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', utilisateur.id)
-      .gte('created_at', debutJour.toISOString());
-    if ((count || 0) >= limite) {
+  const limiteEtudes = Number(Deno.env.get('IA_LIMITE_JOUR') || 30) || 30;
+  const limiteQuestions = Number(Deno.env.get('IA_LIMITE_QUESTIONS') || 60) || 60;
+  const limiteGlobale = Number(Deno.env.get('IA_LIMITE_GLOBALE') || 300) || 300;
+
+  // Compteur tenu par la base : impossible à remettre à zéro depuis le client.
+  let reservation: string | null = null;
+  const { data: quota, error: erreurQuota } = await supabase.rpc('ia_consommer', {
+    p_type: mode,
+    p_limite_etudes: limiteEtudes,
+    p_limite_questions: limiteQuestions,
+    p_limite_globale: limiteGlobale
+  });
+
+  if (erreurQuota) {
+    // Migration non encore exécutée : on laisse passer plutôt que de bloquer le site.
+    console.warn('Quota IA indisponible (migration-ia-quota.sql ?) :', erreurQuota.message);
+  } else if (quota && quota.autorise === false) {
+    if (quota.motif === 'global') {
       return reponse({
         ok: false,
-        code: 'quota',
-        error: `Limite de ${limite} générations par jour atteinte. Réessayez demain.`
+        code: 'quota_global',
+        error: 'Le service a atteint son plafond quotidien. Réessayez demain.'
       }, 429);
     }
+    const quoi = mode === 'etude' ? 'fiches d\'étude' : 'recherches';
+    return reponse({
+      ok: false,
+      code: 'quota',
+      error: `Limite de ${quota.limite} ${quoi} par jour atteinte. Réessayez demain.`
+    }, 429);
+  } else {
+    reservation = mode;
   }
 
   const invite = mode === 'etude'
@@ -442,6 +459,13 @@ Deno.serve(async (requete: Request) => {
     });
   } catch (erreur) {
     console.error('Assistant IA :', erreur);
+    if (reservation) {
+      // La génération a échoué : la réservation est rendue à l'utilisateur.
+      await supabase.rpc('ia_liberer', { p_type: reservation }).then(
+        function () { /* remboursement silencieux */ },
+        function () { /* la migration de quota peut être absente */ }
+      );
+    }
     const connue = erreur instanceof ErreurFournisseur;
     return reponse({
       ok: false,

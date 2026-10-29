@@ -21,7 +21,8 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 - [migration-comptes-admin.sql](migration-comptes-admin.sql) — fonctions `admin_supprimer_compte` et `admin_changer_role` qui permettent la gestion des comptes depuis la page Super-administration ;
 - [migration-bibliotheque.sql](migration-bibliotheque.sql) — table `documents` et bucket de stockage `documents` de la bibliothèque publique ;
 - [migration-bibliotheque-visibilite.sql](migration-bibliotheque-visibilite.sql) — colonne `visibilite` (public / élèves / enseignants) et politique RLS correspondante ;
-- [migration-ia.sql](migration-ia.sql) — table `ia_contenus` de l'assistant IA (études d'œuvres et questions), privée par élève.
+- [migration-ia.sql](migration-ia.sql) — table `ia_contenus` de l'assistant IA (études d'œuvres et questions), privée par élève ;
+- [migration-ia-quota.sql](migration-ia-quota.sql) — table `ia_quotas` et fonctions `ia_consommer()` / `ia_liberer()` : quota quotidien tenu côté base, impossible à remettre à zéro depuis le navigateur.
 
 ## 3. Authentification
 
@@ -146,7 +147,7 @@ Les deux RPC sont `security definer` et vérifient `public.mon_role() = 'superad
 
 La page `#/ia` n'appelle jamais le fournisseur depuis le navigateur : la clé reste dans les secrets Supabase.
 
-1. Exécuter [migration-ia.sql](migration-ia.sql) dans le SQL Editor.
+1. Exécuter [migration-ia.sql](migration-ia.sql) puis [migration-ia-quota.sql](migration-ia-quota.sql) dans le SQL Editor.
 2. Enregistrer la clé et déployer la fonction :
 
 ```bash
@@ -163,9 +164,13 @@ Fournisseurs compatibles OpenAI pris en charge : `gemini` (palier gratuit, par d
 | `AI_API_KEY` | Clé générique, prioritaire sur la précédente |
 | `AI_MODEL` | Modèle à utiliser (ex. `gemini-3.5-flash`), avec repli automatique si le modèle est introuvable ou retiré |
 | `AI_BASE_URL` | Point d'entrée alternatif compatible OpenAI |
-| `IA_LIMITE_JOUR` | Études générées par jour et par compte (30 par défaut) |
+| `IA_LIMITE_JOUR` | Fiches d'étude par jour et par compte (30 par défaut) |
+| `IA_LIMITE_QUESTIONS` | Questions par jour et par compte (60 par défaut) |
+| `IA_LIMITE_GLOBALE` | Plafond quotidien tous comptes confondus (300 par défaut) |
 
 La fonction vérifie le JWT Supabase, applique le quota quotidien, exige une sortie JSON et normalise le contenu (balises HTML supprimées, longueurs bornées). Sans clé, elle répond `non_configure` : le site bascule alors en mode démonstration. Les fiches validées sont enregistrées par le site dans `ia_contenus`, avec une RLS limitée à leur auteur.
+
+**Quota non contournable.** Le décompte ne repose pas sur les lignes enregistrées par le navigateur (qu'un appel direct ou une suppression remettrait à zéro), mais sur la table `ia_quotas`, écrite uniquement par `ia_consommer()` — une fonction `security definer` appelée par la fonction `ia` avec le JWT de l'élève. Elle réserve une génération avant l'appel au fournisseur ; en cas d'échec, `ia_liberer()` rend la réservation. Le plafond global (`IA_LIMITE_GLOBALE`) protège le projet même si plusieurs comptes sont créés.
 
 **Vérifier ce qui est réellement déployé** — un appel `GET` renvoie la version du code en ligne, sans exposer la clé :
 
