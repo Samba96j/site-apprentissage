@@ -19,7 +19,8 @@ Site web éducatif statique qui regroupe des cours, des fiches de révision et d
 - **Leçons et exercices personnalisés.** Chaque enseignant rédige ses propres leçons avec un éditeur riche (gras, italique, titres, listes, citations, liens) et crée ses propres quiz, associations ou textes à trous, sans toucher au code.
 - **Contact développeur.** Une page `#/contact` présente M.BA, Ingénieur en génie logiciel, avec un formulaire de message ; les messages sont consultables dans la super-administration.
 - **Classes et séances.** Un enseignant crée des classes avec un code d'inscription, planifie des séances (date, durée, chapitres du site, ses leçons, exercices assignés, classes ciblées), publie ou masque celles-ci, et suit les résultats de chaque élève.
-- **Espace élève personnalisé.** En saisissant le code de sa classe, un élève rejoint l'espace de son enseignant et accède à ses séances, ses chapitres et ses exercices, avec la progression réalisée séance par séance.
+- **Espace élève personnalisé.** En saisissant le code de sa classe, un élève rejoint l'espace de son enseignant et accède à ses séances, ses chapitres et ses exercices, avec la progression réalisée séance par séance. Son espace l'accueille par son nom (« Bonjour … ») et n'affiche pas le nom de l'enseignant.
+- **IAFA FAMA (assistant IA).** Page `#/ia` : l'élève choisit une œuvre (ou pose une question) et reçoit une fiche structurée rédigée par une IA (Gemini gratuit par défaut, Edge Function Supabase). Chaque fiche est enregistrée dans son espace personnel et peut être relue ou supprimée. L'entrée « IAFA FAMA » (badge **IA**) remplace « Étude d'œuvre » dans le menu principal ; la fiche rédigée du programme reste accessible depuis le pied de page et depuis la page IA. Les onglets Leçons, Bibliothèque, Exercices et Séances sont regroupés dans le menu déroulant **Apprendre**. Le nom et la description de l'assistant sont définis une seule fois (`NOM_IA`, `DESCRIPTION_IA`) dans [app.js](assets/js/app.js).
 - **Navigation corrigée.** Aucun lien mort : le pied de page, les menus et les fil d'Ariane pointent tous vers une vue existante. Les anciennes adresses (`exo.html`, `theme.html`, `eleve/**`) redirigent automatiquement.
 
 ## Comptes et identifiants
@@ -56,7 +57,7 @@ Le formulaire envoie alors les champs en `POST` au service, qui les transmet par
 
 L'inscription est ouverte. Une case à cocher permet de créer directement un **espace enseignant** (rôle administrateur) ; sans elle, le compte est un compte élève. Un administrateur peut changer le rôle des élèves rattachés à ses classes.
 
-Le rôle **super-administrateur** `#/superadmin` dépasse le cloisonnement des espaces : il liste tous les comptes, affiche leur espace et leur classe, permet de changer les rôles (élève, administrateur, super-admin), de réinitialiser une progression, de supprimer un compte, d'en créer et d'exporter la liste en CSV. Seul un super-administrateur peut attribuer ce rôle ; un compte d'amorçage est créé automatiquement s'il n'en existe aucun.
+Le rôle **super-administrateur** `#/superadmin` dépasse le cloisonnement des espaces : il liste tous les comptes, affiche leur espace et leur classe, permet de changer les rôles (élève, administrateur, super-admin), de réinitialiser une progression, de supprimer un compte, d'en créer, de consulter **tous les espaces** (enseignant titulaire, classes, élèves, activité) puis **l'activité de tous les utilisateurs** (toutes les tentatives d'exercices, tous espaces et tous comptes confondus) et d'exporter la liste en CSV. Seul un super-administrateur peut attribuer ce rôle ; un compte d'amorçage est créé automatiquement s'il n'en existe aucun.
 
 Les identifiants du super-administrateur se remplacent directement dans `#/superadmin`, rubrique **« Mes identifiants super-admin »** : nom d'utilisateur, e-mail et mot de passe (l'historique de progression suit le renommage). Pour une installation neuve, les valeurs d'amorçage sont définies dans la constante `SUPER_ADMIN_AMORCAGE` de [auth.js](assets/js/auth.js).
 
@@ -79,12 +80,13 @@ Les contenus publics livrés avec le site restent visibles pour les visiteurs et
 | `#/matieres` · `#/matiere/maths` | Liste des matières et détail d'une matière |
 | `#/niveaux` · `#/niveau/lycee` | Liste des niveaux et détail d'un niveau |
 | `#/chapitre/maths-pythagore` | Fiche d'un chapitre |
-| `#/cours/une-si-longue-lettre` | Étude d'œuvre (section optionnelle : `…/exposes`) |
+| `#/cours/une-si-longue-lettre` | Fiche rédigée d'une œuvre du programme (section optionnelle : `…/exposes`) |
 | `#/exercices` · `#/exercices?exo=<id>` | Exercices interactifs (tous, ou un exercice assigné) |
 | `#/lecons` · `#/lecon/<id>` | Leçons de l'espace de l'élève et contenu d'une leçon |
 | `#/seances` | Séances de la classe de l'élève |
 | `#/recherche?q=polygamie` | Recherche |
 | `#/connexion` · `#/profil` | Authentification, classe et progression |
+| `#/ia` | IAFA FAMA : étude d'œuvre ou recherche/question |
 | `#/contact` | Présentation du développeur et formulaire de contact |
 | `#/admin/classes` · `#/admin/lecons` · `#/admin/seances` | Classes, leçons et séances de l'enseignant |
 | `#/admin/exercices` | Back-office (réservé aux administrateurs) |
@@ -130,6 +132,89 @@ GitHub Pages ne peut pas exécuter de code serveur, mais le site appelle une **A
 - Inscription : Supabase envoie un e-mail de confirmation tant que **Authentication → Providers → Email → Confirm email** reste activé. Le service d'e-mail intégré est limité à quelques messages par heure (« email rate limit exceeded »). Pour un usage réel, désactiver la confirmation ou brancher un SMTP personnalisé (Resend, Brevo…).
 
 Les données locales existantes ne peuvent pas être transférées automatiquement : les mots de passe locaux sont hachés dans le navigateur. Chaque personne recrée son compte Supabase ; les contenus et résultats pourront être importés par un écran dédié (à venir).
+
+## IAFA FAMA (assistant IA : études d'œuvres et recherche)
+
+La page `#/ia` (menu du compte, pied de page, espace élève) propose deux modes :
+
+- **Étude d'œuvre** : l'élève choisit une œuvre du programme ou saisit un titre et un auteur. L'IA renvoie une fiche structurée : fiche d'identité, contexte, résumé, parties, personnages, thèmes, procédés d'écriture, citations, questions et sujets d'exposé.
+- **Recherche / question** : l'élève pose une question libre et reçoit une réponse courte, une explication, un exemple, l'essentiel à retenir et des questions de vérification.
+
+Chaque fiche est enregistrée dans la table `ia_contenus` et reste privée : les politiques RLS limitent la lecture et la suppression à son auteur (et au super-administrateur). Les réponses sont affichées en texte brut dans les gabarits du site — **aucun HTML généré par l'IA n'est injecté** dans la page.
+
+### Activation
+
+#### 1. Obtenir une clé Gemini (gratuite)
+
+1. Ouvrir <https://aistudio.google.com/apikey> et se connecter avec un compte Google.
+2. Cliquer sur **Create API key** (ou **Créer une clé API**), choisir ou créer un projet Google Cloud.
+3. Copier la clé affichée (elle commence par `AIza…`). Aucune carte bancaire n'est demandée pour le palier gratuit.
+
+Autres fournisseurs gratuits, si besoin :
+
+| Fournisseur | Où récupérer la clé | Variable du secret |
+|---|---|---|
+| Gemini | <https://aistudio.google.com/apikey> | `GEMINI_API_KEY` |
+| Groq | <https://console.groq.com/keys> | `GROQ_API_KEY` |
+| OpenRouter | <https://openrouter.ai/keys> | `OPENROUTER_API_KEY` |
+| DeepSeek | <https://platform.deepseek.com/api_keys> | `DEEPSEEK_API_KEY` |
+| GitHub Models | jeton GitHub avec le droit `models:read` | `GITHUB_TOKEN` |
+
+#### 2. Configurer Supabase
+
+1. Exécuter [supabase/migration-ia.sql](supabase/migration-ia.sql) dans le **SQL Editor**.
+2. Ajouter les secrets : **Project Settings → Edge Functions → Secrets** (ou **Edge Functions → Manage secrets**), puis créer :
+   - `AI_PROVIDER` = `gemini`
+   - `GEMINI_API_KEY` = la clé `AIza…`
+3. Déployer la fonction : **Edge Functions → Deploy a new function → Via Editor**, nom `ia`, coller le contenu de [supabase/functions/ia/index.ts](supabase/functions/ia/index.ts), puis **Deploy**.
+
+Avec la CLI Supabase, les étapes 2 et 3 se résument à :
+
+```bash
+supabase link --project-ref votre_reference_projet
+supabase secrets set AI_PROVIDER=gemini GEMINI_API_KEY=votre_cle
+supabase functions deploy ia
+```
+
+La clé ne doit **jamais** être placée dans `assets/js/ia.js`, `supabase-config.js` ou un autre fichier du site : elle resterait visible par tous les visiteurs.
+
+#### 3. Vérifier
+
+Contrôler d'abord quelle version du code est en ligne (réponse `ok: true` avec `"version"`), puis générer une étude depuis le site :
+
+```powershell
+curl.exe -s "https://achwmlisnsbyxcvwteam.supabase.co/functions/v1/ia"
+```
+
+Un `405 Méthode non autorisée` indique que le code déployé est plus ancien que le fichier [index.ts](supabase/functions/ia/index.ts) : redéployer.
+
+Après reconnexion sur le site, ouvrir `#/ia` et lancer une étude. Si la fiche réelle apparaît, tout est branché. En cas de souci :
+
+| Message affiché | Cause probable |
+|---|---|
+| « Mode démonstration » | Secret absent ou fonction non déployée |
+| « La clé IA est refusée par le fournisseur » | Clé révoquée, copiée partiellement, ou bloquée pour le service (`API_KEY_SERVICE_BLOCKED`) : activer la **Generative Language API** et autoriser la clé dans Google Cloud, ou recréer une clé sur <https://aistudio.google.com/apikey> |
+| « Modèle introuvable chez le fournisseur » | Modèle retiré (ex. `gemini-2.5-flash` n'est plus ouvert aux nouveaux comptes) ou `AI_MODEL` erroné ; la fonction bascule automatiquement sur `gemini-3.5-flash` |
+| « Service IA indisponible » | Nom de fonction erroné, fonction en erreur, quota du fournisseur atteint |
+| « Limite de N générations par jour atteinte » | Quota `IA_LIMITE_JOUR` du compte (30 par défaut) |
+| « Session expirée » | Se reconnecter |
+
+Journaux utiles : **Edge Functions → ia → Logs**, ou `supabase functions logs ia`.
+
+Fournisseurs pris en charge (`AI_PROVIDER`) : `gemini` (palier gratuit, par défaut), `groq`, `openrouter`, `deepseek`, `github`. Changer de fournisseur ne demande que de modifier ces variables, sans toucher au site.
+
+Variables optionnelles :
+
+| Variable | Rôle |
+|---|---|
+| `AI_MODEL` | Modèle à utiliser (ex. `gemini-3.5-flash`). En cas de modèle introuvable ou retiré, la fonction essaie automatiquement des modèles de repli |
+| `AI_BASE_URL` | Autre point d'entrée compatible OpenAI |
+| `AI_API_KEY` | Clé générique, prioritaire sur la variable du fournisseur |
+| `IA_LIMITE_JOUR` | Nombre d'études générées par jour et par compte (30 par défaut) |
+
+Sans clé configurée, la page reste utilisable en **mode démonstration** : la présentation type d'une fiche est affichée et clairement signalée comme exemple.
+
+> L'IA ne navigue pas sur le Web : elle répond à partir de ses connaissances et peut se tromper. La page affiche en permanence la mention « contenu généré par IA — à vérifier ». Aucune donnée personnelle (nom, e-mail, classe) n'est envoyée au fournisseur : seuls le titre de l'œuvre ou la question et le niveau sont transmis.
 
 ## Carrousel de la page d'accueil
 
@@ -257,6 +342,7 @@ Le site n'a pas de serveur : les comptes, les scores, les exercices créés et l
 - Les données ne sont pas partagées entre appareils ni entre navigateurs.
 - Les mots de passe ne sont jamais stockés en clair (condensat salé), mais une authentification réelle exigerait un back-end.
 - Vider les données du navigateur réinitialise les comptes créés et la progression ; le contenu de démonstration est alors régénéré automatiquement.
+- Les fiches de l'assistant IA sont générées par un modèle de langage : elles peuvent contenir des erreurs et doivent être vérifiées. Les paliers gratuits des fournisseurs imposent des quotas ; la page affiche un message clair lorsque le service est indisponible.
 
 ## Contribution
 

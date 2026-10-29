@@ -11,6 +11,11 @@
     const store = window.LearnHubStore;
     const auth = window.LearnHubAuth;
 
+    /* Identité de l'assistant IA : un seul endroit à modifier pour renommer. */
+    const NOM_IA = 'IAFA FAMA';
+    const DESCRIPTION_IA = 'Assistant pédagogique IA : étudiez une œuvre ou posez une question, LearnHub met le résultat en forme.';
+    const BADGE_IA = '<span class="badge bg-light text-dark ms-1 align-middle" title="Intelligence artificielle">IA</span>';
+
     /* --------------------------------- Utilitaires --------------------------------- */
 
     function esc(value) {
@@ -101,11 +106,16 @@
                             '<a class="nav-link dropdown-toggle" href="#/niveaux" role="button" data-bs-toggle="dropdown" data-nav="niveaux">Niveaux</a>' +
                             '<ul class="dropdown-menu">' + menuNiveaux() + '</ul>' +
                         '</li>' +
-                        '<li class="nav-item"><a class="nav-link" href="#/cours/une-si-longue-lettre" data-nav="cours">Étude d\'œuvre</a></li>' +
-                        '<li class="nav-item"><a class="nav-link" href="#/lecons" data-nav="lecons">Leçons</a></li>' +
-                        '<li class="nav-item"><a class="nav-link" href="#/bibliotheque" data-nav="bibliotheque">Bibliothèque</a></li>' +
-                        '<li class="nav-item"><a class="nav-link" href="#/exercices" data-nav="exercices">Exercices</a></li>' +
-                        '<li class="nav-item"><a class="nav-link" href="#/seances" data-nav="seances">Séances</a></li>' +
+                        '<li class="nav-item dropdown">' +
+                            '<a class="nav-link dropdown-toggle" href="#/lecons" role="button" data-bs-toggle="dropdown" data-nav="apprendre">Apprendre</a>' +
+                            '<ul class="dropdown-menu">' +
+                                '<li><a class="dropdown-item" href="#/lecons"><i class="fas fa-book-open me-2"></i>Leçons</a></li>' +
+                                '<li><a class="dropdown-item" href="#/bibliotheque"><i class="fas fa-book me-2"></i>Bibliothèque</a></li>' +
+                                '<li><a class="dropdown-item" href="#/exercices"><i class="fas fa-gamepad me-2"></i>Exercices</a></li>' +
+                                '<li><a class="dropdown-item" href="#/seances"><i class="fas fa-calendar-days me-2"></i>Séances</a></li>' +
+                            '</ul>' +
+                        '</li>' +
+                        '<li class="nav-item"><a class="nav-link text-nowrap" href="#/ia" data-nav="ia"><i class="fas fa-wand-magic-sparkles me-1"></i>' + NOM_IA + BADGE_IA + '</a></li>' +
                     '</ul>' +
                     '<form class="d-flex header-search my-2 my-lg-0" id="form-recherche" role="search">' +
                         '<label class="visually-hidden" for="champ-recherche">Rechercher</label>' +
@@ -248,6 +258,7 @@
                             '<li><a href="#/lecons">Leçons</a></li>' +
                             '<li><a href="#/bibliotheque">Bibliothèque</a></li>' +
                             '<li><a href="#/exercices">Exercices</a></li>' +
+                            '<li><a href="#/ia">' + NOM_IA + ' (IA)</a></li>' +
                             '<li><a href="#/seances">Mes séances</a></li>' +
                             '<li><a href="#/recherche">Recherche</a></li>' +
                             '<li><a href="#/profil">Ma progression</a></li>' +
@@ -294,6 +305,7 @@
             '<ul class="dropdown-menu dropdown-menu-end">' +
                 '<li><a class="dropdown-item" href="#/profil"><i class="fas fa-chart-line me-2"></i>Ma progression</a></li>' +
                 '<li><a class="dropdown-item" href="#/seances"><i class="fas fa-calendar-days me-2"></i>Mes séances</a></li>' +
+                '<li><a class="dropdown-item" href="#/ia"><i class="fas fa-wand-magic-sparkles me-2"></i>' + NOM_IA + ' (IA)</a></li>' +
                 (user.role === 'admin' ? '<li><a class="dropdown-item" href="#/admin"><i class="fas fa-user-cog me-2"></i>Administration</a></li>' : '') +
                 (user.role === 'superadmin' ? '<li><a class="dropdown-item" href="#/superadmin"><i class="fas fa-shield-halved me-2"></i>Super-administration</a></li>' : '') +
                 '<li><hr class="dropdown-divider"></li>' +
@@ -301,6 +313,8 @@
             '</ul>' +
         '</div>';
     }
+
+    const SECTIONS_APPRENDRE = ['lecons', 'lecon', 'bibliotheque', 'exercices', 'seances'];
 
     function majEntete(segments) {
         const zoneAuth = document.getElementById('zone-auth');
@@ -324,7 +338,7 @@
                 (cle === 'matieres' && (section === 'matiere' || section === 'chapitre')) ||
                 (cle === 'niveaux' && section === 'niveau') ||
                 (cle === 'accueil' && !segments.length) ||
-                (cle === 'cours' && section === 'cours');
+                (cle === 'apprendre' && SECTIONS_APPRENDRE.indexOf(section) >= 0);
             lien.classList.toggle('active', actif);
         });
     }
@@ -759,6 +773,7 @@
                             '<ul class="nav flex-column">' + sommaire + '</ul>' +
                             '<hr>' +
                             '<a class="btn btn-primary btn-sm w-100 mb-2" href="#/exercices"><i class="fas fa-gamepad me-1"></i>Exercices</a>' +
+                            '<a class="btn btn-outline-primary btn-sm w-100 mb-2" href="#/ia"><i class="fas fa-wand-magic-sparkles me-1"></i>Demander à ' + NOM_IA + '</a>' +
                             '<a class="btn btn-outline-secondary btn-sm w-100" href="#/matiere/francais"><i class="fas fa-book me-1"></i>Français</a>' +
                         '</div>' +
                     '</aside>' +
@@ -1543,7 +1558,7 @@
                     }
                     toast('Bienvenue ' + resultat.user.username + ' !');
                     majEntete([]);
-                    naviguer(suivant ? '#/' + suivant : '#/');
+                    naviguer(suivant ? '#/' + suivant : (resultat.user.role === 'eleve' ? '#/profil' : '#/'));
                 });
 
                 formInscription.addEventListener('submit', async function (event) {
@@ -1612,15 +1627,20 @@
         const badges = auth.badges(user.username);
         const tentatives = auth.attempts(user.username).slice().sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
         const classe = auth.maClasse();
-        const espace = auth.monEspace();
         const seances = classe ? store.seances.pourClasse(classe.id) : [];
 
         return {
             titre: 'Ma progression',
             html: '<div class="container py-4">' +
                 '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">' +
-                    '<h1 class="h3 mb-0">Ma progression</h1>' +
+                    '<div>' +
+                        (user.role === 'eleve'
+                            ? '<h1 class="h3 mb-1">Bonjour <strong>' + esc(user.username) + '</strong>, merci de vous être connecté.</h1>' +
+                              '<p class="text-muted mb-0"><i class="fas fa-chart-line me-1"></i>Voici votre progression, vos badges et votre historique.</p>'
+                            : '<h1 class="h3 mb-0">Ma progression</h1>') +
+                    '</div>' +
                     '<div class="d-flex gap-2">' +
+                        '<a class="btn btn-outline-primary btn-sm" href="#/ia"><i class="fas fa-wand-magic-sparkles me-1"></i>' + NOM_IA + '</a>' +
                         '<a class="btn btn-outline-primary btn-sm" href="#/exercices"><i class="fas fa-gamepad me-1"></i>S\'entraîner</a>' +
                         (tentatives.length ? '<button class="btn btn-outline-danger btn-sm" id="effacer-historique"><i class="fas fa-rotate-left me-1"></i>Effacer mon historique</button>' : '') +
                     '</div>' +
@@ -1632,8 +1652,7 @@
                             (classe ? '<button class="btn btn-outline-secondary btn-sm" id="quitter-classe"><i class="fas fa-right-from-bracket me-1"></i>Quitter la classe</button>' : '') +
                         '</div>' +
                         (classe
-                            ? '<p class="mb-1"><strong>' + esc(classe.nom) + '</strong>' +
-                                (espace ? ' <span class="text-muted">· ' + esc(espace.nom) + '</span>' : '') + '</p>' +
+                            ? '<p class="mb-1"><strong>' + esc(classe.nom) + '</strong></p>' +
                               '<p class="text-muted small mb-0">' + seances.length + ' séance(s) pour votre classe. ' +
                                 '<a href="#/seances">Consulter mes séances</a></p>'
                             : '<p class="text-muted small">Vous n\'êtes rattaché à aucune classe. Saisissez le code fourni par votre enseignant pour accéder à ses séances et exercices.</p>' +
@@ -1735,7 +1754,6 @@
         }
 
         const classe = auth.maClasse();
-        const espace = auth.monEspace();
         const toutes = classe ? store.seances.pourClasse(classe.id) : [];
         const seances = toutes.slice().sort(function (a, b) {
             return new Date(b.date || 0) - new Date(a.date || 0);
@@ -1823,7 +1841,7 @@
                         '<h1 class="h3 mb-1">Mes séances</h1>' +
                         '<p class="text-muted mb-0">' +
                             (classe
-                                ? 'Classe ' + esc(classe.nom) + (espace ? ' · ' + esc(espace.nom) : '')
+                                ? 'Classe ' + esc(classe.nom)
                                 : 'Aucune classe rejointe') +
                         '</p>' +
                     '</div>' +
@@ -1848,10 +1866,391 @@
         '</div>';
     }
 
+    /* ------------------------------ IAFA FAMA (IA) ------------------------------ */
+
+    function sectionsTexteIA(titre, icone, valeur) {
+        if (!valeur) return '';
+        return '<div class="mb-4">' +
+            '<h3 class="h5 text-primary mb-2"><i class="fas ' + icone + ' me-2"></i>' + esc(titre) + '</h3>' +
+            '<p class="mb-0">' + esc(valeur) + '</p>' +
+        '</div>';
+    }
+
+    function sectionsListeIA(titre, icone, items) {
+        const liste = (Array.isArray(items) ? items : []).filter(Boolean);
+        if (!liste.length) return '';
+        return '<div class="mb-4">' +
+            '<h3 class="h5 text-primary mb-2"><i class="fas ' + icone + ' me-2"></i>' + esc(titre) + '</h3>' +
+            '<ul class="mb-0">' + liste.map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>' +
+        '</div>';
+    }
+
+    function htmlEtudeIA(contenu) {
+        const c = contenu || {};
+        const identite = [c.epoque, c.genre, c.mouvement].filter(Boolean).map(esc).join(' · ');
+        const parties = Array.isArray(c.parties) ? c.parties : [];
+        const personnages = Array.isArray(c.personnages) ? c.personnages : [];
+        const themes = Array.isArray(c.themes) ? c.themes : [];
+        const procedes = Array.isArray(c.procedes) ? c.procedes : [];
+        const citations = Array.isArray(c.citations) ? c.citations : [];
+
+        return '<article>' +
+            '<header class="mb-4">' +
+                '<p class="text-muted mb-1">' + (identite || 'Fiche d\'étude') + '</p>' +
+                '<h2 class="h3 mb-1">' + esc(c.titre || '') + '</h2>' +
+                '<p class="mb-0"><i class="fas fa-feather-pointed me-1"></i>' + esc(c.auteur || '') + '</p>' +
+            '</header>' +
+            sectionsTexteIA('Résumé', 'fa-book-open', c.resume) +
+            sectionsTexteIA('Contexte', 'fa-landmark', c.contexte) +
+            (parties.length
+                ? '<div class="mb-4"><h3 class="h5 text-primary mb-2"><i class="fas fa-list-ol me-2"></i>Structure</h3>' +
+                    parties.map(function (partie) {
+                        return '<div class="border-start border-3 border-primary ps-3 mb-3">' +
+                            '<div class="fw-semibold">' + esc(partie.titre || '') + '</div>' +
+                            '<div class="text-muted small">' + esc(partie.resume || '') + '</div>' +
+                        '</div>';
+                    }).join('') + '</div>'
+                : '') +
+            (personnages.length
+                ? '<div class="mb-4"><h3 class="h5 text-primary mb-2"><i class="fas fa-users me-2"></i>Personnages</h3>' +
+                    '<div class="row g-3">' + personnages.map(function (personnage) {
+                        return '<div class="col-md-6"><div class="border rounded-3 p-3 h-100">' +
+                            '<div class="fw-semibold">' + esc(personnage.nom || '') + '</div>' +
+                            '<div class="small text-primary mb-1">' + esc(personnage.role || '') + '</div>' +
+                            '<div class="small text-muted">' + esc(personnage.description || '') + '</div>' +
+                        '</div></div>';
+                    }).join('') + '</div></div>'
+                : '') +
+            (themes.length
+                ? '<div class="mb-4"><h3 class="h5 text-primary mb-2"><i class="fas fa-lightbulb me-2"></i>Thèmes</h3>' +
+                    '<div class="list-group">' + themes.map(function (theme) {
+                        return '<div class="list-group-item">' +
+                            '<div class="fw-semibold">' + esc(theme.titre || '') + '</div>' +
+                            '<div class="small text-muted">' + esc(theme.explication || '') + '</div>' +
+                        '</div>';
+                    }).join('') + '</div></div>'
+                : '') +
+            (procedes.length
+                ? '<div class="mb-4"><h3 class="h5 text-primary mb-2"><i class="fas fa-pen-fancy me-2"></i>Procédés d\'écriture</h3>' +
+                    '<div class="table-responsive"><table class="table table-sm align-middle mb-0">' +
+                        '<thead><tr><th>Procédé</th><th>Exemple</th><th>Effet</th></tr></thead><tbody>' +
+                        procedes.map(function (procede) {
+                            return '<tr>' +
+                                '<td class="fw-semibold">' + esc(procede.nom || '') + '</td>' +
+                                '<td class="small">' + esc(procede.exemple || '') + '</td>' +
+                                '<td class="small text-muted">' + esc(procede.effet || '') + '</td>' +
+                            '</tr>';
+                        }).join('') + '</tbody></table></div></div>'
+                : '') +
+            (citations.length
+                ? '<div class="mb-4"><h3 class="h5 text-primary mb-2"><i class="fas fa-quote-left me-2"></i>Citations</h3>' +
+                    citations.map(function (citation) {
+                        return '<blockquote class="border-start border-3 border-secondary ps-3 mb-3">' +
+                            '<p class="fst-italic mb-1">« ' + esc(citation.texte || '') + ' »</p>' +
+                            '<p class="small text-muted mb-0">' + esc(citation.explication || '') + '</p>' +
+                        '</blockquote>';
+                    }).join('') + '</div>'
+                : '') +
+            sectionsListeIA('Questions d\'entraînement', 'fa-circle-question', c.questions) +
+            sectionsListeIA('Sujets d\'exposé', 'fa-pen-nib', c.sujets) +
+        '</article>';
+    }
+
+    function htmlReponseIA(contenu) {
+        const c = contenu || {};
+        return '<article>' +
+            '<h2 class="h4 mb-3">' + esc(c.question || '') + '</h2>' +
+            sectionsTexteIA('Réponse', 'fa-lightbulb', c.reponse) +
+            sectionsTexteIA('Explication', 'fa-book-open-reader', c.explication) +
+            sectionsTexteIA('Exemple', 'fa-quote-left', c.exemple) +
+            sectionsListeIA('À retenir', 'fa-bookmark', c.aRetenir) +
+            sectionsListeIA('Pour vérifier', 'fa-circle-question', c.questions) +
+        '</article>';
+    }
+
+    function vueIA(parametres) {
+        const user = auth.current();
+        if (!user) {
+            return {
+                titre: NOM_IA + ' — IA',
+                html: '<div class="container py-5"><div class="content text-center">' +
+                    '<i class="fas fa-wand-magic-sparkles fa-3x text-primary mb-3"></i>' +
+                    '<h1 class="h4 mb-2">' + NOM_IA + ' <span class="badge bg-primary align-middle fs-6">IA</span></h1>' +
+                    '<p class="text-muted small mb-3">' + esc(DESCRIPTION_IA) + '</p>' +
+                    '<p class="text-muted">Connectez-vous pour générer et conserver vos fiches.</p>' +
+                    '<a class="btn btn-primary" href="#/connexion?next=ia">Se connecter</a>' +
+                '</div></div>'
+            };
+        }
+
+        const modeInitial = parametres && parametres.get('mode') === 'question' ? 'question' : 'etude';
+        const optionsNiveaux = data.niveaux.map(function (niveau) {
+            return '<option value="' + esc(niveau.slug) + '">' + esc(niveau.nom) + '</option>';
+        }).join('');
+        const optionsOeuvres = data.cours.map(function (cours) {
+            return '<option value="' + esc(cours.titre) + '" data-auteur="' + esc(cours.auteur) + '">' +
+                esc(cours.titre) + ' — ' + esc(cours.auteur) + '</option>';
+        }).join('');
+
+        return {
+            titre: NOM_IA + ' — IA',
+            html: '<div class="container py-4">' +
+                '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">' +
+                    '<div>' +
+                        '<h1 class="h3 mb-1"><i class="fas fa-wand-magic-sparkles me-2"></i>' + NOM_IA +
+                            ' <span class="badge bg-primary align-middle fs-6">IA</span></h1>' +
+                        '<p class="text-muted mb-0">' + esc(DESCRIPTION_IA) + '</p>' +
+                    '</div>' +
+                    '<a class="btn btn-outline-secondary btn-sm" href="#/profil"><i class="fas fa-chart-line me-1"></i>Ma progression</a>' +
+                '</div>' +
+                '<div class="alert alert-warning small"><i class="fas fa-triangle-exclamation me-1"></i>' +
+                    'Contenu généré par intelligence artificielle : vérifiez toujours les informations avant de les apprendre.</div>' +
+                '<ul class="nav nav-tabs mb-3" id="ia-onglets">' +
+                    '<li class="nav-item"><button class="nav-link ' + (modeInitial === 'etude' ? 'active' : '') + '" type="button" data-mode="etude"><i class="fas fa-book-open me-1"></i>Étude d\'œuvre</button></li>' +
+                    '<li class="nav-item"><button class="nav-link ' + (modeInitial === 'question' ? 'active' : '') + '" type="button" data-mode="question"><i class="fas fa-magnifying-glass me-1"></i>Recherche / question</button></li>' +
+                '</ul>' +
+                '<div class="content mb-4">' +
+                    '<form id="form-etude" class="' + (modeInitial === 'etude' ? '' : 'd-none') + '">' +
+                        '<div class="row g-3">' +
+                            '<div class="col-md-6">' +
+                                '<label class="form-label" for="ia-oeuvre">Œuvre</label>' +
+                                '<select class="form-select" id="ia-oeuvre">' +
+                                    '<option value="">Choisir dans le programme…</option>' +
+                                    optionsOeuvres +
+                                    '<option value="autre">Autre œuvre…</option>' +
+                                '</select>' +
+                                '<input class="form-control mt-2 d-none" id="ia-oeuvre-autre" maxlength="120" placeholder="Titre de l\'œuvre">' +
+                                '<div class="small mt-2 d-none" id="ia-lien-fiche"></div>' +
+                            '</div>' +
+                            '<div class="col-md-3">' +
+                                '<label class="form-label" for="ia-auteur">Auteur (optionnel)</label>' +
+                                '<input class="form-control" id="ia-auteur" maxlength="80" placeholder="ex. Mariama Bâ">' +
+                            '</div>' +
+                            '<div class="col-md-3">' +
+                                '<label class="form-label" for="ia-niveau">Niveau</label>' +
+                                '<select class="form-select" id="ia-niveau">' + optionsNiveaux + '</select>' +
+                            '</div>' +
+                            '<div class="col-12">' +
+                                '<button class="btn btn-primary" type="submit"><i class="fas fa-wand-magic-sparkles me-1"></i>Générer ma fiche</button>' +
+                            '</div>' +
+                        '</div>' +
+                    '</form>' +
+                    '<form id="form-question" class="' + (modeInitial === 'question' ? '' : 'd-none') + '">' +
+                        '<div class="row g-3">' +
+                            '<div class="col-12">' +
+                                '<label class="form-label" for="ia-question">Votre question</label>' +
+                                '<textarea class="form-control" id="ia-question" rows="3" maxlength="500" placeholder="ex. Qu\'est-ce que le registre lyrique ?"></textarea>' +
+                            '</div>' +
+                            '<div class="col-md-3">' +
+                                '<label class="form-label" for="ia-niveau-question">Niveau</label>' +
+                                '<select class="form-select" id="ia-niveau-question">' + optionsNiveaux + '</select>' +
+                            '</div>' +
+                            '<div class="col-md-9 d-flex align-items-end">' +
+                                '<button class="btn btn-primary" type="submit"><i class="fas fa-magnifying-glass me-1"></i>Obtenir une réponse</button>' +
+                            '</div>' +
+                        '</div>' +
+                    '</form>' +
+                '</div>' +
+                '<div id="ia-resultat"></div>' +
+                '<div class="content mt-4" id="ia-historique"></div>' +
+            '</div>',
+            after: function (racine) {
+                const onglets = racine.querySelectorAll('#ia-onglets [data-mode]');
+                const formEtude = racine.querySelector('#form-etude');
+                const formQuestion = racine.querySelector('#form-question');
+                const zone = racine.querySelector('#ia-resultat');
+                const historique = racine.querySelector('#ia-historique');
+                const selectOeuvre = racine.querySelector('#ia-oeuvre');
+                const oeuvreLibre = racine.querySelector('#ia-oeuvre-autre');
+
+                function activerMode(mode) {
+                    onglets.forEach(function (bouton) {
+                        bouton.classList.toggle('active', bouton.dataset.mode === mode);
+                    });
+                    formEtude.classList.toggle('d-none', mode !== 'etude');
+                    formQuestion.classList.toggle('d-none', mode !== 'question');
+                }
+
+                onglets.forEach(function (bouton) {
+                    bouton.addEventListener('click', function () { activerMode(bouton.dataset.mode); });
+                });
+
+                function afficherChargement(texte) {
+                    zone.innerHTML = '<div class="content text-center text-muted py-4">' +
+                        '<i class="fas fa-spinner fa-spin me-2"></i>' + esc(texte) + '</div>';
+                    zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+
+                function afficherErreur(texte) {
+                    zone.innerHTML = '<div class="alert alert-danger mb-0">' +
+                        '<i class="fas fa-triangle-exclamation me-1"></i>' + esc(texte) + '</div>';
+                }
+
+                function rendre(item) {
+                    const corps = item.type === 'question' ? htmlReponseIA(item.contenu) : htmlEtudeIA(item.contenu);
+                    zone.innerHTML = '<div class="content">' +
+                        (item.demo
+                            ? '<div class="alert alert-info small"><i class="fas fa-circle-info me-1"></i>' +
+                              'Mode démonstration : aucune clé IA n\'est configurée. Voici la présentation type d\'une fiche.</div>'
+                            : '') +
+                        corps +
+                        '<p class="text-muted small mt-4 mb-0"><i class="fas fa-robot me-1"></i>Généré le ' +
+                            new Date(item.date).toLocaleString('fr-FR') +
+                            (item.modele ? ' · ' + esc(item.modele) : '') + '</p>' +
+                    '</div>';
+                }
+
+                async function rafraichirHistorique() {
+                    const contenus = window.LearnHubIA.mesContenus();
+                    if (!contenus.length) {
+                        historique.innerHTML = '<h2 class="h5 mb-3"><i class="fas fa-clock-rotate-left me-2"></i>Mes fiches</h2>' +
+                            '<p class="text-muted mb-0">Vos fiches générées apparaîtront ici.</p>';
+                        return;
+                    }
+                    historique.innerHTML = '<h2 class="h5 mb-3"><i class="fas fa-clock-rotate-left me-2"></i>Mes fiches (' + contenus.length + ')</h2>' +
+                        '<div class="list-group">' + contenus.map(function (item) {
+                            return '<div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">' +
+                                '<div>' +
+                                    '<div class="fw-semibold">' + esc(item.requete) + '</div>' +
+                                    '<small class="text-muted">' + esc(window.LearnHubIA.libelleType(item.type)) + ' · ' +
+                                        new Date(item.date).toLocaleString('fr-FR') +
+                                        (item.niveau ? ' · ' + esc(item.niveau) : '') +
+                                    '</small>' +
+                                '</div>' +
+                                '<div class="d-flex gap-2">' +
+                                    '<button class="btn btn-sm btn-outline-primary" data-action="ouvrir" data-id="' + esc(item.id) + '"><i class="fas fa-eye me-1"></i>Ouvrir</button>' +
+                                    '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-id="' + esc(item.id) + '" title="Supprimer"><i class="fas fa-trash"></i></button>' +
+                                '</div>' +
+                            '</div>';
+                        }).join('') + '</div>';
+                }
+
+                async function lancer(mode, parametres) {
+                    const boutons = racine.querySelectorAll('form button[type="submit"]');
+                    boutons.forEach(function (bouton) { bouton.disabled = true; });
+                    afficherChargement(mode === 'etude' ? 'L\'IA rédige la fiche…' : 'L\'IA prépare la réponse…');
+
+                    let resultat = await window.LearnHubIA.generer(parametres);
+                    let demo = false;
+                    if (!resultat.ok && (resultat.code === 'local' || resultat.code === 'non_configure')) {
+                        demo = true;
+                        resultat = { ok: true, contenu: window.LearnHubIA.exemple(mode, parametres), modele: '' };
+                    }
+                    boutons.forEach(function (bouton) { bouton.disabled = false; });
+
+                    if (!resultat.ok) {
+                        afficherErreur(resultat.error || 'Génération impossible.');
+                        return;
+                    }
+
+                    const item = {
+                        type: mode,
+                        requete: mode === 'etude' ? parametres.oeuvre : parametres.question,
+                        auteur: parametres.auteur || '',
+                        niveau: parametres.niveau || '',
+                        modele: resultat.modele || '',
+                        contenu: resultat.contenu,
+                        demo: demo,
+                        date: new Date().toISOString()
+                    };
+
+                    if (!demo) {
+                        const enregistre = await window.LearnHubIA.enregistrer(item);
+                        if (!enregistre.ok) toast(enregistre.error, 'warning');
+                        else await rafraichirHistorique();
+                    }
+
+                    rendre(item);
+                    zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+
+                function majLienFiche() {
+                    const zone = racine.querySelector('#ia-lien-fiche');
+                    const cours = data.cours.find(function (item) { return item.titre === selectOeuvre.value; });
+                    if (!cours) {
+                        zone.className = 'small mt-2 d-none';
+                        zone.innerHTML = '';
+                        return;
+                    }
+                    zone.className = 'small mt-2';
+                    zone.innerHTML = '<i class="fas fa-book-open me-1"></i>Une fiche rédigée existe : ' +
+                        '<a href="#/cours/' + esc(cours.slug) + '">consulter l\'étude du programme</a>';
+                }
+
+                selectOeuvre.addEventListener('change', function () {
+                    const estAutre = selectOeuvre.value === 'autre';
+                    oeuvreLibre.classList.toggle('d-none', !estAutre);
+                    if (!estAutre && selectOeuvre.value) {
+                        const option = selectOeuvre.options[selectOeuvre.selectedIndex];
+                        const auteur = option ? option.getAttribute('data-auteur') : null;
+                        if (auteur) racine.querySelector('#ia-auteur').value = auteur;
+                    }
+                    majLienFiche();
+                });
+
+                formEtude.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    const choix = selectOeuvre.value;
+                    const oeuvre = choix === 'autre' ? oeuvreLibre.value.trim() : choix;
+                    if (!oeuvre) {
+                        afficherErreur('Choisissez une œuvre ou saisissez son titre.');
+                        return;
+                    }
+                    lancer('etude', {
+                        mode: 'etude',
+                        oeuvre: oeuvre,
+                        auteur: racine.querySelector('#ia-auteur').value.trim(),
+                        niveau: racine.querySelector('#ia-niveau').value
+                    });
+                });
+
+                formQuestion.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    const question = racine.querySelector('#ia-question').value.trim();
+                    if (question.length < 3) {
+                        afficherErreur('Saisissez une question plus précise.');
+                        return;
+                    }
+                    lancer('question', {
+                        mode: 'question',
+                        question: question,
+                        niveau: racine.querySelector('#ia-niveau-question').value
+                    });
+                });
+
+                historique.addEventListener('click', async function (event) {
+                    const bouton = event.target.closest('button[data-action]');
+                    if (!bouton) return;
+                    const contenus = window.LearnHubIA.mesContenus();
+                    const item = contenus.find(function (contenu) { return contenu.id === bouton.dataset.id; });
+                    if (!item) return;
+
+                    if (bouton.dataset.action === 'supprimer') {
+                        if (!window.confirm('Supprimer définitivement cette fiche ?')) return;
+                        const resultat = await window.LearnHubIA.supprimer(item.id);
+                        if (!resultat.ok) {
+                            afficherErreur(resultat.error || 'Suppression impossible.');
+                            return;
+                        }
+                        toast('Fiche supprimée.');
+                        await rafraichirHistorique();
+                        return;
+                    }
+
+                    rendre(item);
+                    zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+
+                rafraichirHistorique();
+            }
+        };
+    }
+
     /* ------------------------------ Super-administration ------------------------------ */
 
     const LIBELLES_ROLES = { eleve: 'Élève', admin: 'Administrateur', superadmin: 'Super-admin' };
     const ORDRE_ROLES = { superadmin: 0, admin: 1, eleve: 2 };
+    const LIBELLES_TYPES_ACTIVITE = { quiz: 'Quiz', matching: 'Associations', fillblank: 'Textes à trous' };
 
     function infosEspaceCompte(compte) {
         if (compte.role === 'admin') {
@@ -1899,6 +2298,89 @@
         const messages = store.messages.all().slice().sort(function (a, b) {
             return new Date(b.date) - new Date(a.date);
         });
+
+        const activites = [];
+        const progres = auth.allProgress();
+        Object.keys(progres).forEach(function (username) {
+            (progres[username] || []).forEach(function (t) {
+                activites.push(Object.assign({}, t, { username: username }));
+            });
+        });
+        activites.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+        const activitesAffichees = activites.slice(0, 200);
+        const compteParNom = {};
+        comptes.forEach(function (compte) { compteParNom[compte.username] = compte; });
+
+        const lignesActivites = activitesAffichees.map(function (t) {
+            const compte = compteParNom[t.username];
+            const infos = compte ? infosEspaceCompte(compte) : { espace: '—', classe: '—' };
+            const pourcentage = t.total > 0 ? Math.round((t.score / t.total) * 100) : 0;
+            const couleur = pourcentage >= 80 ? 'success' : pourcentage >= 60 ? 'warning' : 'danger';
+            return '<tr>' +
+                '<td class="fw-semibold">' + esc(t.username) + '</td>' +
+                '<td class="small">' + esc(compte ? (LIBELLES_ROLES[compte.role] || compte.role) : '—') + '</td>' +
+                '<td class="small">' + esc(infos.espace) + '</td>' +
+                '<td class="small">' + esc(infos.classe) + '</td>' +
+                '<td>' + esc(t.titre) + '</td>' +
+                '<td class="text-muted small">' + esc(LIBELLES_TYPES_ACTIVITE[t.type] || t.type || '—') + '</td>' +
+                '<td><span class="badge bg-' + couleur + '">' + t.score + '/' + t.total + '</span></td>' +
+                '<td class="text-muted small text-nowrap">' + new Date(t.date).toLocaleString('fr-FR') + '</td>' +
+            '</tr>';
+        }).join('');
+
+        const classeParId = {};
+        store.classes.all().forEach(function (classe) { classeParId[classe.id] = classe; });
+
+        function espaceDeCompte(compte) {
+            if (!compte) return null;
+            if (compte.role === 'admin') return compte.espaceId || null;
+            const classe = compte.classeId ? classeParId[compte.classeId] : null;
+            return classe ? classe.espaceId : null;
+        }
+
+        const statsEspaces = {};
+        function ficheEspace(id, nom) {
+            if (!statsEspaces[id]) {
+                statsEspaces[id] = { id: id, nom: nom || id, titulaire: '—', classes: 0, eleves: 0, activites: 0, derniere: null };
+            } else if (nom && statsEspaces[id].nom === id) {
+                statsEspaces[id].nom = nom;
+            }
+            return statsEspaces[id];
+        }
+
+        comptes.forEach(function (compte) {
+            if (compte.role !== 'admin' || !compte.espaceId) return;
+            ficheEspace(compte.espaceId, compte.espaceNom).titulaire = compte.username;
+        });
+        store.classes.all().forEach(function (classe) {
+            if (!classe.espaceId) return;
+            ficheEspace(classe.espaceId).classes += 1;
+        });
+        comptes.forEach(function (compte) {
+            if (compte.role !== 'eleve') return;
+            const id = espaceDeCompte(compte);
+            if (id) ficheEspace(id).eleves += 1;
+        });
+        activites.forEach(function (t) {
+            const id = espaceDeCompte(compteParNom[t.username]);
+            if (!id) return;
+            const fiche = ficheEspace(id);
+            fiche.activites += 1;
+            if (!fiche.derniere || new Date(t.date) > new Date(fiche.derniere)) fiche.derniere = t.date;
+        });
+        const espacesPlateforme = Object.keys(statsEspaces).map(function (id) { return statsEspaces[id]; })
+            .sort(function (a, b) { return b.activites - a.activites || a.nom.localeCompare(b.nom); });
+
+        const lignesEspaces = espacesPlateforme.map(function (espace) {
+            return '<tr>' +
+                '<td class="fw-semibold">' + esc(espace.nom) + '</td>' +
+                '<td class="small">' + esc(espace.titulaire) + '</td>' +
+                '<td>' + espace.classes + '</td>' +
+                '<td>' + espace.eleves + '</td>' +
+                '<td>' + espace.activites + '</td>' +
+                '<td class="text-muted small text-nowrap">' + (espace.derniere ? new Date(espace.derniere).toLocaleString('fr-FR') : '—') + '</td>' +
+            '</tr>';
+        }).join('');
 
         const lignes = comptes.map(function (compte) {
             const infos = infosEspaceCompte(compte);
@@ -1997,6 +2479,29 @@
                             ? 'Comptes synchronisés avec Supabase : les rôles, la création et la suppression s\'appliquent immédiatement.'
                             : 'Les comptes et leurs données restent stockés dans ce navigateur. Le rôle « super-admin » ne peut être attribué que depuis cette page.') +
                     '</p>' +
+                '</div>' +
+                '<div class="admin-panel mt-4" id="espaces-panel">' +
+                    '<h2 class="h5 mb-3"><i class="fas fa-door-open me-2"></i>Espaces de la plateforme (' + espacesPlateforme.length + ')</h2>' +
+                    (espacesPlateforme.length
+                        ? '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
+                            '<thead><tr><th>Espace</th><th>Enseignant</th><th>Classes</th><th>Élèves</th><th>Activités</th><th>Dernière activité</th></tr></thead>' +
+                            '<tbody>' + lignesEspaces + '</tbody>' +
+                          '</table></div>'
+                        : '<p class="text-muted mb-0">Aucun espace enseignant pour le moment.</p>') +
+                    '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Tous les espaces et tous les comptes confondus, sans cloisonnement.</p>' +
+                '</div>' +
+                '<div class="admin-panel mt-4" id="activites-panel">' +
+                    '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
+                        '<h2 class="h5 mb-0"><i class="fas fa-clock-rotate-left me-2"></i>Activités de tous les utilisateurs</h2>' +
+                        '<span class="badge bg-secondary">' + activitesAffichees.length + ' / ' + activites.length + '</span>' +
+                    '</div>' +
+                    '<p class="text-muted small">Toutes les tentatives d\'exercices, tous comptes et tous espaces confondus, de la plus récente à la plus ancienne.</p>' +
+                    (activitesAffichees.length
+                        ? '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
+                            '<thead><tr><th>Utilisateur</th><th>Rôle</th><th>Espace</th><th>Classe</th><th>Exercice</th><th>Type</th><th>Score</th><th>Date</th></tr></thead>' +
+                            '<tbody>' + lignesActivites + '</tbody>' +
+                          '</table></div>'
+                        : '<p class="text-muted mb-0">Aucune activité enregistrée pour le moment. Les tentatives des élèves apparaîtront ici.</p>') +
                 '</div>' +
                 '<div class="admin-panel mt-4" id="messages-panel">' +
                     '<h2 class="h5 mb-3"><i class="fas fa-inbox me-2"></i>Messages reçus (' + messages.length + ')</h2>' +
@@ -2277,6 +2782,7 @@
             case 'recherche': return vueRecherche(parametres);
             case 'connexion': return vueConnexion(parametres);
             case 'profil': return vueProfil();
+            case 'ia': return vueIA(parametres);
             case 'superadmin': return vueSuperAdmin();
             case 'admin': return vueAdmin(segments[1]);
             default: return vueIntrouvable();

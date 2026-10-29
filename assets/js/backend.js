@@ -31,6 +31,7 @@ window.LearnHubBackend = (function () {
     let utilisateurs = [];
     let cache = null;
     let progression = {};
+    let listeIA = [];
     let derniereErreur = null;
 
     if (active) {
@@ -66,6 +67,11 @@ window.LearnHubBackend = (function () {
 
     function progressionCache() {
         return progression;
+    }
+
+    function contenusIA() {
+        if (!profil) return [];
+        return listeIA.filter(function (contenu) { return contenu.userId === profil.id; });
     }
 
     function listeEspaces() {
@@ -284,7 +290,8 @@ window.LearnHubBackend = (function () {
             client.from('resources').select('*'),
             client.from('seances').select('*'),
             client.from('attempts').select('*'),
-            client.from('messages').select('*')
+            client.from('messages').select('*'),
+            client.from('ia_contenus').select('*')
         ]);
 
         reponses.forEach(function (reponse) {
@@ -300,6 +307,7 @@ window.LearnHubBackend = (function () {
         const seancesRows = reponses[6].data || [];
         const attemptsRows = reponses[7].data || [];
         const messagesRows = reponses[8].data || [];
+        const iaRows = reponses[9].data || [];
 
         espaces = espacesRows;
         utilisateurs = profilsRows.map(versUtilisateur);
@@ -335,6 +343,20 @@ window.LearnHubBackend = (function () {
                 total: tentative.total,
                 date: tentative.created_at
             });
+        });
+
+        listeIA = iaRows.map(function (row) {
+            return {
+                id: row.id,
+                userId: row.user_id,
+                type: row.type,
+                requete: row.requete,
+                auteur: row.auteur || '',
+                niveau: row.niveau || '',
+                modele: row.modele || '',
+                contenu: row.contenu || {},
+                date: row.created_at
+            };
         });
     }
 
@@ -423,6 +445,7 @@ window.LearnHubBackend = (function () {
         utilisateurs = [];
         espaces = [];
         progression = {};
+        listeIA = [];
     }
 
     async function changerMotDePasse(actuel, nouveau) {
@@ -787,6 +810,84 @@ window.LearnHubBackend = (function () {
         return { ok: true };
     }
 
+    /* ------------------------------ Assistant IA ------------------------------ */
+
+    async function invoquerIA(parametres) {
+        if (!estActif()) return { ok: false, code: 'non_connecte', error: 'Connexion requise.' };
+        try {
+            const resultat = await client.functions.invoke('ia', { body: parametres });
+            if (resultat.error) {
+                let corps = resultat.data || null;
+                if (!corps && resultat.error.context && typeof resultat.error.context.json === 'function') {
+                    corps = await resultat.error.context.json().catch(function () { return null; });
+                }
+                return {
+                    ok: false,
+                    code: (corps && corps.code) || 'indisponible',
+                    error: (corps && corps.error) || 'Service IA indisponible.'
+                };
+            }
+            const donnees = resultat.data || null;
+            if (!donnees || !donnees.ok) {
+                return {
+                    ok: false,
+                    code: (donnees && donnees.code) || 'indisponible',
+                    error: (donnees && donnees.error) || 'Génération impossible.'
+                };
+            }
+            return {
+                ok: true,
+                contenu: donnees.contenu,
+                modele: donnees.modele,
+                fournisseur: donnees.fournisseur
+            };
+        } catch (erreur) {
+            return { ok: false, code: 'indisponible', error: 'Service IA indisponible.' };
+        }
+    }
+
+    async function enregistrerIA(entree) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        if (!entree || !entree.contenu) return { ok: false, error: 'Contenu vide.' };
+
+        const id = 'ia-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const ligne = {
+            id: id,
+            user_id: profil.id,
+            type: entree.type === 'question' ? 'question' : 'etude',
+            requete: String(entree.requete || '').slice(0, 500),
+            auteur: entree.auteur ? String(entree.auteur).slice(0, 160) : null,
+            niveau: entree.niveau ? String(entree.niveau).slice(0, 20) : null,
+            modele: entree.modele ? String(entree.modele).slice(0, 80) : null,
+            contenu: entree.contenu
+        };
+
+        const resultat = await client.from('ia_contenus').insert(ligne);
+        if (resultat.error) return { ok: false, error: resultat.error.message };
+
+        listeIA = [{
+            id: id,
+            userId: profil.id,
+            type: ligne.type,
+            requete: ligne.requete,
+            auteur: ligne.auteur || '',
+            niveau: ligne.niveau || '',
+            modele: ligne.modele || '',
+            contenu: ligne.contenu,
+            date: new Date().toISOString()
+        }].concat(listeIA);
+        return { ok: true, id: id };
+    }
+
+    async function supprimerIA(id) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        if (!id) return { ok: false, error: 'Contenu introuvable.' };
+        const resultat = await client.from('ia_contenus').delete().eq('id', id);
+        if (resultat.error) return { ok: false, error: resultat.error.message };
+        listeIA = listeIA.filter(function (contenu) { return contenu.id !== id; });
+        return { ok: true };
+    }
+
     return {
         disponible: disponible,
         estActif: estActif,
@@ -817,6 +918,10 @@ window.LearnHubBackend = (function () {
         ajouterDocument: ajouterDocument,
         supprimerDocument: supprimerDocument,
         mettreAJourDocument: mettreAJourDocument,
+        contenusIA: contenusIA,
+        invoquerIA: invoquerIA,
+        enregistrerIA: enregistrerIA,
+        supprimerIA: supprimerIA,
         erreur: function () { return derniereErreur; }
     };
 })();

@@ -20,7 +20,8 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 - [migration-profil-trigger.sql](migration-profil-trigger.sql) — déclencheur des profils : attribution du rôle `superadmin` depuis le SQL Editor, suppression d'une classe peuplée, et blocage de l'affectation directe à une classe ;
 - [migration-comptes-admin.sql](migration-comptes-admin.sql) — fonctions `admin_supprimer_compte` et `admin_changer_role` qui permettent la gestion des comptes depuis la page Super-administration ;
 - [migration-bibliotheque.sql](migration-bibliotheque.sql) — table `documents` et bucket de stockage `documents` de la bibliothèque publique ;
-- [migration-bibliotheque-visibilite.sql](migration-bibliotheque-visibilite.sql) — colonne `visibilite` (public / élèves / enseignants) et politique RLS correspondante.
+- [migration-bibliotheque-visibilite.sql](migration-bibliotheque-visibilite.sql) — colonne `visibilite` (public / élèves / enseignants) et politique RLS correspondante ;
+- [migration-ia.sql](migration-ia.sql) — table `ia_contenus` de l'assistant IA (études d'œuvres et questions), privée par élève.
 
 ## 3. Authentification
 
@@ -60,6 +61,7 @@ Ces deux valeurs seront placées dans un fichier `assets/js/supabase-config.js` 
 | `attempts` | Résultats des élèves |
 | `messages` | Formulaire de contact (insertion publique, lecture super-admin) |
 | `documents` | Bibliothèque publique : livres et documents (lecture publique, écriture admin) |
+| `ia_contenus` | Fiches générées par l'assistant IA, privées par élève (RLS `user_id = auth.uid()`) |
 
 ### Bibliothèque et stockage
 
@@ -139,3 +141,39 @@ Le super-administrateur dispose d'un CRUD complet depuis `#/superadmin` :
 | **Réinitialiser la progression** | `delete from attempts` (politique RLS dédiée). |
 
 Les deux RPC sont `security definer` et vérifient `public.mon_role() = 'superadmin'` : un enseignant ou un élève ne peut pas les appeler. Aucune clé `service_role` n'est nécessaire.
+
+## 9. Assistant IA (Edge Function `ia`)
+
+La page `#/ia` n'appelle jamais le fournisseur depuis le navigateur : la clé reste dans les secrets Supabase.
+
+1. Exécuter [migration-ia.sql](migration-ia.sql) dans le SQL Editor.
+2. Enregistrer la clé et déployer la fonction :
+
+```bash
+supabase secrets set AI_PROVIDER=gemini GEMINI_API_KEY=votre_cle IA_LIMITE_JOUR=30
+supabase functions deploy ia
+```
+
+Fournisseurs compatibles OpenAI pris en charge : `gemini` (palier gratuit, par défaut), `groq`, `openrouter`, `deepseek`, `github`.
+
+| Variable | Rôle |
+|---|---|
+| `AI_PROVIDER` | Fournisseur choisi |
+| `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`, `GITHUB_TOKEN` | Clé du fournisseur correspondant |
+| `AI_API_KEY` | Clé générique, prioritaire sur la précédente |
+| `AI_MODEL` | Modèle à utiliser (ex. `gemini-3.5-flash`), avec repli automatique si le modèle est introuvable ou retiré |
+| `AI_BASE_URL` | Point d'entrée alternatif compatible OpenAI |
+| `IA_LIMITE_JOUR` | Études générées par jour et par compte (30 par défaut) |
+
+La fonction vérifie le JWT Supabase, applique le quota quotidien, exige une sortie JSON et normalise le contenu (balises HTML supprimées, longueurs bornées). Sans clé, elle répond `non_configure` : le site bascule alors en mode démonstration. Les fiches validées sont enregistrées par le site dans `ia_contenus`, avec une RLS limitée à leur auteur.
+
+**Vérifier ce qui est réellement déployé** — un appel `GET` renvoie la version du code en ligne, sans exposer la clé :
+
+```powershell
+curl.exe -s "https://<projet>.supabase.co/functions/v1/ia"
+```
+
+Réponse attendue : `{"ok":true,"service":"learnhub-ia","version":"2026-10-29","configure":true,"fournisseur":"gemini","modele":"gemini-3.5-flash"}`
+Un `405 Méthode non autorisée` signifie que le code en ligne est une version antérieure : il faut redéployer.
+
+> Le fichier [functions/ia/deno.d.ts](functions/ia/deno.d.ts) ne sert qu'à l'éditeur : il déclare les globales `Deno` et les imports par URL, que l'extension TypeScript de VS Code ne connaît pas. Il n'est pas utilisé au déploiement. Si vous installez l'extension VS Code « Deno », il devient inutile.
