@@ -9,9 +9,9 @@ Site web éducatif statique qui regroupe des cours, des fiches de révision et d
 ## Fonctionnalités
 
 - **Une seule page, plusieurs vues.** `index.html` sert de point d'entrée unique et affiche les vues par routage d'ancre (`#/matieres`, `#/niveau/lycee`, `#/admin`…). Le menu, la session et la recherche sont donc partagés partout.
-- **Contenus réels.** 4 matières, 3 niveaux et 24 chapitres rédigés (résumé, objectifs, points clés), consultables par matière, par niveau ou individuellement.
+- **Contenus réels.** 5 matières, 3 niveaux et 28 chapitres rédigés (résumé, objectifs, points clés), consultables par matière, par niveau ou individuellement.
 - **Étude d'œuvre complète.** *Une si longue lettre* de Mariama Bâ : présentation, analyse littéraire, thèmes, personnages, contexte historique et deux exposés corrigés.
-- **Exercices interactifs.** Quiz chronométré, jeu d'associations (clic ou glisser-déposer) et textes à trous, avec correction immédiate. 14 exercices répartis sur les quatre matières, filtrables par matière.
+- **Exercices interactifs.** Quiz chronométré, jeu d'associations (clic ou glisser-déposer) et textes à trous, avec correction immédiate. 17 exercices répartis sur les cinq matières, filtrables par matière.
 - **Suivi de progression.** Chaque tentative est enregistrée : moyenne, meilleur score, historique et badges (premier pas, sans faute, persévérant, polyvalent, expert).
 - **Recherche globale.** Un champ unique interroge les matières, les chapitres, le cours, les exercices et les ressources.
 - **Espace administrateur réel.** Création, modification, activation et suppression des exercices ; gestion des ressources (liens ou PDF importés) ; gestion des utilisateurs et des rôles ; statistiques calculées ; export CSV ; paramètres appliqués aux exercices.
@@ -69,7 +69,7 @@ Les identifiants du super-administrateur se remplacent directement dans `#/super
 5. **Planifier une séance.** `#/admin/seances` → « Nouvelle séance » : titre, date, durée, classes ciblées, chapitres du site, ses propres leçons, exercices assignés, publication.
 6. **Suivre les résultats.** Le bouton « Suivi » d'une séance affiche, pour chaque élève, le nombre d'exercices réalisés, la moyenne, la dernière activité et le meilleur score par exercice.
 
-Les contenus publics livrés avec le site restent visibles pour les visiteurs et les élèves sans classe. Un espace enseignant est vide au départ : le bouton « Bibliothèque démo » (onglet Exercices) ou « Importer la bibliothèque de démonstration » (onglet Paramètres) y copie les 14 exercices.
+Les contenus publics livrés avec le site restent visibles pour les visiteurs et les élèves sans classe. Un espace enseignant est vide au départ : le bouton « Bibliothèque démo » (onglet Exercices) ou « Importer la bibliothèque de démonstration » (onglet Paramètres) y copie les 17 exercices.
 
 ## Routes principales
 
@@ -240,7 +240,7 @@ Un domaine du type `learnhub.sn` donne un lien plus court et plus crédible :
 ## Ajouter du contenu
 
 - **Un chapitre** : ajouter une entrée dans `matieres[].chapitres` de [data.js](assets/js/data.js) (`id`, `niveau`, `titre`, `resume`, `objectifs`, `points`, `duree`).
-- **Une matière ou un niveau** : compléter les tableaux `matieres` ou `niveaux` du même fichier.
+- **Une matière ou un niveau** : compléter les tableaux `matieres` ou `niveaux` du même fichier. Pour une nouvelle `couleur`, ajouter la classe `bg-…` correspondante dans [styles.css](styles.css), sinon l'icône s'affiche sans fond coloré.
 - **Un exercice** : le créer depuis `#/admin/exercices` (persisté dans le navigateur, rattaché à votre espace) ou l'ajouter à `exercicesSeed`.
 - **Une leçon** : la rédiger depuis `#/admin/lecons`, puis l'assigner à une séance dans `#/admin/seances`.
 

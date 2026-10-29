@@ -328,6 +328,7 @@ body {
 .bg-maths { background: linear-gradient(135deg, #42a5f5, #7e57c2);}
 .bg-sciences { background: linear-gradient(135deg, #43a047, #ab47bc);}
 .bg-lettres { background: linear-gradient(135deg, #ff7043, #ab47bc);}
+.bg-informatique { background: linear-gradient(135deg, #26a69a, #5c6bc0);}
 .methode-icon { background: linear-gradient(135deg, var(--primary), var(--accent)); }
 
 /* Contenu principal */

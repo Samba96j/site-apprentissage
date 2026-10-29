@@ -7,7 +7,7 @@ window.LearnHubStore = (function () {
     'use strict';
 
     const PREFIX = 'learnhub.v1.';
-    const SEED_VERSION = 3;
+    const SEED_VERSION = 4;
     const KEYS = {
         exercices: PREFIX + 'exercices',
         ressources: PREFIX + 'ressources',
@@ -153,6 +153,18 @@ window.LearnHubStore = (function () {
                 }
             });
             modifie = true;
+        }
+
+        if (version < 4) {
+            // Migration : ajoute les exercices livrés depuis la version 3 (matière Informatique).
+            let ajouts = 0;
+            window.LearnHubData.exercicesSeed.forEach(function (seed) {
+                if (exercices.findIndex(function (ex) { return ex.id === seed.id; }) === -1) {
+                    exercices.push(clone(seed));
+                    ajouts += 1;
+                }
+            });
+            if (ajouts) modifie = true;
         }
 
         if (version < SEED_VERSION) {

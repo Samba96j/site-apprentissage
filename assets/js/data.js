@@ -465,6 +465,84 @@ window.LearnHubData = (function () {
                     ]
                 }
             ]
+        },
+        {
+            slug: 'informatique',
+            nom: 'Informatique',
+            icone: 'fa-microchip',
+            couleur: 'bg-informatique',
+            resume: 'Binaire, algorithmes, programmation Python, réseaux et sécurité',
+            description: "Comprendre ce qui se passe derrière un écran : coder l'information, concevoir un algorithme, écrire un programme et sécuriser ses données.",
+            chapitres: [
+                {
+                    id: 'informatique-representation',
+                    niveau: 'lycee',
+                    titre: "Représenter l'information : binaire et encodage",
+                    duree: '40 min',
+                    resume: "Comprendre comment un ordinateur code textes, images et sons avec des 0 et des 1, et passer d'une base de numération à l'autre.",
+                    objectifs: [
+                        'Convertir un nombre entre base 2 et base 10',
+                        'Calculer le poids d\'un fichier texte ou d\'une image',
+                        'Distinguer bit, octet et multiples'
+                    ],
+                    points: [
+                        "Un bit vaut 0 ou 1 ; huit bits forment un octet.",
+                        'Un texte est codé caractère par caractère, par exemple en UTF-8.',
+                        'Une image se code en pixels, chacun décrit par ses composantes de couleur.'
+                    ]
+                },
+                {
+                    id: 'informatique-algorithmique',
+                    niveau: 'lycee',
+                    titre: 'Algorithmique : variables, conditions et boucles',
+                    duree: '45 min',
+                    resume: "Écrire un algorithme en pseudo-code : déclarer des variables, décider avec si… alors… sinon et répéter avec les boucles pour et tant que.",
+                    objectifs: [
+                        'Déclarer puis mettre à jour une variable',
+                        'Traduire un énoncé en instructions conditionnelles',
+                        "Choisir entre une boucle bornée et une boucle non bornée"
+                    ],
+                    points: [
+                        "Un algorithme décrit une suite finie d'instructions sans ambiguïté.",
+                        'Une condition évalue une expression booléenne, vraie ou fausse.',
+                        "La boucle pour s'emploie quand le nombre d'itérations est connu, la boucle tant que sinon."
+                    ]
+                },
+                {
+                    id: 'informatique-python',
+                    niveau: 'lycee',
+                    titre: 'Programmer en Python : fonctions et listes',
+                    duree: '50 min',
+                    resume: "Passer du pseudo-code au langage Python : définir une fonction, parcourir une liste et renvoyer un résultat vérifiable par des tests.",
+                    objectifs: [
+                        'Définir une fonction avec def et return',
+                        'Parcourir une liste avec une boucle for',
+                        'Tester une fonction sur des cas simples et limites'
+                    ],
+                    points: [
+                        "En Python, l'indentation délimite les blocs d'instructions.",
+                        'Une fonction claire fait une seule chose et porte un nom explicite.',
+                        "Une liste est ordonnée et ses éléments s'indexent à partir de 0."
+                    ]
+                },
+                {
+                    id: 'informatique-reseaux',
+                    niveau: 'lycee',
+                    titre: 'Réseaux, Web et sécurité des données',
+                    duree: '45 min',
+                    resume: "Suivre le trajet d'une requête HTTP, distinguer client et serveur, et adopter les bons réflexes pour protéger ses comptes et ses données personnelles.",
+                    objectifs: [
+                        'Décrire le rôle du client, du serveur et du DNS',
+                        'Expliquer ce que protège le chiffrement HTTPS',
+                        "Identifier une donnée personnelle et sa durée de conservation"
+                    ],
+                    points: [
+                        'Le DNS traduit un nom de domaine en adresse IP.',
+                        "HTTPS chiffre l'échange entre le navigateur et le serveur.",
+                        'Un mot de passe long et unique vaut mieux qu\'un mot de passe complexe réutilisé partout.'
+                    ]
+                }
+            ]
         }
     ];
 
@@ -878,6 +956,82 @@ window.LearnHubData = (function () {
                 {
                     text: "I wanted to go out, <span class='blank' data-answer='but'></span> it was raining. <span class='blank' data-answer='However'></span>, I took an umbrella <span class='blank' data-answer='because'></span> I hate getting wet.",
                     words: ['but', 'However', 'because', 'although', 'so', 'unless']
+                }
+            ]
+        },
+        {
+            id: 'informatique-quiz-bases',
+            type: 'quiz',
+            matiere: 'informatique',
+            titre: 'Informatique : bases et culture numérique',
+            actif: true,
+            temps: 30,
+            questions: [
+                {
+                    question: 'Combien de bits contient un octet ?',
+                    options: ['4', '8', '16', '1024'],
+                    answer: 1,
+                    explanation: 'Un octet regroupe 8 bits.'
+                },
+                {
+                    question: 'En base 2, le nombre 1010 vaut en décimal…',
+                    options: ['10', '8', '12', '5'],
+                    answer: 0,
+                    explanation: '1010₂ = 8 + 0 + 2 + 0 = 10.'
+                },
+                {
+                    question: "Quel composant exécute les instructions d'un programme ?",
+                    options: ['Le disque dur', 'Le processeur', 'La mémoire vive', "L'écran"],
+                    answer: 1,
+                    explanation: 'Le processeur (CPU) exécute les instructions ; la mémoire vive stocke temporairement les données.'
+                },
+                {
+                    question: 'Un algorithme est…',
+                    options: [
+                        'un langage de programmation',
+                        "une suite finie d'instructions qui résout un problème",
+                        "un format de fichier",
+                        'un composant matériel'
+                    ],
+                    answer: 1,
+                    explanation: "Un algorithme décrit la méthode de résolution, indépendamment du langage utilisé pour le programmer."
+                },
+                {
+                    question: 'HTTPS sert principalement à…',
+                    options: [
+                        'accélérer le chargement du site',
+                        'chiffrer les échanges entre le navigateur et le serveur',
+                        'compresser les images',
+                        'stocker les cookies'
+                    ],
+                    answer: 1,
+                    explanation: "HTTPS chiffre la communication, ce qui empêche l'interception du mot de passe ou des données envoyées."
+                }
+            ]
+        },
+        {
+            id: 'informatique-matching-notions',
+            type: 'matching',
+            matiere: 'informatique',
+            titre: 'Informatique : notions et définitions',
+            actif: true,
+            pairs: [
+                { item: 'Bit', match: "Plus petite unité d'information, qui vaut 0 ou 1" },
+                { item: 'Variable', match: "Nom associé à une valeur qui peut changer pendant l'exécution" },
+                { item: 'Boucle', match: 'Structure qui répète plusieurs fois des instructions' },
+                { item: 'Serveur', match: 'Machine qui répond aux requêtes envoyées par les clients' }
+            ]
+        },
+        {
+            id: 'informatique-fillblank-algorithme',
+            type: 'fillblank',
+            matiere: 'informatique',
+            titre: 'Algorithme : calculer une moyenne',
+            actif: true,
+            quotes: [
+                {
+                    text: "Pour calculer une moyenne, on <span class='blank' data-answer='initialise'></span> une variable somme à 0, on <span class='blank' data-answer='additionne'></span> les notes dans une boucle, puis on <span class='blank' data-answer='divise'></span> le total par le nombre de notes.",
+                    words: ['initialise', 'additionne', 'divise', 'multiplie', 'supprime', 'compare']
                 }
             ]
         }
