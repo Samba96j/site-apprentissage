@@ -18,3 +18,17 @@ scripts/node_modules/
 scripts/.env
 scripts/.import-state.json
 scripts/.migration-r2.json
+
+# Secrets : aucun fichier d'environnement ni trousseau dans le depot
+.env
+.env.*
+*.env
+!.env.example
+supabase/.env
+supabase/functions/.env
+supabase/functions/*/.env
+.dev.vars
+*.pem
+*.p12
+*.key
+service-account*.json

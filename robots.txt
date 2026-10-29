@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /supabase/
 
 Sitemap: https://samba96j.github.io/site-apprentissage/sitemap.xml
