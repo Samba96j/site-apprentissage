@@ -128,7 +128,18 @@
         '</nav>';
     }
 
-    const TEXTE_PARTAGE = 'LearnHub — cours, exercices interactifs et bibliothèque numérique, du collège au supérieur';
+    const TEXTE_PARTAGE = '📚 LearnHub : cours, exercices interactifs et bibliothèque gratuits — avec IAFA FAMA ✨, ' +
+        'l\'assistant IA qui prépare une fiche complète sur n\'importe quelle œuvre en quelques secondes. Sans publicité.';
+    const SUJET_PARTAGE = 'IAFA FAMA t\'attend sur LearnHub ✨';
+    const CORPS_PARTAGE = [
+        'Salut,',
+        '',
+        'Je te partage LearnHub : cours, exercices interactifs et bibliothèque numérique du collège au supérieur, gratuit et sans publicité.',
+        '',
+        'La nouveauté : IAFA FAMA ✨, un assistant IA qui prépare une fiche complète sur n\'importe quelle œuvre — résumé, contexte, personnages, thèmes, procédés, citations et questions d\'entraînement — en quelques secondes.',
+        '',
+        'À découvrir ici :'
+    ].join('\n');
 
     /** URL à partager : la page canonique, plus la route courante (partage d'un chapitre, d'une matière…). */
     function urlPartage() {
@@ -148,7 +159,7 @@
             ['email', 'fa-envelope', 'Partager par e-mail']
         ];
         return '<div class="partage-pied" id="partage-pied">' +
-            '<span class="partage-titre"><i class="fas fa-share-nodes me-2"></i>Partager LearnHub</span>' +
+            '<span class="partage-titre"><i class="fas fa-share-nodes me-2"></i>Faire découvrir LearnHub</span>' +
             '<div class="partage-liens">' +
                 reseaux.map(function (reseau) {
                     return '<a class="partage-lien" data-partage="' + reseau[0] + '" href="#/" target="_blank" rel="noopener"' +
@@ -172,8 +183,8 @@
             linkedin: 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(url),
             x: 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(TEXTE_PARTAGE) + '&url=' + encodeURIComponent(url),
             telegram: 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(TEXTE_PARTAGE),
-            email: 'mailto:?subject=' + encodeURIComponent('Découvrir LearnHub') +
-                '&body=' + encodeURIComponent(TEXTE_PARTAGE + '\n' + url)
+            email: 'mailto:?subject=' + encodeURIComponent(SUJET_PARTAGE) +
+                '&body=' + encodeURIComponent(CORPS_PARTAGE + '\n' + url)
         };
     }
 
@@ -220,7 +231,7 @@
                 return;
             }
             if (bouton.dataset.partage === 'natif' && navigator.share) {
-                navigator.share({ title: 'LearnHub', text: TEXTE_PARTAGE, url: urlPartage() }).catch(function () {});
+                navigator.share({ title: 'LearnHub — cours, exercices et IAFA FAMA', text: TEXTE_PARTAGE, url: urlPartage() }).catch(function () {});
             }
         });
     }
