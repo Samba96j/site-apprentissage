@@ -1423,6 +1423,16 @@ window.LearnHubData = (function () {
             image: 'assets/images/carrousel/slide-5.jpg',
             credit: 'Photo : Rumuri Rutazima — CC BY 4.0',
             cta: { libelle: 'Créer mon espace', href: '#/connexion?mode=inscription' }
+        },
+        {
+            titre: 'IAFA FAMA, votre assistant de lecture',
+            texte: 'Choisissez une œuvre : résumé, personnages, thèmes, citations et questions arrivent en quelques secondes.',
+            icone: 'fa-wand-magic-sparkles',
+            embleme: 'fa-star',
+            variante: 'violet',
+            image: 'assets/images/carrousel/slide-6.jpg',
+            credit: 'Illustration : LearnHub',
+            cta: { libelle: 'Essayer IAFA FAMA', href: '#/ia' }
         }
     ];
 

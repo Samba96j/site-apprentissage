@@ -221,6 +221,7 @@ window.LearnHubAuth = (function () {
                 espaceId: p.espace_id || null,
                 espaceNom: espace ? espace.nom : null,
                 classeId: p.classe_id || null,
+                avatarUrl: p.avatar_url || null,
                 loginAt: new Date().toISOString()
             };
         }
@@ -236,6 +237,7 @@ window.LearnHubAuth = (function () {
             espaceId: user.espaceId || null,
             espaceNom: user.espaceNom || null,
             classeId: user.classeId || null,
+            avatarUrl: user.avatarUrl || null,
             loginAt: session.loginAt
         };
     }
@@ -290,9 +292,56 @@ window.LearnHubAuth = (function () {
         return store && store.classes ? store.classes.get(user.classeId) : null;
     }
 
-    function monEspace() {
+    /** Matière imposée par la classe de l'élève (null = toutes les matières). */
+    function matiereClasse() {
+        const classe = maClasse();
+        return classe && classe.matiere ? classe.matiere : null;
+    }
+
+    function avatarUrl(nomUtilisateur) {
+        if (!nomUtilisateur) return null;
+        const cible = findUser(nomUtilisateur);
+        return (cible && cible.avatarUrl) || null;
+    }
+
+    /**
+     * Enregistre la photo de profil.
+     * `source` contient un Blob (mode Supabase) et/ou une data URL (mode local).
+     */
+    async function changerAvatar(source) {
+        if (!source) return { ok: false, error: 'Image manquante.' };
+
         const b = backend();
-        if (b) {
+        if (b && b.estActif() && source.blob) return b.televerserAvatar(source.blob);
+
+        const user = current();
+        if (!user) return { ok: false, error: 'Connectez-vous pour changer de photo.' };
+        if (!source.dataUrl) return { ok: false, error: 'Image manquante.' };
+
+        const liste = users();
+        const cible = liste.find(function (u) { return u.username === user.username; });
+        if (!cible) return { ok: false, error: 'Compte introuvable.' };
+        cible.avatarUrl = source.dataUrl;
+        write(KEYS.users, liste);
+        return { ok: true, url: source.dataUrl };
+    }
+
+    async function effacerAvatar() {
+        const b = backend();
+        if (b && b.estActif()) return b.effacerAvatar();
+
+        const user = current();
+        if (!user) return { ok: false, error: 'Connexion requise.' };
+        const liste = users();
+        const cible = liste.find(function (u) { return u.username === user.username; });
+        if (!cible) return { ok: false, error: 'Compte introuvable.' };
+        delete cible.avatarUrl;
+        write(KEYS.users, liste);
+        return { ok: true };
+    }
+
+    function monEspace() {
+        const b = backend();        if (b) {
             const p = b.profilCourant();
             if (!p) return null;
             if (p.role === ROLES.SUPERADMIN) {
@@ -915,6 +964,10 @@ window.LearnHubAuth = (function () {
         espaceActif: espaceActif,
         monEspace: monEspace,
         maClasse: maClasse,
+        matiereClasse: matiereClasse,
+        avatarUrl: avatarUrl,
+        changerAvatar: changerAvatar,
+        effacerAvatar: effacerAvatar,
         rejoindreClasse: rejoindreClasse,
         quitterClasse: quitterClasse,
         detacherClasse: detacherClasse,

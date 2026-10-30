@@ -249,3 +249,67 @@
     }
     .ia-hero .etoile { opacity: 0.45; }
 }
+/* --------------------------- Photo de profil / avatars --------------------------- */
+
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    color: #fff;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    user-select: none;
+    box-shadow: 0 4px 14px rgba(49, 27, 79, 0.18), inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.avatar-principal {
+    box-shadow:
+        0 0 0 4px #ffffff,
+        0 0 0 7px rgba(106, 27, 154, 0.18),
+        0 12px 28px rgba(49, 27, 79, 0.26);
+}
+
+.identite-entete {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.identite-texte {
+    flex: 1 1 15rem;
+    min-width: 0;
+}
+
+.identite-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+@media (max-width: 575.98px) {
+    .identite-entete {
+        justify-content: center;
+        text-align: center;
+    }
+    .identite-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .identite-texte .d-flex {
+        justify-content: center;
+    }
+}

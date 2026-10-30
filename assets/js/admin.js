@@ -1069,7 +1069,7 @@ window.LearnHubAdmin = (function () {
             const seances = window.LearnHubStore.seances.miens();
             liste.innerHTML =
                 '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
-                    '<thead><tr><th>Classe</th><th>Niveau</th><th>Code d\'inscription</th><th>Élèves</th><th>Séances</th><th class="text-end">Actions</th></tr></thead>' +
+                    '<thead><tr><th>Classe</th><th>Matière</th><th>Niveau</th><th>Code d\'inscription</th><th>Élèves</th><th>Séances</th><th class="text-end">Actions</th></tr></thead>' +
                     '<tbody>' + classes.map(function (classe) {
                         const membres = window.LearnHubAuth.membresClasse(classe.id);
                         const nombreSeances = seances.filter(function (s) {
@@ -1077,9 +1077,13 @@ window.LearnHubAdmin = (function () {
                             return !cibles.length || cibles.indexOf(classe.id) >= 0;
                         }).length;
                         const niveau = classe.niveau ? window.LearnHubData.getNiveau(classe.niveau) : null;
+                        const matiere = classe.matiere ? window.LearnHubData.getMatiere(classe.matiere) : null;
                         return '<tr>' +
                             '<td class="fw-semibold">' + esc(classe.nom) +
                                 (classe.description ? '<div class="small text-muted fw-normal">' + esc(classe.description) + '</div>' : '') + '</td>' +
+                            '<td>' + (matiere
+                                ? '<span class="badge bg-primary bg-opacity-10 text-primary"><i class="fas ' + esc(matiere.icone) + ' me-1"></i>' + esc(matiere.nom) + '</span>'
+                                : '<span class="text-muted small">Toutes</span>') + '</td>' +
                             '<td class="small">' + esc(niveau ? niveau.nom : 'Tous niveaux') + '</td>' +
                             '<td><span class="badge bg-primary me-1">' + esc(classe.code) + '</span>' +
                                 '<button class="btn btn-sm btn-outline-secondary" data-action="copier" data-id="' + esc(classe.id) + '" title="Copier le code"><i class="fas fa-copy"></i></button></td>' +
@@ -1087,6 +1091,7 @@ window.LearnHubAdmin = (function () {
                             '<td>' + nombreSeances + '</td>' +
                             '<td class="text-end text-nowrap">' +
                                 '<button class="btn btn-sm btn-outline-secondary me-1" data-action="membres" data-id="' + esc(classe.id) + '" title="Voir les élèves"><i class="fas fa-user-group"></i></button>' +
+                                '<button class="btn btn-sm btn-outline-success me-1" data-action="export" data-id="' + esc(classe.id) + '" title="Exporter les comptes des élèves (CSV)" ' + (membres.length ? '' : 'disabled') + '><i class="fas fa-file-csv"></i></button>' +
                                 '<button class="btn btn-sm btn-outline-primary me-1" data-action="editer" data-id="' + esc(classe.id) + '" title="Modifier"><i class="fas fa-edit"></i></button>' +
                                 '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-id="' + esc(classe.id) + '" title="Supprimer"><i class="fas fa-trash"></i></button>' +
                             '</td>' +
@@ -1104,16 +1109,24 @@ window.LearnHubAdmin = (function () {
                         '<button type="button" class="btn btn-sm btn-outline-secondary" id="fermer-classe"><i class="fas fa-xmark"></i></button>' +
                     '</div>' +
                     '<div class="row g-3">' +
-                        '<div class="col-md-5"><label class="form-label" for="classe-nom">Nom de la classe</label>' +
+                        '<div class="col-md-4"><label class="form-label" for="classe-nom">Nom de la classe</label>' +
                             '<input type="text" class="form-control" id="classe-nom" maxlength="60" required placeholder="ex. Terminale A" value="' + esc(classe ? classe.nom : '') + '"></div>' +
-                        '<div class="col-md-3"><label class="form-label" for="classe-niveau">Niveau</label>' +
+                        '<div class="col-md-3"><label class="form-label" for="classe-matiere">Matière</label>' +
+                            '<select class="form-select" id="classe-matiere">' +
+                                '<option value="">Toutes les matières</option>' +
+                                window.LearnHubData.matieres.map(function (matiere) {
+                                    return '<option value="' + esc(matiere.slug) + '" ' + (classe && classe.matiere === matiere.slug ? 'selected' : '') + '>' + esc(matiere.nom) + '</option>';
+                                }).join('') +
+                            '</select>' +
+                            '<div class="form-text">L\'élève ne verra que cette matière.</div></div>' +
+                        '<div class="col-md-2"><label class="form-label" for="classe-niveau">Niveau</label>' +
                             '<select class="form-select" id="classe-niveau">' +
-                                '<option value="">Tous niveaux</option>' +
+                                '<option value="">Tous</option>' +
                                 window.LearnHubData.niveaux.map(function (niveau) {
                                     return '<option value="' + esc(niveau.slug) + '" ' + (classe && classe.niveau === niveau.slug ? 'selected' : '') + '>' + esc(niveau.nom) + '</option>';
                                 }).join('') +
                             '</select></div>' +
-                        '<div class="col-md-4"><label class="form-label" for="classe-description">Description (facultative)</label>' +
+                        '<div class="col-md-3"><label class="form-label" for="classe-description">Description (facultative)</label>' +
                             '<input type="text" class="form-control" id="classe-description" value="' + esc(classe ? classe.description || '' : '') + '"></div>' +
                     '</div>' +
                     '<div class="d-flex gap-2 mt-3">' +
@@ -1132,6 +1145,7 @@ window.LearnHubAdmin = (function () {
                 }
                 const donnees = {
                     nom: nom,
+                    matiere: editeur.querySelector('#classe-matiere').value,
                     niveau: editeur.querySelector('#classe-niveau').value,
                     description: editeur.querySelector('#classe-description').value.trim()
                 };
@@ -1155,6 +1169,50 @@ window.LearnHubAdmin = (function () {
             editeur.innerHTML = '';
         }
 
+        /** Exporte les comptes des élèves d'une classe (identifiants de connexion). */
+        function exporterClasse(classeId) {
+            const classe = window.LearnHubStore.classes.get(classeId);
+            if (!classe) return;
+            const membres = window.LearnHubAuth.membresClasse(classeId);
+            if (!membres.length) {
+                message(zoneMessage, 'Aucun élève à exporter dans cette classe.', 'warning');
+                return;
+            }
+            const matiere = classe.matiere
+                ? (window.LearnHubData.getMatiere(classe.matiere) || {}).nom || classe.matiere
+                : 'Toutes';
+            const lignes = [['Identifiant', 'E-mail', 'Classe', 'Matière', 'Tentatives', 'Moyenne (%)', 'Inscrit le']];
+            membres.forEach(function (eleve) {
+                const tentatives = window.LearnHubAuth.attempts(eleve.username);
+                const moyenne = moyennePourcentage(tentatives);
+                lignes.push([
+                    eleve.username,
+                    eleve.email || '',
+                    classe.nom,
+                    matiere,
+                    String(tentatives.length),
+                    moyenne === null ? '' : String(moyenne),
+                    eleve.cree ? formaterDate(eleve.cree) : ''
+                ]);
+            });
+            const csv = lignes.map(function (ligne) {
+                return ligne.map(function (cellule) {
+                    const texte = String(cellule == null ? '' : cellule).replace(/"/g, '""');
+                    return '"' + texte + '"';
+                }).join(';');
+            }).join('\r\n');
+            const nomFichier = 'eleves-' + String(classe.nom).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.csv';
+            const fichier = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const lien = document.createElement('a');
+            lien.href = URL.createObjectURL(fichier);
+            lien.download = nomFichier;
+            document.body.appendChild(lien);
+            lien.click();
+            document.body.removeChild(lien);
+            setTimeout(function () { URL.revokeObjectURL(lien.href); }, 2000);
+            message(zoneMessage, membres.length + ' compte(s) exporté(s) dans ' + nomFichier + '.', 'success');
+        }
+
         function afficherMembres(classeId) {
             const classe = window.LearnHubStore.classes.get(classeId);
             if (!classe) return;
@@ -1164,7 +1222,10 @@ window.LearnHubAdmin = (function () {
                 '<div class="admin-panel mt-3">' +
                     '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
                         '<h4 class="mb-0"><i class="fas fa-user-group me-2"></i>' + esc(classe.nom) + '</h4>' +
-                        '<span class="badge bg-primary">Code ' + esc(classe.code) + '</span>' +
+                        '<div class="d-flex align-items-center gap-2">' +
+                            '<span class="badge bg-primary">Code ' + esc(classe.code) + '</span>' +
+                            '<button class="btn btn-sm btn-outline-success" data-action="export-membres"><i class="fas fa-file-csv me-1"></i>Exporter les comptes</button>' +
+                        '</div>' +
                     '</div>' +
                     (membres.length
                         ? '<ul class="list-group">' + membres.map(function (eleve) {
@@ -1190,6 +1251,8 @@ window.LearnHubAdmin = (function () {
 
             if (bouton.dataset.action === 'copier') {
                 copierTexte(classe.code, zoneMessage);
+            } else if (bouton.dataset.action === 'export') {
+                exporterClasse(classe.id);
             } else if (bouton.dataset.action === 'membres') {
                 afficherMembres(classe.id);
             } else if (bouton.dataset.action === 'editer') {
@@ -1204,6 +1267,11 @@ window.LearnHubAdmin = (function () {
         });
 
         zoneMembres.addEventListener('click', function (event) {
+            const exportBouton = event.target.closest('button[data-action="export-membres"]');
+            if (exportBouton) {
+                exporterClasse(classeAffichee);
+                return;
+            }
             const bouton = event.target.closest('button[data-action="retirer-membre"]');
             if (!bouton) return;
             const resultat = window.LearnHubAuth.retirerDeClasse(bouton.dataset.username);

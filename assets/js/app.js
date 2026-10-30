@@ -26,6 +26,73 @@
             .replace(/"/g, '&quot;');
     }
 
+    function initiales(nom) {
+        const mots = String(nom || '?').trim().split(/\s+/).filter(Boolean);
+        if (!mots.length) return '?';
+        if (mots.length === 1) return mots[0].slice(0, 2).toUpperCase();
+        return (mots[0].charAt(0) + mots[mots.length - 1].charAt(0)).toUpperCase();
+    }
+
+    /** Teinte stable déduite du nom : deux comptes n'ont pas la même couleur. */
+    function teinteAvatar(nom) {
+        let hash = 0;
+        const texte = String(nom || '');
+        for (let i = 0; i < texte.length; i += 1) {
+            hash = (hash * 31 + texte.charCodeAt(i)) % 360;
+        }
+        return hash;
+    }
+
+    function avatarHtml(nom, url, taille, classes) {
+        const taillePx = taille || 40;
+        const classe = 'avatar' + (classes ? ' ' + classes : '');
+        const style = 'width:' + taillePx + 'px;height:' + taillePx + 'px;font-size:' + Math.round(taillePx * 0.38) + 'px';
+        if (url) {
+            return '<span class="' + classe + '">' +
+                '<img src="' + esc(url) + '" alt="Photo de ' + esc(nom) + '" style="' + style + '" loading="lazy">' +
+            '</span>';
+        }
+        const teinte = teinteAvatar(nom);
+        const teinte2 = (teinte + 45) % 360;
+        return '<span class="' + classe + ' avatar-initiales" aria-hidden="true" style="' + style +
+            ';background:linear-gradient(135deg,hsl(' + teinte + ',64%,55%),hsl(' + teinte2 + ',68%,38%))">' +
+            esc(initiales(nom)) +
+        '</span>';
+    }
+
+    /** Recadre et compresse l'image choisie (carré 384 px, JPEG). */
+    function preparerAvatar(fichier) {
+        return new Promise(function (resolve, reject) {
+            const lecteur = new FileReader();
+            lecteur.onerror = reject;
+            lecteur.onload = function () {
+                const image = new Image();
+                image.onerror = reject;
+                image.onload = function () {
+                    const cote = Math.min(image.width, image.height);
+                    const cible = 384;
+                    const toile = document.createElement('canvas');
+                    toile.width = cible;
+                    toile.height = cible;
+                    const contexte = toile.getContext('2d');
+                    contexte.fillStyle = '#ffffff';
+                    contexte.fillRect(0, 0, cible, cible);
+                    contexte.drawImage(
+                        image,
+                        (image.width - cote) / 2, (image.height - cote) / 2, cote, cote,
+                        0, 0, cible, cible
+                    );
+                    const dataUrl = toile.toDataURL('image/jpeg', 0.86);
+                    toile.toBlob(function (blob) {
+                        resolve({ blob: blob, dataUrl: dataUrl, nom: fichier.name });
+                    }, 'image/jpeg', 0.86);
+                };
+                image.src = lecteur.result;
+            };
+            lecteur.readAsDataURL(fichier);
+        });
+    }
+
     function normaliser(texte) {
         return String(texte || '')
             .normalize('NFD')
@@ -310,8 +377,9 @@
                 '<a href="#/connexion?mode=inscription" class="btn btn-primary btn-sm">Inscription</a>';
         }
         return '<div class="dropdown">' +
-            '<button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">' +
-                '<i class="fas fa-user-circle me-1"></i>' + esc(user.username) +
+            '<button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">' +
+                avatarHtml(user.username, user.avatarUrl, 26) +
+                '<span class="d-none d-sm-inline">' + esc(user.username) + '</span>' +
             '</button>' +
             '<ul class="dropdown-menu dropdown-menu-end">' +
                 '<li><a class="dropdown-item" href="#/profil"><i class="fas fa-chart-line me-2"></i>Ma progression</a></li>' +
@@ -825,9 +893,13 @@
 
     function vueLecons() {
         const user = auth.current();
-        const lecons = store.lecons.all().slice().sort(function (a, b) {
-            return String(a.titre).localeCompare(String(b.titre));
-        });
+        const matiereClasse = auth.matiereClasse();
+        const lecons = store.lecons.all()
+            .filter(function (lecon) { return !matiereClasse || lecon.matiere === matiereClasse; })
+            .slice()
+            .sort(function (a, b) {
+                return String(a.titre).localeCompare(String(b.titre));
+            });
 
         const cartes = lecons.map(function (lecon) {
             const matiere = data.getMatiere(lecon.matiere);
@@ -1215,11 +1287,15 @@
     function vueExercices(parametres) {
         const user = auth.current();
         const exoCible = parametres ? parametres.get('exo') : null;
-        const tous = store.exercices.actifs();
+        const matiereClasse = auth.matiereClasse();
+        const matiereNom = matiereClasse ? (data.getMatiere(matiereClasse) || {}).nom : null;
+        const tous = store.exercices.actifs().filter(function (ex) {
+            return !matiereClasse || ex.matiere === matiereClasse;
+        });
         const actifs = exoCible
             ? tous.filter(function (ex) { return ex.id === exoCible; })
             : tous;
-        const pastilles = exoCible ? '' : ['<button class="btn btn-sm btn-primary" data-matiere="" aria-pressed="true"><i class="fas fa-layer-group me-1"></i>Toutes <span class="badge bg-light text-dark ms-1">' + actifs.length + '</span></button>']
+        const pastilles = (exoCible || matiereClasse) ? '' : ['<button class="btn btn-sm btn-primary" data-matiere="" aria-pressed="true"><i class="fas fa-layer-group me-1"></i>Toutes <span class="badge bg-light text-dark ms-1">' + actifs.length + '</span></button>']
             .concat(data.matieres.map(function (matiere) {
                 const nombre = actifs.filter(function (ex) { return ex.matiere === matiere.slug; }).length;
                 return '<button class="btn btn-sm btn-outline-primary" data-matiere="' + esc(matiere.slug) + '" aria-pressed="false">' +
@@ -1233,7 +1309,11 @@
                 '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
                     '<div>' +
                         '<h1 class="h3 mb-1">Exercices interactifs</h1>' +
-                        '<p class="text-muted mb-0">Quiz chronométrés, associations et textes à trous dans toutes les matières.</p>' +
+                        '<p class="text-muted mb-0">' +
+                            (matiereClasse
+                                ? 'Quiz chronométrés, associations et textes à trous — matière de votre classe : <strong>' + esc(matiereNom || matiereClasse) + '</strong>.'
+                                : 'Quiz chronométrés, associations et textes à trous dans toutes les matières.') +
+                        '</p>' +
                     '</div>' +
                     (user
                         ? '<a class="btn btn-outline-primary btn-sm" href="#/profil"><i class="fas fa-chart-line me-1"></i>Ma progression</a>'
@@ -1244,7 +1324,12 @@
                         '<span><i class="fas fa-calendar-check me-1"></i>Exercice assigné dans une séance.</span>' +
                         '<a class="alert-link" href="#/exercices">Voir tous les exercices</a></div>'
                     : '') +
-                '<div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filtrer les exercices par matière">' + pastilles + '</div>' +
+                (matiereClasse && !exoCible
+                    ? '<div class="alert alert-primary py-2 small"><i class="fas fa-filter me-1"></i>' +
+                        'Votre classe travaille une seule matière : seuls les exercices de <strong>' +
+                        esc(matiereNom || matiereClasse) + '</strong> sont proposés.</div>'
+                    : '') +
+                (pastilles ? '<div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filtrer les exercices par matière">' + pastilles + '</div>' : '') +
                 '<div class="content"><div id="zone-jeux"></div></div>' +
                 '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Les exercices affichés proviennent de la bibliothèque publique et de l\'espace de votre enseignant.</p>' +
             '</div>',
@@ -1643,17 +1728,28 @@
         return {
             titre: 'Ma progression',
             html: '<div class="container py-4">' +
-                '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">' +
-                    '<div>' +
-                        (user.role === 'eleve'
-                            ? '<h1 class="h3 mb-1">Bonjour <strong>' + esc(user.username) + '</strong>, merci de vous être connecté.</h1>' +
-                              '<p class="text-muted mb-0"><i class="fas fa-chart-line me-1"></i>Voici votre progression, vos badges et votre historique.</p>'
-                            : '<h1 class="h3 mb-0">Ma progression</h1>') +
-                    '</div>' +
-                    '<div class="d-flex gap-2">' +
-                        '<a class="btn btn-outline-primary btn-sm" href="#/ia"><i class="fas fa-wand-magic-sparkles me-1"></i>' + NOM_IA + '</a>' +
-                        '<a class="btn btn-outline-primary btn-sm" href="#/exercices"><i class="fas fa-gamepad me-1"></i>S\'entraîner</a>' +
-                        (tentatives.length ? '<button class="btn btn-outline-danger btn-sm" id="effacer-historique"><i class="fas fa-rotate-left me-1"></i>Effacer mon historique</button>' : '') +
+                '<div class="content mb-4">' +
+                    '<div class="identite-entete">' +
+                        avatarHtml(user.username, user.avatarUrl, 96, 'avatar-principal') +
+                        '<div class="identite-texte">' +
+                            '<h1 class="h3 mb-1">Bonjour ' + esc(user.username) + '</h1>' +
+                            '<p class="text-muted mb-2">' +
+                                (user.role === 'eleve'
+                                    ? '<i class="fas fa-user-graduate me-1"></i>Élève'
+                                    : '<i class="fas fa-chalkboard-user me-1"></i>Enseignant') +
+                                (classe ? ' · <strong>' + esc(classe.nom) + '</strong>' : '') +
+                            '</p>' +
+                            '<div class="d-flex flex-wrap gap-2">' +
+                                '<label class="btn btn-outline-primary btn-sm mb-0" for="champ-avatar"><i class="fas fa-camera me-1"></i>Changer ma photo</label>' +
+                                '<input type="file" id="champ-avatar" accept="image/*" class="visually-hidden">' +
+                                (user.avatarUrl ? '<button class="btn btn-outline-secondary btn-sm" id="retirer-avatar"><i class="fas fa-trash-can me-1"></i>Retirer</button>' : '') +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="identite-actions">' +
+                            '<a class="btn btn-outline-primary btn-sm" href="#/ia"><i class="fas fa-wand-magic-sparkles me-1"></i>' + esc(NOM_IA) + '</a>' +
+                            '<a class="btn btn-outline-primary btn-sm" href="#/exercices"><i class="fas fa-gamepad me-1"></i>S\'entraîner</a>' +
+                            (tentatives.length ? '<button class="btn btn-outline-danger btn-sm" id="effacer-historique"><i class="fas fa-rotate-left me-1"></i>Effacer mon historique</button>' : '') +
+                        '</div>' +
                     '</div>' +
                 '</div>' +
                 (user.role === 'eleve'
@@ -1717,6 +1813,46 @@
                         if (!window.confirm('Effacer tout votre historique de scores ?')) return;
                         auth.clearProgress(user.username);
                         toast('Historique effacé.');
+                        router();
+                    });
+                }
+
+                const champAvatar = racine.querySelector('#champ-avatar');
+                if (champAvatar) {
+                    champAvatar.addEventListener('change', async function () {
+                        const fichier = champAvatar.files && champAvatar.files[0];
+                        if (!fichier) return;
+                        if (fichier.size > 8 * 1024 * 1024) {
+                            toast('Image trop lourde : 8 Mo maximum.', 'danger');
+                            return;
+                        }
+                        try {
+                            const prepare = await preparerAvatar(fichier);
+                            const resultat = await auth.changerAvatar(prepare);
+                            if (!resultat.ok) {
+                                toast(resultat.error || 'Enregistrement impossible.', 'danger');
+                                return;
+                            }
+                            toast('Photo de profil mise à jour.');
+                            router();
+                        } catch (erreur) {
+                            toast('Image illisible. Essayez un autre fichier.', 'danger');
+                        } finally {
+                            champAvatar.value = '';
+                        }
+                    });
+                }
+
+                const retirerAvatar = racine.querySelector('#retirer-avatar');
+                if (retirerAvatar) {
+                    retirerAvatar.addEventListener('click', async function () {
+                        if (!window.confirm('Retirer votre photo de profil ?')) return;
+                        const resultat = await auth.effacerAvatar();
+                        if (!resultat.ok) {
+                            toast(resultat.error || 'Suppression impossible.', 'danger');
+                            return;
+                        }
+                        toast('Photo retirée.');
                         router();
                     });
                 }

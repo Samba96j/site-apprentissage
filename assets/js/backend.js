@@ -100,6 +100,7 @@ window.LearnHubBackend = (function () {
             espaceId: row.espace_id || null,
             espaceNom: espace ? espace.nom : null,
             classeId: row.classe_id || null,
+            avatarUrl: row.avatar_url || null,
             cree: row.created_at
         };
     }
@@ -109,6 +110,7 @@ window.LearnHubBackend = (function () {
             id: row.id,
             espaceId: row.espace_id,
             nom: row.nom,
+            matiere: row.matiere || '',
             niveau: row.niveau || '',
             description: row.description || '',
             code: row.code,
@@ -188,6 +190,7 @@ window.LearnHubBackend = (function () {
                 id: item.id,
                 espace_id: espaceId,
                 nom: item.nom,
+                matiere: item.matiere || null,
                 niveau: item.niveau || null,
                 description: item.description || null,
                 code: item.code
@@ -888,6 +891,44 @@ window.LearnHubBackend = (function () {
         return { ok: true };
     }
 
+    /* ------------------------------ Photo de profil ------------------------------ */
+
+    async function televerserAvatar(blob) {
+        if (!estActif() || !profil) return { ok: false, error: 'Connexion requise.' };
+        if (!blob) return { ok: false, error: 'Image manquante.' };
+
+        const extension = blob.type === 'image/png' ? 'png' : 'jpg';
+        const chemin = profil.id + '/avatar-' + Date.now() + '.' + extension;
+        const envoi = await client.storage.from('avatars').upload(chemin, blob, {
+            cacheControl: '3600',
+            upsert: true,
+            contentType: blob.type || 'image/jpeg'
+        });
+        if (envoi.error) return { ok: false, error: envoi.error.message };
+
+        const publique = client.storage.from('avatars').getPublicUrl(chemin);
+        const url = publique && publique.data ? publique.data.publicUrl : null;
+        if (!url) return { ok: false, error: 'URL publique introuvable.' };
+
+        const maj = await client.from('profiles').update({ avatar_url: url }).eq('id', profil.id);
+        if (maj.error) return { ok: false, error: maj.error.message };
+
+        profil.avatar_url = url;
+        const local = utilisateurs.find(function (u) { return u.id === profil.id; });
+        if (local) local.avatarUrl = url;
+        return { ok: true, url: url };
+    }
+
+    async function effacerAvatar() {
+        if (!estActif() || !profil) return { ok: false, error: 'Connexion requise.' };
+        const maj = await client.from('profiles').update({ avatar_url: null }).eq('id', profil.id);
+        if (maj.error) return { ok: false, error: maj.error.message };
+        profil.avatar_url = null;
+        const local = utilisateurs.find(function (u) { return u.id === profil.id; });
+        if (local) local.avatarUrl = null;
+        return { ok: true };
+    }
+
     return {
         disponible: disponible,
         estActif: estActif,
@@ -922,6 +963,8 @@ window.LearnHubBackend = (function () {
         invoquerIA: invoquerIA,
         enregistrerIA: enregistrerIA,
         supprimerIA: supprimerIA,
+        televerserAvatar: televerserAvatar,
+        effacerAvatar: effacerAvatar,
         erreur: function () { return derniereErreur; }
     };
 })();
