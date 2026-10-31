@@ -939,13 +939,13 @@ window.LearnHubBackend = (function () {
 
     /* ------------------------------ Supports de cours ------------------------------ */
 
-    async function televerserSupport(fichier) {
+    async function televerserFichier(fichier, prefixe) {
         if (!estActif() || !profil) return { ok: false, error: 'Connexion requise.' };
         if (!fichier) return { ok: false, error: 'Fichier manquant.' };
 
-        const nom = fichier.name || 'support.pdf';
+        const nom = fichier.name || 'document.pdf';
         const extension = (nom.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const chemin = 'supports/' + profil.id + '/' + Date.now().toString(36) + '-' +
+        const chemin = (prefixe || 'fichiers') + '/' + profil.id + '/' + Date.now().toString(36) + '-' +
             Math.random().toString(36).slice(2, 8) + (extension ? '.' + extension : '');
         const envoi = await client.storage.from('documents').upload(chemin, fichier, { upsert: true });
         if (envoi.error) return { ok: false, error: envoi.error.message };
@@ -954,6 +954,10 @@ window.LearnHubBackend = (function () {
         const url = publique && publique.data ? publique.data.publicUrl : '';
         if (!url) return { ok: false, error: 'URL publique introuvable.' };
         return { ok: true, url: url, nom: nom, taille: formatteTaille(fichier.size) };
+    }
+
+    function televerserSupport(fichier) {
+        return televerserFichier(fichier, 'supports');
     }
 
     return {
@@ -993,6 +997,7 @@ window.LearnHubBackend = (function () {
         televerserAvatar: televerserAvatar,
         effacerAvatar: effacerAvatar,
         televerserSupport: televerserSupport,
+        televerserFichier: televerserFichier,
         erreur: function () { return derniereErreur; }
     };
 })();

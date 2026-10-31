@@ -9,6 +9,8 @@ window.LearnHubAdmin = (function () {
 
     const LIBELLES_TYPES = { quiz: 'Quiz', matching: 'Associations', fillblank: 'Textes à trous' };
     const LIMITE_FICHIER = 1.5 * 1024 * 1024;
+    /** Limite d'envoi vers Supabase Storage (bucket `documents`). */
+    const LIMITE_FICHIER_DISTANT = 25 * 1024 * 1024;
 
     function esc(value) {
         return String(value == null ? '' : value)
@@ -618,10 +620,16 @@ window.LearnHubAdmin = (function () {
                         '</tr>';
                     }).join('') + '</tbody>' +
                 '</table></div>' +
-                '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Les documents importés sont conservés dans le navigateur (localStorage) : ils ne sont pas partagés entre appareils.</p>';
+                '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>' +
+                    (window.LearnHubBackend && window.LearnHubBackend.estActif()
+                        ? 'Les fichiers importés sont hébergés dans Supabase Storage : ils restent accessibles sur tous vos appareils.'
+                        : 'Les documents importés sont conservés dans le navigateur (localStorage) : ils ne sont pas partagés entre appareils.') +
+                '</p>';
         }
 
         racine.querySelector('#nouvelle-ressource').addEventListener('click', function () {
+            const backendActif = !!(window.LearnHubBackend && window.LearnHubBackend.estActif());
+            const limiteMo = backendActif ? 25 : 1.5;
             formulaire.classList.remove('d-none');
             formulaire.innerHTML =
                 '<div class="admin-panel border border-primary">' +
@@ -635,7 +643,12 @@ window.LearnHubAdmin = (function () {
                                 }).join('') +
                             '</select></div>' +
                         '<div class="col-md-6"><label class="form-label">Lien (URL ou ancre interne)</label><input type="text" class="form-control" id="res-url" placeholder="#/cours/une-si-longue-lettre"></div>' +
-                        '<div class="col-md-6"><label class="form-label">… ou fichier PDF (max 1,5 Mo)</label><input type="file" class="form-control" id="res-fichier" accept="application/pdf"></div>' +
+                        '<div class="col-md-6"><label class="form-label">… ou fichier PDF (max ' + limiteMo + ' Mo)</label>' +
+                            '<input type="file" class="form-control" id="res-fichier" accept="application/pdf">' +
+                            '<div class="form-text">' + (backendActif
+                                ? 'Le fichier est hébergé dans Supabase Storage : il reste accessible sur tous les appareils.'
+                                : 'Stockage local (navigateur) : 1,5 Mo maximum. Connectez-vous à Supabase pour envoyer des fichiers plus lourds.') +
+                            '</div></div>' +
                     '</div>' +
                     '<div class="d-flex gap-2 mt-3">' +
                         '<button class="btn btn-primary" id="enregistrer-ressource"><i class="fas fa-floppy-disk me-1"></i>Enregistrer</button>' +
@@ -648,7 +661,8 @@ window.LearnHubAdmin = (function () {
                 formulaire.innerHTML = '';
             });
 
-            formulaire.querySelector('#enregistrer-ressource').addEventListener('click', function () {
+            formulaire.querySelector('#enregistrer-ressource').addEventListener('click', async function () {
+                const bouton = formulaire.querySelector('#enregistrer-ressource');
                 const titre = formulaire.querySelector('#res-titre').value.trim();
                 const type = formulaire.querySelector('#res-type').value;
                 const url = formulaire.querySelector('#res-url').value.trim();
@@ -678,14 +692,32 @@ window.LearnHubAdmin = (function () {
                 }
 
                 if (fichier) {
-                    if (fichier.type !== 'application/pdf') {
+                    if (fichier.type !== 'application/pdf' && !/\.pdf$/i.test(fichier.name || '')) {
                         message(zoneMessage, 'Seuls les fichiers PDF sont acceptés.', 'danger');
                         return;
                     }
-                    if (fichier.size > LIMITE_FICHIER) {
-                        message(zoneMessage, 'Fichier trop volumineux (1,5 Mo maximum pour un stockage local).', 'danger');
+                    const limite = backendActif ? LIMITE_FICHIER_DISTANT : LIMITE_FICHIER;
+                    if (fichier.size > limite) {
+                        message(zoneMessage, backendActif
+                            ? 'Fichier trop volumineux (25 Mo maximum).'
+                            : 'Fichier trop volumineux (1,5 Mo maximum pour un stockage local).', 'danger');
                         return;
                     }
+
+                    if (backendActif) {
+                        bouton.disabled = true;
+                        bouton.innerHTML = '<i class="fas fa-circle-notch fa-spin me-1"></i>Envoi en cours…';
+                        const envoi = await window.LearnHubBackend.televerserFichier(fichier, 'ressources');
+                        bouton.disabled = false;
+                        bouton.innerHTML = '<i class="fas fa-floppy-disk me-1"></i>Enregistrer';
+                        if (!envoi.ok) {
+                            message(zoneMessage, envoi.error, 'danger');
+                            return;
+                        }
+                        enregistrerLien(envoi.url, envoi.taille);
+                        return;
+                    }
+
                     const lecteur = new FileReader();
                     lecteur.onload = function () {
                         enregistrerLien(lecteur.result, Math.round(fichier.size / 1024) + ' Ko');
@@ -1654,7 +1686,7 @@ window.LearnHubAdmin = (function () {
                         '<div class="col-md-6">' +
                             '<label class="form-label" for="lecon-support"><i class="fas fa-paperclip me-1"></i>Support de cours (fichier)</label>' +
                             '<input type="file" class="form-control" id="lecon-support" accept=".pdf,.doc,.docx,.ppt,.pptx,.odt,.odp,.txt,.epub,image/*">' +
-                            '<div class="form-text">Les élèves pourront l\'ouvrir depuis la leçon. 15 Mo maximum.</div>' +
+                            '<div class="form-text">Les élèves pourront l\'ouvrir depuis la leçon. 25 Mo maximum.</div>' +
                         '</div>' +
                         '<div class="col-md-6">' +
                             '<label class="form-label" for="lecon-support-url">… ou adresse d\'un support en ligne</label>' +
@@ -1775,8 +1807,8 @@ window.LearnHubAdmin = (function () {
                     supportNom = '';
                     supportTaille = '';
                 } else if (fichierSupport) {
-                    if (fichierSupport.size > 15 * 1024 * 1024) {
-                        message(zoneMessage, 'Le support dépasse 15 Mo.', 'danger');
+                    if (fichierSupport.size > LIMITE_FICHIER_DISTANT) {
+                        message(zoneMessage, 'Le support dépasse 25 Mo.', 'danger');
                         return;
                     }
                     const envoi = await window.LearnHubBackend.televerserSupport(fichierSupport);
