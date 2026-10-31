@@ -23,7 +23,8 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 - [migration-bibliotheque-visibilite.sql](migration-bibliotheque-visibilite.sql) — colonne `visibilite` (public / élèves / enseignants) et politique RLS correspondante ;
 - [migration-ia.sql](migration-ia.sql) — table `ia_contenus` de l'assistant IA (études d'œuvres et questions), privée par élève ;
 - [migration-ia-quota.sql](migration-ia-quota.sql) — table `ia_quotas` et fonctions `ia_consommer()` / `ia_liberer()` : quota quotidien tenu côté base, impossible à remettre à zéro depuis le navigateur ;
-- [migration-classes-avatars.sql](migration-classes-avatars.sql) — colonne `classes.matiere`, colonne `profiles.avatar_url` et bucket de stockage public `avatars` (écriture limitée au dossier de chaque compte).
+- [migration-classes-avatars.sql](migration-classes-avatars.sql) — colonne `classes.matiere`, colonne `profiles.avatar_url` et bucket de stockage public `avatars` (écriture limitée au dossier de chaque compte) ;
+- [migration-lecons-classes.sql](migration-lecons-classes.sql) — colonne `lessons.classe_ids` : ciblage d'une leçon sur une ou plusieurs classes.
 
 ## 3. Authentification
 

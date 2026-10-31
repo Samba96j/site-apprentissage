@@ -956,42 +956,71 @@
     function vueLecons() {
         const user = auth.current();
         const matiereClasse = auth.matiereClasse();
-        const lecons = store.lecons.all()
-            .filter(function (lecon) { return !matiereClasse || lecon.matiere === matiereClasse; })
-            .slice()
-            .sort(function (a, b) {
-                return String(a.titre).localeCompare(String(b.titre));
-            });
+        const toutes = store.lecons.all().slice().sort(function (a, b) {
+            return String(a.titre).localeCompare(String(b.titre));
+        });
+        const matieresPresentes = {};
+        toutes.forEach(function (lecon) { if (lecon.matiere) matieresPresentes[lecon.matiere] = true; });
+        const pastilles = Object.keys(matieresPresentes).length > 1
+            ? '<div class="d-flex flex-wrap gap-2 mb-3" id="lecons-filtres" role="group" aria-label="Filtrer les leçons par matière">' +
+                '<button class="btn btn-sm ' + (matiereClasse ? 'btn-outline-primary' : 'btn-primary') + '" type="button" data-matiere="" aria-pressed="' + (!matiereClasse) + '">' +
+                    '<i class="fas fa-layer-group me-1"></i>Toutes <span class="badge bg-light text-dark ms-1">' + toutes.length + '</span></button>' +
+                Object.keys(matieresPresentes).sort().map(function (slug) {
+                    const matiere = data.getMatiere(slug);
+                    const nombre = toutes.filter(function (l) { return l.matiere === slug; }).length;
+                    const actif = matiereClasse === slug;
+                    return '<button class="btn btn-sm ' + (actif ? 'btn-primary' : 'btn-outline-primary') + '" type="button" data-matiere="' + esc(slug) + '" aria-pressed="' + actif + '">' +
+                        '<i class="fas ' + esc(matiere ? matiere.icone : 'fa-book') + ' me-1"></i>' + esc(matiere ? matiere.nom : slug) +
+                        ' <span class="badge bg-light text-dark ms-1">' + nombre + '</span></button>';
+                }).join('') +
+              '</div>'
+            : '';
 
-        const cartes = lecons.map(function (lecon) {
-            const matiere = data.getMatiere(lecon.matiere);
-            const niveau = lecon.niveau ? data.getNiveau(lecon.niveau) : null;
-            return '<div class="col-md-6 col-xl-4">' +
-                '<div class="content h-100 d-flex flex-column">' +
-                    '<div class="d-flex justify-content-between align-items-start gap-2 mb-2">' +
-                        '<h2 class="h5 mb-0">' + esc(lecon.titre) + '</h2>' +
-                        (matiere ? '<span class="badge bg-primary bg-opacity-10 text-primary">' + esc(matiere.nom) + '</span>' : '') +
+        function cartesDe(liste) {
+            return liste.map(function (lecon) {
+                const matiere = data.getMatiere(lecon.matiere);
+                const niveau = lecon.niveau ? data.getNiveau(lecon.niveau) : null;
+                const pourMaClasse = matiereClasse && lecon.matiere === matiereClasse;
+                return '<div class="col-md-6 col-xl-4" data-lecon-matiere="' + esc(lecon.matiere || '') + '">' +
+                    '<div class="content h-100 d-flex flex-column' + (pourMaClasse ? ' border border-primary border-opacity-25' : '') + '">' +
+                        '<div class="d-flex justify-content-between align-items-start gap-2 mb-2">' +
+                            '<h2 class="h5 mb-0">' + esc(lecon.titre) + '</h2>' +
+                            (matiere ? '<span class="badge bg-primary bg-opacity-10 text-primary">' + esc(matiere.nom) + '</span>' : '') +
+                        '</div>' +
+                        '<p class="text-muted small mb-2">' +
+                            '<i class="fas fa-clock me-1"></i>' + (lecon.duree || 30) + ' min' +
+                            (niveau ? ' · ' + esc(niveau.nom) : ' · Tous niveaux') +
+                            (pourMaClasse ? ' · <span class="text-primary">votre classe</span>' : '') +
+                        '</p>' +
+                        (lecon.resume ? '<p class="mb-3">' + esc(lecon.resume) + '</p>' : '') +
+                        '<a class="btn btn-outline-primary btn-sm mt-auto align-self-start" href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
+                            '<i class="fas fa-book-open me-1"></i>Lire la leçon</a>' +
                     '</div>' +
-                    '<p class="text-muted small mb-2">' +
-                        '<i class="fas fa-clock me-1"></i>' + (lecon.duree || 30) + ' min' +
-                        (niveau ? ' · ' + esc(niveau.nom) : ' · Tous niveaux') +
-                    '</p>' +
-                    (lecon.resume ? '<p class="mb-3">' + esc(lecon.resume) + '</p>' : '') +
-                    '<a class="btn btn-outline-primary btn-sm mt-auto align-self-start" href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
-                        '<i class="fas fa-book-open me-1"></i>Lire la leçon</a>' +
-                '</div>' +
-            '</div>';
-        }).join('');
+                '</div>';
+            }).join('');
+        }
+
+        const lecons = toutes;
+
+        const cartes = cartesDe(lecons);
 
         return {
             titre: 'Leçons',
             html: '<div class="container py-4">' +
                 '<div class="mb-4">' +
                     '<h1 class="h3 mb-1">Leçons</h1>' +
-                    '<p class="text-muted mb-0">Les leçons rédigées par votre enseignant et assignées à vos séances.</p>' +
+                    '<p class="text-muted mb-0">Les leçons rédigées par votre enseignant et les ressources du programme.</p>' +
                 '</div>' +
+                pastilles +
+                (matiereClasse
+                    ? '<div class="alert alert-primary py-2 small"><i class="fas fa-filter me-1"></i>' +
+                        'Filtre par défaut : la matière de votre classe (<strong>' +
+                        esc((data.getMatiere(matiereClasse) || {}).nom || matiereClasse) +
+                        '</strong>). Choisissez « Toutes » pour parcourir les autres matières.</div>'
+                    : '') +
                 (lecons.length
-                    ? '<div class="row g-3">' + cartes + '</div>'
+                    ? '<div class="row g-3" id="lecons-liste">' + cartes + '</div>' +
+                      '<p class="text-muted small mt-3 mb-0 d-none" id="lecons-vide">Aucune leçon dans cette matière pour le moment.</p>'
                     : '<div class="content text-muted">' +
                         '<i class="fas fa-book-open me-2"></i>Aucune leçon disponible pour le moment.' +
                         '<div class="small mt-2">' +
@@ -1000,7 +1029,37 @@
                                 : 'Votre enseignant peut en créer depuis l\'onglet « Leçons » de son espace.') +
                         '</div>' +
                       '</div>') +
-            '</div>'
+            '</div>',
+            after: function (racine) {
+                const barre = racine.querySelector('#lecons-filtres');
+                const grille = racine.querySelector('#lecons-liste');
+                const vide = racine.querySelector('#lecons-vide');
+                if (!barre || !grille) return;
+
+                function appliquer(slug) {
+                    let visibles = 0;
+                    Array.prototype.forEach.call(racine.querySelectorAll('[data-lecon-matiere]'), function (element) {
+                        const correspond = !slug || element.dataset.leconMatiere === slug;
+                        element.classList.toggle('d-none', !correspond);
+                        if (correspond) visibles += 1;
+                    });
+                    if (vide) vide.classList.toggle('d-none', visibles > 0);
+                    Array.prototype.forEach.call(barre.querySelectorAll('[data-matiere]'), function (bouton) {
+                        const actif = (bouton.dataset.matiere || '') === (slug || '');
+                        bouton.classList.toggle('btn-primary', actif);
+                        bouton.classList.toggle('btn-outline-primary', !actif);
+                        bouton.setAttribute('aria-pressed', actif ? 'true' : 'false');
+                    });
+                }
+
+                barre.addEventListener('click', function (event) {
+                    const bouton = event.target.closest('[data-matiere]');
+                    if (!bouton) return;
+                    appliquer(bouton.dataset.matiere || '');
+                });
+
+                appliquer(matiereClasse || '');
+            }
         };
     }
 
@@ -1373,16 +1432,15 @@
         const exoCible = parametres ? parametres.get('exo') : null;
         const matiereClasse = auth.matiereClasse();
         const matiereNom = matiereClasse ? (data.getMatiere(matiereClasse) || {}).nom : null;
-        const tous = store.exercices.actifs().filter(function (ex) {
-            return !matiereClasse || ex.matiere === matiereClasse;
-        });
+        const tous = store.exercices.actifs();
         const actifs = exoCible
             ? tous.filter(function (ex) { return ex.id === exoCible; })
             : tous;
-        const pastilles = (exoCible || matiereClasse) ? '' : ['<button class="btn btn-sm btn-primary" data-matiere="" aria-pressed="true"><i class="fas fa-layer-group me-1"></i>Toutes <span class="badge bg-light text-dark ms-1">' + actifs.length + '</span></button>']
+        const pastilles = exoCible ? '' : ['<button class="btn btn-sm ' + (matiereClasse ? 'btn-outline-primary' : 'btn-primary') + '" data-matiere="" aria-pressed="' + (!matiereClasse) + '"><i class="fas fa-layer-group me-1"></i>Toutes <span class="badge bg-light text-dark ms-1">' + actifs.length + '</span></button>']
             .concat(data.matieres.map(function (matiere) {
                 const nombre = actifs.filter(function (ex) { return ex.matiere === matiere.slug; }).length;
-                return '<button class="btn btn-sm btn-outline-primary" data-matiere="' + esc(matiere.slug) + '" aria-pressed="false">' +
+                const actif = matiereClasse === matiere.slug;
+                return '<button class="btn btn-sm ' + (actif ? 'btn-primary' : 'btn-outline-primary') + '" data-matiere="' + esc(matiere.slug) + '" aria-pressed="' + actif + '">' +
                     '<i class="fas ' + esc(matiere.icone) + ' me-1"></i>' + esc(matiere.nom) +
                     ' <span class="badge bg-light text-dark ms-1">' + nombre + '</span></button>';
             })).join('');
@@ -1395,7 +1453,7 @@
                         '<h1 class="h3 mb-1">Exercices interactifs</h1>' +
                         '<p class="text-muted mb-0">' +
                             (matiereClasse
-                                ? 'Quiz chronométrés, associations et textes à trous — matière de votre classe : <strong>' + esc(matiereNom || matiereClasse) + '</strong>.'
+                                ? 'Quiz, associations et textes à trous — filtre par défaut : <strong>' + esc(matiereNom || matiereClasse) + '</strong>.'
                                 : 'Quiz chronométrés, associations et textes à trous dans toutes les matières.') +
                         '</p>' +
                     '</div>' +
@@ -1410,8 +1468,9 @@
                     : '') +
                 (matiereClasse && !exoCible
                     ? '<div class="alert alert-primary py-2 small"><i class="fas fa-filter me-1"></i>' +
-                        'Votre classe travaille une seule matière : seuls les exercices de <strong>' +
-                        esc(matiereNom || matiereClasse) + '</strong> sont proposés.</div>'
+                        'Filtre par défaut : la matière de votre classe (<strong>' +
+                        esc(matiereNom || matiereClasse) + '</strong>). ' +
+                        'Les exercices des autres matières restent accessibles : cliquez sur « Toutes » ou sur une autre matière.</div>'
                     : '') +
                 (pastilles ? '<div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filtrer les exercices par matière">' + pastilles + '</div>' : '') +
                 '<div class="content"><div id="zone-jeux"></div></div>' +
@@ -1447,7 +1506,7 @@
                     });
                 });
 
-                afficher('');
+                afficher(exoCible ? '' : (matiereClasse || ''));
             }
         };
     }

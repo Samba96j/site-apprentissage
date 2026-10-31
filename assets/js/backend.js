@@ -128,6 +128,7 @@ window.LearnHubBackend = (function () {
             duree: row.duree || 30,
             resume: row.resume || '',
             objectifs: row.objectifs || [],
+            classeIds: row.classe_ids || [],
             contenu: row.contenu || '',
             contenuHtml: row.contenu_html || '',
             cree: row.created_at,
@@ -206,6 +207,7 @@ window.LearnHubBackend = (function () {
                 duree: item.duree || 30,
                 resume: item.resume || null,
                 objectifs: item.objectifs || [],
+                classe_ids: item.classeIds || [],
                 contenu: item.contenu || '',
                 contenu_html: item.contenuHtml || null
             };

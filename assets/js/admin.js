@@ -1559,6 +1559,11 @@ window.LearnHubAdmin = (function () {
         const editeur = racine.querySelector('#editeur-lecon');
         const liste = racine.querySelector('#liste-lecons');
 
+        function nomClasse(id) {
+            const classe = window.LearnHubStore.classes.get(id);
+            return classe ? classe.nom : 'Classe supprimée';
+        }
+
         function rafraichir() {
             const lecons = window.LearnHubStore.lecons.miens();
             if (!lecons.length) {
@@ -1568,16 +1573,22 @@ window.LearnHubAdmin = (function () {
             const seances = window.LearnHubStore.seances.miens();
             liste.innerHTML =
                 '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
-                    '<thead><tr><th>Titre</th><th>Matière</th><th>Niveau</th><th>Durée</th><th>Séances</th><th class="text-end">Actions</th></tr></thead>' +
+                    '<thead><tr><th>Titre</th><th>Matière</th><th>Classes</th><th>Niveau</th><th>Durée</th><th>Séances</th><th class="text-end">Actions</th></tr></thead>' +
                     '<tbody>' + lecons.map(function (lecon) {
                         const niveau = lecon.niveau ? window.LearnHubData.getNiveau(lecon.niveau) : null;
                         const usage = seances.filter(function (s) {
                             return (s.lecons || []).indexOf(lecon.id) >= 0;
                         }).length;
+                        const cibles = lecon.classeIds || [];
                         return '<tr>' +
                             '<td class="fw-semibold">' + esc(lecon.titre) +
                                 (lecon.resume ? '<div class="small text-muted fw-normal">' + esc(lecon.resume) + '</div>' : '') + '</td>' +
                             '<td><span class="badge bg-primary bg-opacity-10 text-primary">' + esc(nomMatiere(lecon.matiere)) + '</span></td>' +
+                            '<td class="small">' + (cibles.length
+                                ? cibles.map(function (id) {
+                                    return '<span class="badge bg-info bg-opacity-10 text-dark border me-1">' + esc(nomClasse(id)) + '</span>';
+                                }).join('')
+                                : '<span class="text-muted">Toutes</span>') + '</td>' +
                             '<td class="small">' + esc(niveau ? niveau.nom : 'Tous niveaux') + '</td>' +
                             '<td class="small">' + (lecon.duree || 30) + ' min</td>' +
                             '<td>' + usage + '</td>' +
@@ -1592,6 +1603,7 @@ window.LearnHubAdmin = (function () {
 
         function ouvrirEditeur(lecon) {
             editeur.classList.remove('d-none');
+            const classesEspace = window.LearnHubStore.classes.miens();
             editeur.innerHTML =
                 '<form class="admin-panel border border-primary" id="form-lecon">' +
                     '<div class="d-flex justify-content-between align-items-center mb-3">' +
@@ -1621,6 +1633,22 @@ window.LearnHubAdmin = (function () {
                             '<input type="number" min="5" max="480" step="5" class="form-control" id="lecon-duree" value="' + (lecon && lecon.duree ? lecon.duree : 30) + '"></div>' +
                         '<div class="col-md-9"><label class="form-label" for="lecon-resume">Résumé</label>' +
                             '<input type="text" class="form-control" id="lecon-resume" value="' + esc(lecon ? lecon.resume || '' : '') + '"></div>' +
+                    '</div>' +
+                    '<div class="mb-3">' +
+                        '<label class="form-label" for="lecon-classes"><i class="fas fa-users-rectangle me-1"></i>Classes concernées</label>' +
+                        '<select class="form-select" id="lecon-classes" multiple size="' + Math.min(5, Math.max(2, classesEspace.length)) + '">' +
+                            classesEspace.map(function (classe) {
+                                const selection = lecon && Array.isArray(lecon.classeIds) && lecon.classeIds.indexOf(classe.id) >= 0;
+                                return '<option value="' + esc(classe.id) + '"' + (selection ? ' selected' : '') + '>' +
+                                    esc(classe.nom) + (classe.matiere ? ' — ' + esc(nomMatiere(classe.matiere)) : '') +
+                                '</option>';
+                            }).join('') +
+                        '</select>' +
+                        '<div class="form-text">' +
+                            (classesEspace.length
+                                ? 'Aucune sélection = leçon visible par toutes vos classes. Sélectionnez une ou plusieurs classes (Ctrl + clic) pour la réserver.'
+                                : 'Créez d\'abord une classe dans l\'onglet « Classes » pour cibler cette leçon.') +
+                        '</div>' +
                     '</div>' +
                     '<div class="mb-3"><label class="form-label" for="lecon-objectifs">Objectifs (un par ligne)</label>' +
                         '<textarea class="form-control" id="lecon-objectifs" rows="3" placeholder="Comprendre la structure d\'une introduction">' +
@@ -1717,6 +1745,8 @@ window.LearnHubAdmin = (function () {
                     objectifs: editeur.querySelector('#lecon-objectifs').value.split('\n')
                         .map(function (ligne) { return ligne.trim(); })
                         .filter(Boolean),
+                    classeIds: Array.prototype.slice.call(editeur.querySelector('#lecon-classes').selectedOptions || [])
+                        .map(function (option) { return option.value; }),
                     contenu: texteContenu,
                     contenuHtml: contenuHtml
                 };

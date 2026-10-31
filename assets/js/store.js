@@ -76,13 +76,29 @@ window.LearnHubStore = (function () {
     }
 
     /**
-     * Enregistrement visible : le contenu de l'espace courant, ou la
-     * bibliothèque publique pour un visiteur (ou un élève sans classe).
+     * Enregistrement visible : le contenu public (sans espace) reste toujours
+     * accessible — y compris pour un élève connecté — auquel s'ajoute le
+     * contenu de l'espace courant.
      */
     function visible(entree) {
+        if (!entree.espaceId) return true;
         const espace = espaceActif();
-        if (espace) return entree.espaceId === espace;
-        return !entree.espaceId;
+        return !!espace && entree.espaceId === espace;
+    }
+
+    /**
+     * Ciblage par classe : un contenu sans `classeIds` s'adresse à tout
+     * l'espace ; un contenu ciblé n'est visible que par les élèves des
+     * classes concernées (les enseignants gardent la vue complète).
+     */
+    function pourClasse(entree) {
+        const cibles = entree.classeIds || [];
+        if (!cibles.length) return true;
+        const auth = window.LearnHubAuth;
+        const utilisateur = auth && typeof auth.current === 'function' ? auth.current() : null;
+        if (!utilisateur) return false;
+        if (utilisateur.role !== 'eleve') return true;
+        return !!utilisateur.classeId && cibles.indexOf(utilisateur.classeId) >= 0;
     }
 
     function dansEspaceActif(entree) {
@@ -207,7 +223,7 @@ window.LearnHubStore = (function () {
         all: function () {
             return read(KEYS.exercices, []).map(function (ex) {
                 return ex.matiere ? ex : Object.assign({}, ex, { matiere: 'francais' });
-            }).filter(visible);
+            }).filter(visible).filter(pourClasse);
         },
         miens: function () {
             const espace = espaceActif();
@@ -471,7 +487,7 @@ window.LearnHubStore = (function () {
 
     const lecons = {
         all: function () {
-            return read(KEYS.lecons, []).filter(visible);
+            return read(KEYS.lecons, []).filter(visible).filter(pourClasse);
         },
         miens: function () {
             const espace = espaceActif();
@@ -491,6 +507,7 @@ window.LearnHubStore = (function () {
                 id: data.id || uid('lecon'),
                 espaceId: espace,
                 objectifs: Array.isArray(data.objectifs) ? data.objectifs : [],
+                classeIds: Array.isArray(data.classeIds) ? data.classeIds : [],
                 maj: new Date().toISOString()
             });
             if (index >= 0) {
