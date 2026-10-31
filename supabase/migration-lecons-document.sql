@@ -21,8 +21,3 @@ alter table public.lessons drop column if exists livre_maj;
 insert into storage.buckets (id, name, public)
 values ('documents', 'documents', true)
 on conflict (id) do update set public = true;
-
--- Autorise les cours volumineux (50 Mo) dans ce bucket.
--- Le plafond global du projet doit aussi être au moins égal : Dashboard →
--- Storage → Settings → « Global file upload limit ».
-update storage.buckets set file_size_limit = 52428800 where id = 'documents';

@@ -1353,6 +1353,15 @@ window.LearnHubAdmin = (function () {
             editeur.classList.remove('d-none');
             const classesEspace = window.LearnHubStore.classes.miens();
             let couvertureRetiree = false;
+            // La matière de la classe s'applique par défaut : c'est elle qui
+            // filtre l'espace élève.
+            const matieresClasses = classesEspace
+                .map(function (classe) { return classe.matiere; })
+                .filter(Boolean)
+                .filter(function (valeur, index, liste) { return liste.indexOf(valeur) === index; });
+            const matiereDefaut = lecon && lecon.matiere
+                ? lecon.matiere
+                : (matieresClasses.length === 1 ? matieresClasses[0] : 'francais');
             editeur.innerHTML =
                 '<form class="admin-panel border border-primary" id="form-lecon">' +
                     '<div class="d-flex justify-content-between align-items-center mb-3">' +
@@ -1365,7 +1374,7 @@ window.LearnHubAdmin = (function () {
                         '<div class="col-md-3"><label class="form-label" for="lecon-matiere">Matière</label>' +
                             '<select class="form-select" id="lecon-matiere">' +
                                 window.LearnHubData.matieres.map(function (matiere) {
-                                    const selection = (lecon ? lecon.matiere : 'francais') === matiere.slug;
+                                    const selection = matiereDefaut === matiere.slug;
                                     return '<option value="' + esc(matiere.slug) + '" ' + (selection ? 'selected' : '') + '>' + esc(matiere.nom) + '</option>';
                                 }).join('') +
                             '</select></div>' +
@@ -1389,7 +1398,7 @@ window.LearnHubAdmin = (function () {
                         '</select>' +
                         '<div class="form-text">' +
                             (classesEspace.length
-                                ? 'Aucune sélection = cours visible par toutes vos classes. Sélectionnez une ou plusieurs classes (Ctrl + clic) pour le réserver.'
+                                ? 'Aucune sélection = cours visible par toutes vos classes. Sélectionnez une ou plusieurs classes (Ctrl + clic) pour le réserver : les élèves de ces classes le voient toujours, quelle que soit la matière.'
                                 : 'Créez d\'abord une classe dans l\'onglet « Classes » pour cibler ce cours.') +
                         '</div>' +
                     '</div>' +
@@ -1438,6 +1447,17 @@ window.LearnHubAdmin = (function () {
             const form = editeur.querySelector('#form-lecon');
             const apercuCouverture = editeur.querySelector('#lecon-couverture-apercu');
             const champCouverture = editeur.querySelector('#lecon-couverture');
+
+            // Une seule classe sélectionnée : on aligne la matière sur la sienne,
+            // puisque c'est elle qui filtre l'espace élève.
+            const champClasses = editeur.querySelector('#lecon-classes');
+            const champMatiere = editeur.querySelector('#lecon-matiere');
+            champClasses.addEventListener('change', function () {
+                const choisies = Array.prototype.slice.call(champClasses.selectedOptions || []);
+                if (choisies.length !== 1) return;
+                const classe = window.LearnHubStore.classes.get(choisies[0].value);
+                if (classe && classe.matiere) champMatiere.value = classe.matiere;
+            });
 
             champCouverture.addEventListener('change', function () {
                 const fichier = champCouverture.files && champCouverture.files[0];

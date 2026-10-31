@@ -938,15 +938,22 @@
     function vueLecons() {
         const user = auth.current();
         const matiereClasse = auth.matiereClasse();
+        const maClasse = auth.maClasse();
         const toutes = store.lecons.all().slice().sort(function (a, b) {
             return String(a.titre).localeCompare(String(b.titre));
         });
+
+        // Un cours explicitement destiné à la classe de l'élève reste visible
+        // même si sa matière diffère de celle de la classe.
+        function cibleMaClasse(lecon) {
+            return !!maClasse && (lecon.classeIds || []).indexOf(maClasse.id) >= 0;
+        }
 
         function cartesDe(liste) {
             return liste.map(function (lecon) {
                 const matiere = data.getMatiere(lecon.matiere);
                 const niveau = lecon.niveau ? data.getNiveau(lecon.niveau) : null;
-                const pourMaClasse = matiereClasse && lecon.matiere === matiereClasse;
+                const pourMaClasse = cibleMaClasse(lecon) || (matiereClasse && lecon.matiere === matiereClasse);
                 return '<div class="col-md-6 col-xl-4" data-lecon-matiere="' + esc(lecon.matiere || '') + '">' +
                     '<div class="content h-100 d-flex flex-column' + (pourMaClasse ? ' border border-primary border-opacity-25' : '') + '">' +
                         '<div class="livre-carte">' +
@@ -981,7 +988,9 @@
         }
 
         const lecons = matiereClasse
-            ? toutes.filter(function (lecon) { return lecon.matiere === matiereClasse; })
+            ? toutes.filter(function (lecon) {
+                return lecon.matiere === matiereClasse || cibleMaClasse(lecon);
+            })
             : toutes;
 
         const cartes = cartesDe(lecons);
@@ -1004,12 +1013,13 @@
                     : '<div class="content text-muted">' +
                         '<i class="fas fa-book-open me-2"></i>' +
                         (matiereClasse
-                            ? 'Aucune leçon de ' + esc((data.getMatiere(matiereClasse) || {}).nom || matiereClasse) + ' pour le moment.'
-                            : 'Aucune leçon disponible pour le moment.') +
+                            ? 'Aucun cours de ' + esc((data.getMatiere(matiereClasse) || {}).nom || matiereClasse) + ' pour le moment.'
+                            : 'Aucun cours disponible pour le moment.') +
                         '<div class="small mt-2">' +
-                            (user && !auth.maClasse()
-                                ? 'Rejoignez une classe depuis <a href="#/profil">Ma progression</a> pour accéder aux leçons de votre enseignant.'
-                                : 'Votre enseignant peut en créer depuis l\'onglet « Leçons » de son espace.') +
+                            (user && !maClasse
+                                ? 'Rejoignez une classe depuis <a href="#/profil">Ma progression</a> pour accéder aux cours de votre enseignant.'
+                                : 'Votre enseignant peut en ajouter depuis l\'onglet « Leçons » de son espace. ' +
+                                  'Si un cours vient d\'être publié, rechargez la page (Ctrl + F5).') +
                         '</div>' +
                       '</div>') +
             '</div>'

@@ -78,9 +78,16 @@ window.LearnHubStore = (function () {
      * Enregistrement visible : le contenu public (sans espace) reste toujours
      * accessible — y compris pour un élève connecté — auquel s'ajoute le
      * contenu de l'espace courant.
+     *
+     * Avec Supabase, les lignes reçues sont déjà restreintes par les
+     * politiques RLS : on ne réapplique pas le filtre côté navigateur, qui
+     * masquerait le contenu d'un élève dont l'espace n'est pas résolu
+     * localement.
      */
     function visible(entree) {
         if (!entree.espaceId) return true;
+        const backend = window.LearnHubBackend;
+        if (backend && backend.estActif()) return true;
         const espace = espaceActif();
         return !!espace && entree.espaceId === espace;
     }
