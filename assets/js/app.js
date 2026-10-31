@@ -935,21 +935,6 @@
         };
     }
 
-    function texteVersHtml(texte) {
-        const blocs = String(texte || '').replace(/\r/g, '').split(/\n{2,}/);
-        return blocs.map(function (bloc) {
-            const lignes = bloc.split('\n').filter(function (ligne) { return ligne.trim(); });
-            if (!lignes.length) return '';
-            const estListe = lignes.every(function (ligne) { return /^\s*[-*]\s+/.test(ligne); });
-            if (estListe) {
-                return '<ul>' + lignes.map(function (ligne) {
-                    return '<li>' + esc(ligne.replace(/^\s*[-*]\s+/, '')) + '</li>';
-                }).join('') + '</ul>';
-            }
-            return '<p>' + lignes.map(esc).join('<br>') + '</p>';
-        }).join('');
-    }
-
     function vueLecons() {
         const user = auth.current();
         const matiereClasse = auth.matiereClasse();
@@ -973,19 +958,22 @@
                                     (niveau ? esc(niveau.nom) : 'Tous niveaux') +
                                 '</p>' +
                                 '<p class="text-muted small mb-0">' +
-                                    '<i class="fas fa-clock me-1"></i>' + (lecon.duree || 30) + ' min' +
+                                    (lecon.supportNom
+                                        ? '<i class="fas fa-file-lines me-1"></i>' + esc(lecon.supportNom)
+                                        : '<i class="fas fa-file-lines me-1"></i>Cours de votre enseignant') +
                                     (pourMaClasse ? ' · <span class="text-primary">votre classe</span>' : '') +
                                 '</p>' +
                             '</div>' +
                         '</div>' +
-                        (lecon.resume ? '<p class="mb-3 mt-2 small">' + esc(lecon.resume) + '</p>' : '') +
-                        '<div class="mt-auto d-flex flex-wrap gap-2">' +
-                            '<a class="btn btn-primary btn-sm" href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
-                                '<i class="fas fa-book-open me-1"></i>Ouvrir le livre</a>' +
-                            (lecon.livreUrl
-                                ? '<a class="btn btn-outline-secondary btn-sm" href="' + esc(lecon.livreUrl) + '" target="_blank" rel="noopener" title="Télécharger le PDF">' +
-                                    '<i class="fas fa-file-pdf"></i></a>'
-                                : '') +
+                        '<div class="mt-auto d-flex flex-wrap gap-2 pt-3">' +
+                            (lecon.supportUrl
+                                ? '<a class="btn btn-primary btn-sm" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
+                                    '<i class="fas fa-book-open me-1"></i>Ouvrir le document</a>' +
+                                  '<a class="btn btn-outline-secondary btn-sm" href="' + esc(lecon.supportUrl) + '" download="' + esc(lecon.supportNom || lecon.titre) + '" title="Télécharger">' +
+                                    '<i class="fas fa-download"></i></a>'
+                                : '<span class="badge bg-secondary bg-opacity-25 text-dark align-self-center">Document bientôt disponible</span>') +
+                            '<a class="btn btn-outline-primary btn-sm" href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
+                                '<i class="fas fa-circle-info"></i></a>' +
                         '</div>' +
                     '</div>' +
                 '</div>';
@@ -1003,7 +991,7 @@
             html: '<div class="container py-4">' +
                 '<div class="mb-4">' +
                     '<h1 class="h3 mb-1">Leçons</h1>' +
-                    '<p class="text-muted mb-0">Les leçons rédigées par votre enseignant et les ressources du programme.</p>' +
+                    '<p class="text-muted mb-0">Les documents de cours déposés par votre enseignant et les ressources du programme.</p>' +
                 '</div>' +
                 (matiereClasse
                     ? '<div class="alert alert-primary py-2 small"><i class="fas fa-filter me-1"></i>' +
@@ -1028,7 +1016,7 @@
         };
     }
 
-    /** Couverture d'un livre : image du professeur, sinon couverture dessinée en CSS. */
+    /** Couverture d'un cours : image du professeur, sinon couverture dessinée en CSS. */
     function couvertureLivre(lecon, options) {
         const reglages = options || {};
         const matiere = data.getMatiere(lecon.matiere);
@@ -1054,49 +1042,28 @@
                     (niveau ? esc(niveau.nom) : 'Tous niveaux') +
                     (classes.length ? ' · ' + esc(classes.join(', ')) : '') +
                 '</span>' +
-                '<span class="livre-couverture-pied"><i class="fas fa-file-pdf me-1"></i>Livre de cours</span>' +
+                '<span class="livre-couverture-pied"><i class="fas fa-file-pdf me-1"></i>Document de cours</span>' +
             '</div>' +
         '</div>';
     }
 
-    function vueLecon(id, mode) {
+    /** Boutons d'ouverture d'un document, identiques à ceux de la bibliothèque. */
+    function actionsDocument(lecon, taille) {
+        if (!lecon.supportUrl) {
+            return '<span class="badge bg-secondary bg-opacity-25 text-dark">' +
+                '<i class="fas fa-hourglass-half me-1"></i>Document bientôt disponible</span>';
+        }
+        return '<a class="btn btn-primary' + (taille ? ' btn-' + taille : '') + '" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
+                '<i class="fas fa-book-open me-1"></i>Ouvrir le document</a>' +
+            '<a class="btn btn-outline-secondary' + (taille ? ' btn-' + taille : '') + '" href="' + esc(lecon.supportUrl) + '" download="' + esc(lecon.supportNom || lecon.titre) + '">' +
+                '<i class="fas fa-download me-1"></i>Télécharger</a>';
+    }
+
+    function vueLecon(id) {
         const lecon = store.lecons.get(id);
-        if (!lecon) return vueIntrouvable('Cette leçon n\'existe pas ou n\'est pas accessible depuis votre espace.');
+        if (!lecon) return vueIntrouvable('Ce cours n\'existe pas ou n\'est pas accessible depuis votre espace.');
         const matiere = data.getMatiere(lecon.matiere);
         const niveau = lecon.niveau ? data.getNiveau(lecon.niveau) : null;
-        const lecteur = mode === 'lire';
-
-        if (lecteur) {
-            const url = lecon.livreUrl || lecon.supportUrl || '';
-            if (!url) {
-                return {
-                    titre: lecon.titre,
-                    html: '<div class="container py-5"><div class="content text-center">' +
-                        '<i class="fas fa-book fa-3x text-primary mb-3"></i>' +
-                        '<h1 class="h4">Le livre n\'est pas encore disponible</h1>' +
-                        '<p class="text-muted">Votre enseignant n\'a pas encore publié ce cours au format PDF.</p>' +
-                        '<a class="btn btn-primary" href="#/lecon/' + encodeURIComponent(lecon.id) + '">Revenir à la leçon</a>' +
-                    '</div></div>'
-                };
-            }
-            return {
-                titre: 'Lire — ' + lecon.titre,
-                html: '<div class="lecteur-livre">' +
-                    '<div class="lecteur-barre">' +
-                        '<a class="btn btn-sm btn-outline-light" href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
-                            '<i class="fas fa-arrow-left me-1"></i>Quitter la lecture</a>' +
-                        '<span class="lecteur-titre"><i class="fas fa-book-open me-2"></i>' + esc(lecon.titre) + '</span>' +
-                        '<a class="btn btn-sm btn-light" href="' + esc(url) + '" target="_blank" rel="noopener" download>' +
-                            '<i class="fas fa-download me-1"></i>Télécharger</a>' +
-                    '</div>' +
-                    '<iframe class="lecteur-cadre" src="' + esc(url) + '#view=FitH" title="Livre : ' + esc(lecon.titre) + '"></iframe>' +
-                '</div>'
-            };
-        }
-
-        const lienLecture = lecon.livreUrl
-            ? '#/lecon/' + encodeURIComponent(lecon.id) + '/lire'
-            : '';
 
         return {
             titre: lecon.titre,
@@ -1115,44 +1082,22 @@
                             '<h1 class="h3 mb-2">' + esc(lecon.titre) + '</h1>' +
                             '<p class="text-muted small mb-3">' +
                                 (matiere ? '<span class="badge bg-primary bg-opacity-10 text-primary me-2">' + esc(matiere.nom) + '</span>' : '') +
-                                (niveau ? esc(niveau.nom) : 'Tous niveaux') + ' · ' + (lecon.duree || 30) + ' min de lecture' +
+                                (niveau ? esc(niveau.nom) : 'Tous niveaux') +
                             '</p>' +
-                            (lecon.resume ? '<p class="lead">' + esc(lecon.resume) + '</p>' : '') +
-                            ((lecon.objectifs || []).length
-                                ? '<div class="alert alert-info py-2"><strong class="d-block mb-1">Objectifs</strong>' +
-                                    '<ul class="mb-0">' + lecon.objectifs.map(function (objectif) {
-                                        return '<li>' + esc(objectif) + '</li>';
-                                    }).join('') + '</ul></div>'
-                                : '') +
-                            '<div class="d-flex flex-wrap gap-2 mb-2">' +
-                                (lienLecture
-                                    ? '<a class="btn btn-primary" href="' + lienLecture + '"><i class="fas fa-book-open me-1"></i>Lire le livre</a>' +
-                                      '<a class="btn btn-outline-primary" href="' + esc(lecon.livreUrl) + '" target="_blank" rel="noopener">' +
-                                        '<i class="fas fa-up-right-from-square me-1"></i>Plein écran</a>' +
-                                      '<a class="btn btn-outline-secondary" href="' + esc(lecon.livreUrl) + '" download>' +
-                                        '<i class="fas fa-download me-1"></i>Télécharger le PDF</a>'
-                                    : '<span class="badge bg-secondary bg-opacity-25 text-dark align-self-center">' +
-                                        '<i class="fas fa-hourglass-half me-1"></i>Livre PDF en préparation</span>') +
-                            '</div>' +
                             (lecon.supportUrl
-                                ? '<div class="support-cours mt-3">' +
-                                    '<span class="support-cours-icone"><i class="fas fa-paperclip"></i></span>' +
-                                    '<div class="support-cours-texte">' +
-                                        '<strong>Support de cours</strong>' +
-                                        '<span>' + esc(lecon.supportNom || 'Document joint') +
-                                            (lecon.supportTaille ? ' · ' + esc(lecon.supportTaille) : '') + '</span>' +
-                                    '</div>' +
-                                    '<div class="support-cours-actions">' +
-                                        '<a class="btn btn-outline-secondary btn-sm" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
-                                            '<i class="fas fa-up-right-from-square me-1"></i>Ouvrir</a>' +
-                                    '</div>' +
-                                  '</div>'
+                                ? '<p class="mb-2"><i class="fas fa-file-lines me-1 text-primary"></i>' +
+                                    esc(lecon.supportNom || 'Document de cours') +
+                                    (lecon.supportTaille ? ' · ' + esc(lecon.supportTaille) : '') + '</p>'
                                 : '') +
+                            '<div class="d-flex flex-wrap gap-2 mb-3">' +
+                                actionsDocument(lecon, 'sm') +
+                            '</div>' +
+                            '<p class="text-muted small mb-0">' +
+                                (lecon.supportUrl
+                                    ? 'Le document s\'ouvre dans un nouvel onglet : vous pouvez le lire, zoomer et revenir à tout moment.'
+                                    : 'Votre enseignant n\'a pas encore joint le document de ce cours.') +
+                            '</p>' +
                         '</div>' +
-                    '</div>' +
-                    '<hr>' +
-                    '<div class="lecon-contenu">' +
-                        (lecon.contenuHtml ? store.nettoyerHtml(lecon.contenuHtml) : texteVersHtml(lecon.contenu)) +
                     '</div>' +
                     '<hr>' +
                     '<div class="d-flex flex-wrap gap-2">' +
@@ -1163,6 +1108,7 @@
             '</div>'
         };
     }
+
     /* -------------------------------- Bibliothèque -------------------------------- */
 
     const LIBELLES_DOC = { pdf: 'PDF', word: 'Word / Texte', texte: 'Texte', autre: 'Document' };
@@ -2561,7 +2507,7 @@
         const totalAdmins = comptes.filter(function (c) { return c.role === 'admin'; }).length;
         const totalSupers = comptes.filter(function (c) { return c.role === 'superadmin'; }).length;
         const totalClasses = store.classes.all().length;
-        const totalLivres = store.lecons.all().filter(function (lecon) { return !!lecon.livreUrl; }).length;
+        const totalLivres = store.lecons.all().filter(function (lecon) { return !!lecon.supportUrl; }).length;
         const messages = store.messages.all().slice().sort(function (a, b) {
             return new Date(b.date) - new Date(a.date);
         });
@@ -3040,7 +2986,7 @@
             case 'chapitre': return vueChapitre(segments[1]);
             case 'cours': return vueCours(segments[1], segments[2]);
             case 'lecons': return vueLecons();
-            case 'lecon': return vueLecon(segments[1], segments[2]);
+            case 'lecon': return vueLecon(segments[1]);
             case 'bibliotheque': return vueBibliotheque(parametres);
             case 'contact': return vueContact();
             case 'exercices': return vueExercices(parametres);

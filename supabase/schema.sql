@@ -8,7 +8,7 @@
 --   espaces    : espace de travail d'un enseignant (propriétaire)
 --   profiles   : compte (élève, enseignant/admin, super-admin), lié à auth.users
 --   classes    : classe d'un espace, rejointe par un code
---   lessons    : leçons rédigées par un enseignant (livre PDF + couverture)
+--   lessons    : cours d'un enseignant (document importé + couverture facultative)
 --   exercises  : exercices (quiz, associations, textes à trous)
 --   resources  : liens et documents
 --   attempts   : résultats des élèves
@@ -77,9 +77,6 @@ create table if not exists public.lessons (
     support_taille text,
     classe_ids text[] not null default '{}',
     couverture_url text,
-    livre_url text,
-    livre_taille text,
-    livre_maj timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );

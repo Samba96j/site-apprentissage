@@ -61,89 +61,6 @@ window.LearnHubAdmin = (function () {
         return String(html || '').replace(/<span class=['"]blank['"] data-answer=['"]([^'"]*)['"]><\/span>/g, '[$1]');
     }
 
-    /** Convertit un contenu texte (paragraphes et puces) en HTML pour l'éditeur riche. */
-    function texteSimpleVersHtml(texte) {
-        const blocs = String(texte || '').replace(/\r/g, '').split(/\n{2,}/);
-        return blocs.map(function (bloc) {
-            const lignes = bloc.split('\n').filter(function (ligne) { return ligne.trim(); });
-            if (!lignes.length) return '';
-            const estListe = lignes.every(function (ligne) { return /^\s*[-*]\s+/.test(ligne); });
-            if (estListe) {
-                return '<ul>' + lignes.map(function (ligne) {
-                    return '<li>' + esc(ligne.replace(/^\s*[-*]\s+/, '')) + '</li>';
-                }).join('') + '</ul>';
-            }
-            return '<p>' + lignes.map(esc).join('<br>') + '</p>';
-        }).join('');
-    }
-
-    /** Convertit une URL « data: » en Blob pour l'envoyer vers le stockage. */
-    function dataUrlVersBlob(dataUrl) {
-        const morceaux = String(dataUrl || '').split(',');
-        if (morceaux.length < 2) return null;
-        const entete = morceaux[0];
-        const type = (entete.match(/^data:([^;]+)/i) || [])[1] || 'image/png';
-        try {
-            if (!/;base64/i.test(entete)) return new Blob([decodeURIComponent(morceaux[1])], { type: type });
-            const binaire = atob(morceaux[1]);
-            const octets = new Uint8Array(binaire.length);
-            for (let i = 0; i < binaire.length; i += 1) octets[i] = binaire.charCodeAt(i);
-            return new Blob([octets], { type: type });
-        } catch (e) {
-            return null;
-        }
-    }
-
-    /**
-     * Prépare du HTML collé : nettoie, puis remplace les images « data: » par une URL publique.
-     * Renvoie le HTML insérable et le nombre d'images abandonnées (trop lourdes).
-     */
-    async function preparerHtmlColle(html) {
-        const propre = window.LearnHubStore.nettoyerHtml(html || '');
-        if (!propre) return { html: '', perdues: 0 };
-        const conteneur = document.createElement('div');
-        conteneur.innerHTML = propre;
-        const images = Array.prototype.slice.call(conteneur.querySelectorAll('img'));
-        let perdues = 0;
-        for (let i = 0; i < images.length; i += 1) {
-            const image = images[i];
-            const src = image.getAttribute('src') || '';
-            if (!/^data:image\//i.test(src)) continue;
-            const blob = dataUrlVersBlob(src);
-            if (!blob || blob.size > LIMITE_FICHIER_DISTANT) {
-                image.parentNode.removeChild(image);
-                perdues += 1;
-                continue;
-            }
-            let url = '';
-            const backend = window.LearnHubBackend;
-            if (backend && backend.estActif()) {
-                const envoi = await backend.televerserFichier(blob, 'lecons');
-                if (envoi && envoi.ok) url = envoi.url;
-            } else if (blob.size <= 400 * 1024) {
-                url = src;
-            }
-            if (url) {
-                image.setAttribute('src', url);
-            } else {
-                image.parentNode.removeChild(image);
-                perdues += 1;
-            }
-        }
-        return { html: conteneur.innerHTML, perdues: perdues };
-    }
-
-    /** Téléverse une image choisie dans le presse-papiers et renvoie son HTML. */
-    async function htmlDepuisFichierImage(fichier) {
-        if (!fichier || !/^image\//i.test(fichier.type || '')) return '';
-        if (fichier.size > LIMITE_FICHIER_DISTANT) return '';
-        const backend = window.LearnHubBackend;
-        if (!backend || !backend.estActif()) return '';
-        const envoi = await backend.televerserFichier(fichier, 'lecons');
-        if (!envoi || !envoi.ok) return '';
-        return '<p><img src="' + esc(envoi.url) + '" alt=""></p>';
-    }
-
     function moyennePourcentage(tentatives) {
         if (!tentatives.length) return null;
         let points = 0;
@@ -228,13 +145,13 @@ window.LearnHubAdmin = (function () {
         const tentatives = tentativesEspace();
         const actifs = exercices.filter(function (ex) { return ex.actif !== false; });
         const activite = tentatives.slice(0, 6);
-        const livres = lecons.filter(function (lecon) { return !!lecon.livreUrl; });
+        const cours = lecons.filter(function (lecon) { return !!lecon.supportUrl; });
 
         racine.innerHTML =
             '<div class="row g-3 mb-4">' +
                 carte('bg-primary', 'fa-tasks', 'Exercices actifs', actifs.length, exercices.length + ' dans mon espace') +
                 carte('bg-success', 'fa-users', 'Mes élèves', eleves.length, classes.length + ' classe(s)') +
-                carte('bg-warning', 'fa-book', 'Livres publiés', livres.length, lecons.length + ' leçon(s) au total') +
+                carte('bg-warning', 'fa-book', 'Cours en ligne', cours.length, lecons.length + ' cours au total') +
                 carte('bg-info', 'fa-chart-simple', 'Tentatives', tentatives.length, 'réalisées par mes élèves') +
             '</div>' +
             '<div class="row g-4">' +
@@ -1371,9 +1288,9 @@ window.LearnHubAdmin = (function () {
             '<div id="admin-message" class="d-none"></div>' +
             '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
                 '<h2 class="mb-0"><i class="fas fa-book-open me-2"></i>Mes leçons</h2>' +
-                '<button class="btn btn-primary btn-sm" id="nouvelle-lecon"><i class="fas fa-plus me-1"></i>Nouvelle leçon</button>' +
+                '<button class="btn btn-primary btn-sm" id="nouvelle-lecon"><i class="fas fa-file-arrow-up me-1"></i>Ajouter un cours</button>' +
             '</div>' +
-            '<p class="text-muted small">Rédigez vos leçons : elles sont converties en livre PDF (avec couverture) et déposées dans l\'espace de vos élèves.</p>' +
+            '<p class="text-muted small">Importez le document de votre cours : vos élèves le retrouvent dans leur espace sous forme de carte à son nom, et l\'ouvrent pour travailler dessus.</p>' +
             '<div id="editeur-lecon" class="d-none"></div>' +
             '<div class="admin-panel"><div id="liste-lecons"></div></div>';
 
@@ -1389,23 +1306,22 @@ window.LearnHubAdmin = (function () {
         function rafraichir() {
             const lecons = window.LearnHubStore.lecons.miens();
             if (!lecons.length) {
-                liste.innerHTML = '<p class="text-muted mb-0">Votre espace ne contient encore aucune leçon. Créez-en une : elle sera publiée en livre PDF pour vos élèves.</p>';
+                liste.innerHTML = '<p class="text-muted mb-0">Aucun cours pour le moment. Ajoutez le PDF de votre cours : il apparaîtra aussitôt dans l\'espace de vos élèves.</p>';
                 return;
             }
             liste.innerHTML =
                 '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
-                    '<thead><tr><th>Titre</th><th>Matière</th><th>Classes</th><th>Niveau</th><th>Durée</th><th>Livre PDF</th><th class="text-end">Actions</th></tr></thead>' +
+                    '<thead><tr><th>Cours</th><th>Matière</th><th>Classes</th><th>Niveau</th><th>Document</th><th class="text-end">Actions</th></tr></thead>' +
                     '<tbody>' + lecons.map(function (lecon) {
                         const niveau = lecon.niveau ? window.LearnHubData.getNiveau(lecon.niveau) : null;
-                        const livre = lecon.livreUrl
-                            ? '<a class="badge bg-success text-decoration-none" href="' + esc(lecon.livreUrl) + '" target="_blank" rel="noopener" title="Ouvrir le PDF">' +
-                                '<i class="fas fa-file-pdf me-1"></i>Prêt</a>' +
-                                (lecon.livreTaille ? '<div class="small text-muted">' + esc(lecon.livreTaille) + '</div>' : '')
-                            : '<span class="badge bg-secondary bg-opacity-25 text-dark">À générer</span>';
                         const cibles = lecon.classeIds || [];
+                        const document_ = lecon.supportUrl
+                            ? '<a class="badge bg-success text-decoration-none" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener" title="Ouvrir le document">' +
+                                '<i class="fas fa-file-pdf me-1"></i>' + esc(lecon.supportNom || 'Document') + '</a>' +
+                                (lecon.supportTaille ? '<div class="small text-muted">' + esc(lecon.supportTaille) + '</div>' : '')
+                            : '<span class="badge bg-danger bg-opacity-10 text-danger">Aucun document</span>';
                         return '<tr>' +
-                            '<td class="fw-semibold">' + esc(lecon.titre) +
-                                (lecon.resume ? '<div class="small text-muted fw-normal">' + esc(lecon.resume) + '</div>' : '') + '</td>' +
+                            '<td class="fw-semibold">' + esc(lecon.titre) + '</td>' +
                             '<td><span class="badge bg-primary bg-opacity-10 text-primary">' + esc(nomMatiere(lecon.matiere)) + '</span></td>' +
                             '<td class="small">' + (cibles.length
                                 ? cibles.map(function (id) {
@@ -1413,11 +1329,12 @@ window.LearnHubAdmin = (function () {
                                 }).join('')
                                 : '<span class="text-muted">Toutes</span>') + '</td>' +
                             '<td class="small">' + esc(niveau ? niveau.nom : 'Tous niveaux') + '</td>' +
-                            '<td class="small">' + (lecon.duree || 30) + ' min</td>' +
-                            '<td>' + livre + '</td>' +
+                            '<td class="small">' + document_ + '</td>' +
                             '<td class="text-end text-nowrap">' +
+                                (lecon.supportUrl
+                                    ? '<a class="btn btn-sm btn-outline-secondary me-1" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener" title="Ouvrir le document"><i class="fas fa-up-right-from-square"></i></a>'
+                                    : '') +
                                 '<button class="btn btn-sm btn-outline-primary me-1" data-action="editer" data-id="' + esc(lecon.id) + '" title="Modifier"><i class="fas fa-edit"></i></button>' +
-                                (lecon.livreUrl ? '<a class="btn btn-sm btn-outline-secondary me-1" href="' + esc(lecon.livreUrl) + '" target="_blank" rel="noopener" title="Ouvrir le livre"><i class="fas fa-book-open"></i></a>' : '') +
                                 '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-id="' + esc(lecon.id) + '" title="Supprimer"><i class="fas fa-trash"></i></button>' +
                             '</td>' +
                         '</tr>';
@@ -1432,12 +1349,12 @@ window.LearnHubAdmin = (function () {
             editeur.innerHTML =
                 '<form class="admin-panel border border-primary" id="form-lecon">' +
                     '<div class="d-flex justify-content-between align-items-center mb-3">' +
-                        '<h4 class="mb-0">' + (lecon ? 'Modifier la leçon' : 'Nouvelle leçon') + '</h4>' +
+                        '<h4 class="mb-0">' + (lecon ? 'Modifier le cours' : 'Ajouter un cours') + '</h4>' +
                         '<button type="button" class="btn btn-sm btn-outline-secondary" id="fermer-lecon"><i class="fas fa-xmark"></i></button>' +
                     '</div>' +
                     '<div class="row g-3 mb-3">' +
-                        '<div class="col-md-6"><label class="form-label" for="lecon-titre">Titre</label>' +
-                            '<input type="text" class="form-control" id="lecon-titre" required placeholder="ex. Méthode de la dissertation" value="' + esc(lecon ? lecon.titre : '') + '"></div>' +
+                        '<div class="col-md-6"><label class="form-label" for="lecon-titre">Nom du cours</label>' +
+                            '<input type="text" class="form-control" id="lecon-titre" required placeholder="ex. Les classes grammaticales" value="' + esc(lecon ? lecon.titre : '') + '"></div>' +
                         '<div class="col-md-3"><label class="form-label" for="lecon-matiere">Matière</label>' +
                             '<select class="form-select" id="lecon-matiere">' +
                                 window.LearnHubData.matieres.map(function (matiere) {
@@ -1453,12 +1370,6 @@ window.LearnHubAdmin = (function () {
                                 }).join('') +
                             '</select></div>' +
                     '</div>' +
-                    '<div class="row g-3 mb-3">' +
-                        '<div class="col-md-3"><label class="form-label" for="lecon-duree">Durée (minutes)</label>' +
-                            '<input type="number" min="5" max="480" step="5" class="form-control" id="lecon-duree" value="' + (lecon && lecon.duree ? lecon.duree : 30) + '"></div>' +
-                        '<div class="col-md-9"><label class="form-label" for="lecon-resume">Résumé</label>' +
-                            '<input type="text" class="form-control" id="lecon-resume" value="' + esc(lecon ? lecon.resume || '' : '') + '"></div>' +
-                    '</div>' +
                     '<div class="mb-3">' +
                         '<label class="form-label" for="lecon-classes"><i class="fas fa-users-rectangle me-1"></i>Classes concernées</label>' +
                         '<select class="form-select" id="lecon-classes" multiple size="' + Math.min(5, Math.max(2, classesEspace.length)) + '">' +
@@ -1471,15 +1382,36 @@ window.LearnHubAdmin = (function () {
                         '</select>' +
                         '<div class="form-text">' +
                             (classesEspace.length
-                                ? 'Aucune sélection = leçon visible par toutes vos classes. Sélectionnez une ou plusieurs classes (Ctrl + clic) pour la réserver.'
-                                : 'Créez d\'abord une classe dans l\'onglet « Classes » pour cibler cette leçon.') +
+                                ? 'Aucune sélection = cours visible par toutes vos classes. Sélectionnez une ou plusieurs classes (Ctrl + clic) pour le réserver.'
+                                : 'Créez d\'abord une classe dans l\'onglet « Classes » pour cibler ce cours.') +
                         '</div>' +
                     '</div>' +
                     '<div class="row g-3 mb-3">' +
                         '<div class="col-md-6">' +
-                            '<label class="form-label" for="lecon-couverture"><i class="fas fa-image me-1"></i>Couverture du livre</label>' +
+                            '<label class="form-label" for="lecon-document"><i class="fas fa-file-pdf me-1"></i>Document du cours (PDF, Word, PowerPoint…)</label>' +
+                            '<input type="file" class="form-control" id="lecon-document" accept=".pdf,.doc,.docx,.ppt,.pptx,.odt,.odp,.txt,.epub">' +
+                            '<div class="form-text">C\'est le document que vos élèves ouvriront. 25 Mo maximum.</div>' +
+                        '</div>' +
+                        '<div class="col-md-6">' +
+                            '<label class="form-label" for="lecon-document-url">… ou adresse d\'un document en ligne</label>' +
+                            '<input type="url" class="form-control" id="lecon-document-url" placeholder="https://…" value="' + esc(lecon && lecon.supportUrl ? lecon.supportUrl : '') + '">' +
+                            '<div class="form-text">Lien vers un document déjà hébergé (Cloudflare R2, Drive…).</div>' +
+                        '</div>' +
+                    '</div>' +
+                    (lecon && lecon.supportUrl
+                        ? '<div class="alert alert-light border py-2 d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
+                            '<span class="small"><i class="fas fa-file-lines me-1"></i>Document actuel : <strong>' +
+                                esc(lecon.supportNom || 'fichier') + '</strong>' +
+                                (lecon.supportTaille ? ' · ' + esc(lecon.supportTaille) : '') + '</span>' +
+                            '<a class="btn btn-sm btn-outline-primary" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
+                                '<i class="fas fa-up-right-from-square me-1"></i>Vérifier</a>' +
+                          '</div>'
+                        : '') +
+                    '<div class="row g-3 mb-3">' +
+                        '<div class="col-md-6">' +
+                            '<label class="form-label" for="lecon-couverture"><i class="fas fa-image me-1"></i>Couverture (facultatif)</label>' +
                             '<input type="file" class="form-control" id="lecon-couverture" accept="image/png,image/jpeg,image/webp">' +
-                            '<div class="form-text">Image verticale conseillée (portrait). Sans image, une couverture est dessinée automatiquement.</div>' +
+                            '<div class="form-text">Sans image, une couverture est dessinée avec le nom du cours.</div>' +
                         '</div>' +
                         '<div class="col-md-6 d-flex align-items-center">' +
                             '<div class="couverture-apercu" id="lecon-couverture-apercu">' +
@@ -1490,73 +1422,6 @@ window.LearnHubAdmin = (function () {
                             '</div>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="alert alert-light border d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
-                        '<div class="small">' +
-                            '<i class="fas fa-book me-1"></i><strong>Livre PDF de l\'élève</strong>' +
-                            (lecon && lecon.livreUrl
-                                ? '<div class="text-muted">Déjà généré' + (lecon.livreTaille ? ' · ' + esc(lecon.livreTaille) : '') +
-                                    (lecon.livreMaj ? ' · ' + formaterDate(lecon.livreMaj) : '') + '</div>'
-                                : '<div class="text-muted">Pas encore généré : il le sera à l\'enregistrement de la leçon.</div>') +
-                        '</div>' +
-                        (lecon && lecon.livreUrl
-                            ? '<a class="btn btn-sm btn-outline-primary" href="' + esc(lecon.livreUrl) + '" target="_blank" rel="noopener">' +
-                                '<i class="fas fa-up-right-from-square me-1"></i>Vérifier le PDF</a>'
-                            : '') +
-                    '</div>' +
-                    '<div class="row g-3 mb-3">' +
-                        '<div class="col-md-6">' +
-                            '<label class="form-label" for="lecon-support"><i class="fas fa-paperclip me-1"></i>Support de cours (fichier)</label>' +
-                            '<input type="file" class="form-control" id="lecon-support" accept=".pdf,.doc,.docx,.ppt,.pptx,.odt,.odp,.txt,.epub,image/*">' +
-                            '<div class="form-text">Les élèves pourront l\'ouvrir depuis la leçon. 25 Mo maximum.</div>' +
-                        '</div>' +
-                        '<div class="col-md-6">' +
-                            '<label class="form-label" for="lecon-support-url">… ou adresse d\'un support en ligne</label>' +
-                            '<input type="url" class="form-control" id="lecon-support-url" placeholder="https://…" value="' + esc(lecon && lecon.supportUrl ? lecon.supportUrl : '') + '">' +
-                            '<div class="form-text">Lien vers un document déjà hébergé.</div>' +
-                        '</div>' +
-                    '</div>' +
-                    (lecon && lecon.supportUrl
-                        ? '<div class="alert alert-light border py-2 d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
-                            '<span class="small"><i class="fas fa-file-lines me-1"></i>Support actuel : <strong>' +
-                                esc(lecon.supportNom || 'fichier') + '</strong>' +
-                                (lecon.supportTaille ? ' · ' + esc(lecon.supportTaille) : '') + '</span>' +
-                            '<a class="btn btn-sm btn-outline-primary" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
-                                '<i class="fas fa-up-right-from-square me-1"></i>Vérifier</a>' +
-                          '</div>' +
-                          '<div class="form-check mb-3">' +
-                            '<input class="form-check-input" type="checkbox" id="lecon-support-retirer">' +
-                            '<label class="form-check-label small" for="lecon-support-retirer">Retirer le support de cours</label>' +
-                          '</div>'
-                        : '') +
-                    '<div class="mb-3"><label class="form-label" for="lecon-objectifs">Objectifs (un par ligne)</label>' +
-                        '<textarea class="form-control" id="lecon-objectifs" rows="3" placeholder="Comprendre la structure d\'une introduction">' +
-                        esc(lecon && lecon.objectifs ? lecon.objectifs.join('\n') : '') + '</textarea></div>' +
-                    '<div class="mb-3"><label class="form-label" for="lecon-editeur">Contenu de la leçon</label>' +
-                        '<div class="rich-toolbar btn-toolbar mb-2" role="toolbar" aria-label="Mise en forme de la leçon">' +
-                            '<div class="btn-group btn-group-sm me-2" role="group" aria-label="Style du texte">' +
-                                '<button type="button" class="btn btn-outline-secondary" data-cmd="bold" title="Gras"><i class="fas fa-bold"></i></button>' +
-                                '<button type="button" class="btn btn-outline-secondary" data-cmd="italic" title="Italique"><i class="fas fa-italic"></i></button>' +
-                                '<button type="button" class="btn btn-outline-secondary" data-cmd="underline" title="Souligné"><i class="fas fa-underline"></i></button>' +
-                            '</div>' +
-                            '<div class="btn-group btn-group-sm me-2" role="group" aria-label="Titres">' +
-                                '<button type="button" class="btn btn-outline-secondary" data-block="h2" title="Titre de section">H2</button>' +
-                                '<button type="button" class="btn btn-outline-secondary" data-block="h3" title="Sous-titre">H3</button>' +
-                                '<button type="button" class="btn btn-outline-secondary" data-block="p" title="Paragraphe">¶</button>' +
-                            '</div>' +
-                            '<div class="btn-group btn-group-sm me-2" role="group" aria-label="Listes et citation">' +
-                                '<button type="button" class="btn btn-outline-secondary" data-cmd="insertUnorderedList" title="Liste à puces"><i class="fas fa-list-ul"></i></button>' +
-                                '<button type="button" class="btn btn-outline-secondary" data-cmd="insertOrderedList" title="Liste numérotée"><i class="fas fa-list-ol"></i></button>' +
-                                '<button type="button" class="btn btn-outline-secondary" data-block="blockquote" title="Citation"><i class="fas fa-quote-right"></i></button>' +
-                            '</div>' +
-                            '<div class="btn-group btn-group-sm" role="group" aria-label="Liens et nettoyage">' +
-                                '<button type="button" class="btn btn-outline-secondary" data-action="lien" title="Insérer un lien"><i class="fas fa-link"></i></button>' +
-                                '<button type="button" class="btn btn-outline-secondary" data-cmd="removeFormat" title="Effacer la mise en forme"><i class="fas fa-eraser"></i></button>' +
-                            '</div>' +
-                        '</div>' +
-                        '<div class="form-control rich-editor" id="lecon-editeur" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="lecon-editeur-label"></div>' +
-                        '<span class="visually-hidden" id="lecon-editeur-label">Contenu de la leçon</span>' +
-                        '<div class="form-text">Gras, italique, titres, listes, citation et liens. Vous pouvez coller une capture d\'écran directement dans la zone : elle est envoyée automatiquement. Le contenu est nettoyé à l\'enregistrement.</div>' +
-                    '</div>' +
                     '<div class="d-flex gap-2">' +
                         '<button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk me-1"></i>Enregistrer</button>' +
                         '<button type="button" class="btn btn-outline-secondary" id="annuler-lecon">Annuler</button>' +
@@ -1564,124 +1429,57 @@ window.LearnHubAdmin = (function () {
                 '</form>';
 
             const form = editeur.querySelector('#form-lecon');
-            const zoneContenu = editeur.querySelector('#lecon-editeur');
-            zoneContenu.innerHTML = lecon
-                ? (lecon.contenuHtml ? window.LearnHubStore.nettoyerHtml(lecon.contenuHtml) : texteSimpleVersHtml(lecon.contenu))
-                : '<p><br></p>';
-
             const apercuCouverture = editeur.querySelector('#lecon-couverture-apercu');
             const champCouverture = editeur.querySelector('#lecon-couverture');
+
             champCouverture.addEventListener('change', function () {
                 const fichier = champCouverture.files && champCouverture.files[0];
                 if (!fichier) return;
                 couvertureRetiree = false;
-                if (apercuCouverture) {
-                    apercuCouverture.innerHTML = '<img src="' + esc(URL.createObjectURL(fichier)) + '" alt="Aperçu de la couverture">' +
-                        '<button type="button" class="btn btn-sm btn-outline-danger" id="lecon-couverture-retirer" title="Retirer la couverture">' +
-                        '<i class="fas fa-trash"></i></button>';
-                    brancherRetraitCouverture();
-                }
+                if (!apercuCouverture) return;
+                apercuCouverture.innerHTML = '<img src="' + esc(URL.createObjectURL(fichier)) + '" alt="Aperçu de la couverture">' +
+                    '<button type="button" class="btn btn-sm btn-outline-danger" id="lecon-couverture-retirer" title="Retirer la couverture">' +
+                    '<i class="fas fa-trash"></i></button>';
+                brancherRetraitCouverture();
             });
+
             function brancherRetraitCouverture() {
                 const bouton = editeur.querySelector('#lecon-couverture-retirer');
                 if (!bouton) return;
                 bouton.addEventListener('click', function () {
                     couvertureRetiree = true;
                     champCouverture.value = '';
-                    apercuCouverture.innerHTML = '<span class="text-muted small">Couverture retirée : elle sera regénérée automatiquement.</span>';
+                    apercuCouverture.innerHTML = '<span class="text-muted small">Couverture retirée : elle sera dessinée automatiquement.</span>';
                 });
             }
             brancherRetraitCouverture();
 
-            zoneContenu.addEventListener('paste', async function (event) {
-                const presse = event.clipboardData;
-                if (!presse) return;
-                const html = presse.getData('text/html');
-                const fichiers = Array.prototype.slice.call(presse.files || []).filter(function (f) {
-                    return /^image\//i.test(f.type || '');
-                });
-                if (!html && !fichiers.length) return;
-                event.preventDefault();
-                zoneContenu.focus();
-
-                let insere = '';
-                let perdues = 0;
-                if (html) {
-                    const prepare = await preparerHtmlColle(html);
-                    insere = prepare.html;
-                    perdues += prepare.perdues;
-                }
-                if (fichiers.length && !/<img\s/i.test(insere)) {
-                    for (let i = 0; i < fichiers.length; i += 1) {
-                        const bloc = await htmlDepuisFichierImage(fichiers[i]);
-                        if (bloc) insere += bloc; else perdues += 1;
-                    }
-                }
-                if (insere) document.execCommand('insertHTML', false, insere);
-                if (perdues) {
-                    message(zoneMessage,
-                        perdues + ' image(s) ignorée(s) : taille trop lourde ou envoi impossible. ' +
-                        'Utilisez la section « Support de cours » pour un fichier volumineux.', 'warning');
-                }
-            });
-
-            const barre = editeur.querySelector('.rich-toolbar');
-            barre.addEventListener('mousedown', function (event) {
-                event.preventDefault();
-            });
-            barre.addEventListener('click', function (event) {
-                const bouton = event.target.closest('button');
-                if (!bouton) return;
-                zoneContenu.focus();
-                if (bouton.dataset.cmd) {
-                    document.execCommand(bouton.dataset.cmd, false, null);
-                } else if (bouton.dataset.block) {
-                    document.execCommand('formatBlock', false, '<' + bouton.dataset.block + '>');
-                } else if (bouton.dataset.action === 'lien') {
-                    const url = window.prompt('Adresse du lien (https://…)', 'https://');
-                    if (url && /^(https?:\/\/|mailto:)/i.test(url)) {
-                        document.execCommand('createLink', false, url);
-                    }
-                }
-                zoneContenu.focus();
-            });
-
             form.addEventListener('submit', async function (event) {
                 event.preventDefault();
                 const titre = editeur.querySelector('#lecon-titre').value.trim();
-                const contenuHtml = window.LearnHubStore.nettoyerHtml(zoneContenu.innerHTML);
-                const texteContenu = (function () {
-                    const conteneur = document.createElement('div');
-                    conteneur.innerHTML = contenuHtml;
-                    return (conteneur.textContent || '').replace(/\s+/g, ' ').trim();
-                })();
                 if (titre.length < 3) {
-                    message(zoneMessage, 'Le titre de la leçon doit contenir au moins 3 caractères.', 'danger');
+                    message(zoneMessage, 'Le nom du cours doit contenir au moins 3 caractères.', 'danger');
                     return;
                 }
-                if (texteContenu.length < 20 && !/<img\s[^>]*src=/i.test(contenuHtml)) {
-                    message(zoneMessage, 'Le contenu de la leçon doit contenir au moins 20 caractères de texte ou au moins une image.', 'danger');
-                    return;
-                }
-                // Support de cours : fichier téléversé, lien, conservation ou retrait.
-                const champSupport = editeur.querySelector('#lecon-support');
-                const champSupportUrl = editeur.querySelector('#lecon-support-url');
-                const retirerSupport = editeur.querySelector('#lecon-support-retirer');
-                const fichierSupport = champSupport && champSupport.files ? champSupport.files[0] : null;
+
+                const champDocument = editeur.querySelector('#lecon-document');
+                const champDocumentUrl = editeur.querySelector('#lecon-document-url');
+                const fichier = champDocument && champDocument.files ? champDocument.files[0] : null;
                 let supportUrl = lecon && lecon.supportUrl ? lecon.supportUrl : '';
                 let supportNom = lecon && lecon.supportNom ? lecon.supportNom : '';
                 let supportTaille = lecon && lecon.supportTaille ? lecon.supportTaille : '';
 
-                if (retirerSupport && retirerSupport.checked) {
-                    supportUrl = '';
-                    supportNom = '';
-                    supportTaille = '';
-                } else if (fichierSupport) {
-                    if (fichierSupport.size > LIMITE_FICHIER_DISTANT) {
-                        message(zoneMessage, 'Le support dépasse 25 Mo.', 'danger');
+                if (fichier) {
+                    if (fichier.size > LIMITE_FICHIER_DISTANT) {
+                        message(zoneMessage, 'Le document dépasse 25 Mo.', 'danger');
                         return;
                     }
-                    const envoi = await window.LearnHubBackend.televerserSupport(fichierSupport);
+                    if (!window.LearnHubBackend || !window.LearnHubBackend.estActif()) {
+                        message(zoneMessage, 'Connectez-vous pour importer un document.', 'danger');
+                        return;
+                    }
+                    message(zoneMessage, 'Envoi du document…', 'info');
+                    const envoi = await window.LearnHubBackend.televerserSupport(fichier);
                     if (!envoi.ok) {
                         message(zoneMessage, envoi.error + ' — vous pouvez aussi coller une adresse en ligne.', 'danger');
                         return;
@@ -1689,23 +1487,23 @@ window.LearnHubAdmin = (function () {
                     supportUrl = envoi.url;
                     supportNom = envoi.nom;
                     supportTaille = envoi.taille;
-                } else if (champSupportUrl && champSupportUrl.value.trim()) {
-                    supportUrl = champSupportUrl.value.trim();
-                    supportNom = supportUrl.split('/').pop().split('?')[0] || 'support';
+                } else if (champDocumentUrl && champDocumentUrl.value.trim()) {
+                    supportUrl = champDocumentUrl.value.trim();
+                    supportNom = supportUrl.split('/').pop().split('?')[0] || 'document';
                     supportTaille = '';
                 }
 
-                // Couverture du livre : nouvelle image, conservation ou retrait.
-                const champCouverture = editeur.querySelector('#lecon-couverture');
-                const fichierCouverture = champCouverture && champCouverture.files ? champCouverture.files[0] : null;
+                if (!supportUrl) {
+                    message(zoneMessage, 'Importez le document du cours (ou indiquez son adresse en ligne).', 'danger');
+                    return;
+                }
+
+                // Couverture : nouvelle image, conservation ou retrait.
                 let couvertureUrl = couvertureRetiree ? '' : (lecon && lecon.couvertureUrl ? lecon.couvertureUrl : '');
+                const fichierCouverture = champCouverture.files && champCouverture.files[0];
                 if (fichierCouverture) {
                     if (fichierCouverture.size > LIMITE_FICHIER_DISTANT) {
                         message(zoneMessage, 'L\'image de couverture dépasse 25 Mo.', 'danger');
-                        return;
-                    }
-                    if (!window.LearnHubBackend || !window.LearnHubBackend.estActif()) {
-                        message(zoneMessage, 'Connectez-vous pour téléverser une couverture.', 'danger');
                         return;
                     }
                     const envoiCouverture = await window.LearnHubBackend.televerserFichier(fichierCouverture, 'couvertures');
@@ -1720,19 +1518,17 @@ window.LearnHubAdmin = (function () {
                     titre: titre,
                     matiere: editeur.querySelector('#lecon-matiere').value,
                     niveau: editeur.querySelector('#lecon-niveau').value,
-                    duree: Number(editeur.querySelector('#lecon-duree').value) || 30,
-                    resume: editeur.querySelector('#lecon-resume').value.trim(),
-                    objectifs: editeur.querySelector('#lecon-objectifs').value.split('\n')
-                        .map(function (ligne) { return ligne.trim(); })
-                        .filter(Boolean),
+                    duree: lecon && lecon.duree ? lecon.duree : 30,
+                    resume: lecon && lecon.resume ? lecon.resume : '',
+                    objectifs: lecon && Array.isArray(lecon.objectifs) ? lecon.objectifs : [],
                     classeIds: Array.prototype.slice.call(editeur.querySelector('#lecon-classes').selectedOptions || [])
                         .map(function (option) { return option.value; }),
                     supportUrl: supportUrl,
                     supportNom: supportNom,
                     supportTaille: supportTaille,
                     couvertureUrl: couvertureUrl,
-                    contenu: texteContenu,
-                    contenuHtml: contenuHtml
+                    contenu: lecon && lecon.contenu ? lecon.contenu : '',
+                    contenuHtml: lecon && lecon.contenuHtml ? lecon.contenuHtml : ''
                 };
                 if (lecon) donnees.id = lecon.id;
                 const enregistre = window.LearnHubStore.lecons.save(donnees);
@@ -1742,23 +1538,9 @@ window.LearnHubAdmin = (function () {
                 }
                 fermerEditeur();
                 rafraichir();
-                message(zoneMessage, lecon ? 'Leçon mise à jour.' : 'Leçon créée.', 'success');
-
-                // Le livre PDF part dans l'espace des élèves : génération immédiate.
-                if (window.LearnHubBackend && window.LearnHubBackend.estActif()) {
-                    message(zoneMessage, 'Leçon enregistrée. Génération du livre PDF…', 'info');
-                    const livre = await window.LearnHubBackend.genererLivre(enregistre.id);
-                    if (livre.ok) {
-                        rafraichir();
-                        message(zoneMessage,
-                            'Leçon enregistrée et livre PDF publié dans l\'espace des élèves' +
-                            (livre.taille ? ' (' + livre.taille + ').' : '.'), 'success');
-                    } else {
-                        message(zoneMessage,
-                            'Leçon enregistrée, mais le livre PDF n\'a pas pu être généré : ' + livre.error, 'warning');
-                    }
-                }
+                message(zoneMessage, lecon ? 'Cours mis à jour.' : 'Cours ajouté : vos élèves le voient dès maintenant.', 'success');
             });
+
             editeur.querySelector('#fermer-lecon').addEventListener('click', fermerEditeur);
             editeur.querySelector('#annuler-lecon').addEventListener('click', fermerEditeur);
             editeur.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1778,14 +1560,14 @@ window.LearnHubAdmin = (function () {
             if (!bouton) return;
             const lecon = window.LearnHubStore.lecons.get(bouton.dataset.id);
             if (!lecon) return;
-
             if (bouton.dataset.action === 'editer') {
                 ouvrirEditeur(lecon);
             } else if (bouton.dataset.action === 'supprimer') {
-                if (!window.confirm('Supprimer la leçon « ' + lecon.titre + ' » ? Le livre PDF disparaîtra de l\'espace des élèves.')) return;
+                if (!window.confirm('Supprimer le cours « ' + lecon.titre + ' » ? Il disparaîtra de l\'espace des élèves.')) return;
                 window.LearnHubStore.lecons.remove(lecon.id);
+                fermerEditeur();
                 rafraichir();
-                message(zoneMessage, 'Leçon supprimée.', 'success');
+                message(zoneMessage, 'Cours supprimé.', 'success');
             }
         });
 

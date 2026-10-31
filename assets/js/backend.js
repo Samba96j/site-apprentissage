@@ -132,9 +132,6 @@ window.LearnHubBackend = (function () {
             supportNom: row.support_nom || '',
             supportTaille: row.support_taille || '',
             couvertureUrl: row.couverture_url || '',
-            livreUrl: row.livre_url || '',
-            livreTaille: row.livre_taille || '',
-            livreMaj: row.livre_maj || null,
             contenu: row.contenu || '',
             contenuHtml: row.contenu_html || '',
             cree: row.created_at,
@@ -938,54 +935,6 @@ window.LearnHubBackend = (function () {
         return televerserFichier(fichier, 'supports');
     }
 
-    /* ------------------------------- Livre PDF -------------------------------- */
-
-    /**
-     * Demande la fabrication du livre PDF d'une leçon : la fonction Edge met en
-     * page la leçon (couverture + contenu) et dépose le fichier sur Cloudflare R2.
-     */
-    async function genererLivre(leconId) {
-        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
-        if (!leconId) return { ok: false, error: 'Leçon introuvable.' };
-        try {
-            const resultat = await client.functions.invoke('livre', { body: { leconId: leconId } });
-            let corps = resultat.data || null;
-            if (resultat.error) {
-                if (!corps && resultat.error.context && typeof resultat.error.context.json === 'function') {
-                    corps = await resultat.error.context.json().catch(function () { return null; });
-                }
-                if (!corps) {
-                    const statut = resultat.error.status || resultat.error.context?.status;
-                    return {
-                        ok: false,
-                        error: statut === 404
-                            ? 'La fonction « livre » n\'est pas encore déployée sur Supabase (supabase functions deploy livre).'
-                            : 'Génération du livre impossible.'
-                    };
-                }
-            }
-            if (!corps || !corps.ok) {
-                return {
-                    ok: false,
-                    code: (corps && corps.code) || 'indisponible',
-                    error: (corps && corps.error) || 'Génération du livre impossible.'
-                };
-            }
-            // Le cache local reflète immédiatement le nouveau fichier.
-            if (cache && cache[window.LearnHubStore.keys.lecons]) {
-                cache[window.LearnHubStore.keys.lecons].forEach(function (lecon) {
-                    if (lecon.id !== leconId) return;
-                    lecon.livreUrl = corps.url || '';
-                    lecon.livreTaille = corps.taille || '';
-                    lecon.livreMaj = corps.date || new Date().toISOString();
-                });
-            }
-            return { ok: true, url: corps.url, taille: corps.taille, stockage: corps.stockage || '', pages: corps.pages || 0 };
-        } catch (erreur) {
-            return { ok: false, error: 'Génération du livre impossible.' };
-        }
-    }
-
     return {
         disponible: disponible,
         estActif: estActif,
@@ -1024,7 +973,6 @@ window.LearnHubBackend = (function () {
         effacerAvatar: effacerAvatar,
         televerserSupport: televerserSupport,
         televerserFichier: televerserFichier,
-        genererLivre: genererLivre,
         erreur: function () { return derniereErreur; }
     };
 })();

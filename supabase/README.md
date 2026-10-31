@@ -25,8 +25,8 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 - [migration-classes-avatars.sql](migration-classes-avatars.sql) — colonne `classes.matiere`, colonne `profiles.avatar_url` et bucket de stockage public `avatars` (écriture limitée au dossier de chaque compte) ;
 - [migration-lecons-classes.sql](migration-lecons-classes.sql) — colonne `lessons.classe_ids` : ciblage d'une leçon sur une ou plusieurs classes ;
 - [migration-lecons-support.sql](migration-lecons-support.sql) — colonnes `support_url`, `support_nom`, `support_taille` : support de cours joint à une leçon (fichier stocké dans le bucket `documents`, préfixe `supports/`) ;
-- [migration-lecons-livre.sql](migration-lecons-livre.sql) — colonnes `couverture_url`, `livre_url`, `livre_taille`, `livre_maj` : livre PDF d'une leçon publié par la fonction Edge `livre` ;
-- [migration-suppression-seances.sql](migration-suppression-seances.sql) — supprime la table `seances` (fonctionnalité remplacée par les livres de leçons).
+- [migration-lecons-document.sql](migration-lecons-document.sql) — colonne `couverture_url` : couverture facultative de la carte d'un cours (et retrait des colonnes de l'ancienne génération de PDF) ;
+- [migration-suppression-seances.sql](migration-suppression-seances.sql) — supprime la table `seances` (fonctionnalité remplacée par les documents de cours).
 
 ## 3. Authentification
 
@@ -59,7 +59,7 @@ Ces deux valeurs seront placées dans un fichier `assets/js/supabase-config.js` 
 | `espaces` | Espace de travail d'un enseignant (propriétaire) |
 | `profiles` | Compte : rôle `eleve`, `admin` ou `superadmin`, espace, classe |
 | `classes` | Classe d'un espace, rejointe avec un code |
-| `lessons` | Leçons (texte + HTML nettoyé), couverture et livre PDF |
+| `lessons` | Cours : document importé (`support_url`), couverture facultative, classes ciblées |
 | `exercises` | Quiz, associations, textes à trous (JSONB) |
 | `resources` | Liens et documents |
 | `attempts` | Résultats des élèves |
@@ -186,48 +186,25 @@ Un `405 Méthode non autorisée` signifie que le code en ligne est une version a
 
 > Le fichier [functions/ia/deno.d.ts](functions/ia/deno.d.ts) ne sert qu'à l'éditeur : il déclare les globales `Deno` et les imports par URL, que l'extension TypeScript de VS Code ne connaît pas. Il n'est pas utilisé au déploiement. Si vous installez l'extension VS Code « Deno », il devient inutile.
 
-## 10. Livres PDF des leçons (Edge Function `livre`)
+## 10. Documents de cours importés par les enseignants
 
-Chaque leçon enregistrée par un enseignant devient un **livre PDF** : une couverture
-(image choisie, ou couverture dessinée automatiquement), puis le contenu mis en page
-(titres, paragraphes, listes, citations, images), avec en-tête et pagination. Le
-fichier est déposé sur **Cloudflare R2** et son adresse est enregistrée dans
-`lessons.livre_url` ; l'élève l'ouvre depuis `#/lecons`.
+Un cours est le **document** que l'enseignant possède déjà (PDF de préférence, mais
+aussi DOCX, PPTX ou EPUB). Il l'importe depuis `#/admin/lecons` ; le fichier est
+déposé dans le bucket Supabase **`documents`** (préfixe `supports/`) et son adresse
+est enregistrée dans `lessons.support_url`. L'élève voit alors une **carte** (nom du
+cours + couverture) dans `#/lecons` et ouvre le document exactement comme un livre
+de la bibliothèque : nouvel onglet, lecture, zoom, téléchargement.
 
-1. Exécuter [migration-lecons-livre.sql](migration-lecons-livre.sql) dans le SQL Editor.
-2. Créer le bucket R2 (le même que la bibliothèque, `learnhub-bibliotheque`, suffit)
-   et un jeton **Object Read & Write** (voir `scripts/README.md`).
-3. Enregistrer les secrets et déployer :
+1. Exécuter [migration-lecons-document.sql](migration-lecons-document.sql) dans le
+   SQL Editor : elle ajoute `lessons.couverture_url` (facultative) et supprime les
+   colonnes de l'ancienne génération automatique de PDF.
+2. Rien d'autre à déployer : l'import réutilise le bucket `documents` et les
+   politiques de `schema.sql` (écriture réservée aux enseignants, lecture publique).
 
-```bash
-supabase secrets set R2_ACCOUNT_ID=votre_compte R2_ACCESS_KEY_ID=cle R2_SECRET_ACCESS_KEY=secret
-supabase secrets set R2_BUCKET=learnhub-bibliotheque R2_PUBLIC_BASE=https://pub-xxxx.r2.dev
-supabase functions deploy livre
-```
+**Volumétrie** : 25 Mo par document, ce qui couvre la quasi-totalité des cours PDF.
+Le bucket gratuit de Supabase offre 1 Go ; pour des ouvrages plus volumineux ou plus
+nombreux, passez par l'import Cloudflare R2 de `scripts/` puis renseignez l'adresse
+publique du fichier dans le champ « … ou adresse d'un document en ligne ».
 
-| Variable | Rôle |
-|---|---|
-| `R2_ACCOUNT_ID` | Identifiant de compte Cloudflare (affiché dans R2) |
-| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Jeton API R2 (Object Read & Write) |
-| `R2_BUCKET` | Bucket de destination (`learnhub-bibliotheque` par défaut) |
-| `R2_PUBLIC_BASE` | URL publique du bucket (r2.dev ou domaine personnalisé) |
-
-Les fichiers sont écrits sous `livres/<espace>/<leçon>.pdf` : une nouvelle
-publication remplace l'ancienne, sans accumuler de doublons.
-
-**Sans secrets R2**, la fonction dépose le PDF dans le bucket Supabase `documents`
-(préfixe `livres/`) : la génération continue de fonctionner, et la réponse indique
-`"stockage":"supabase"`. Dès que les secrets R2 sont présents, les nouveaux livres
-partent sur Cloudflare.
-
-**Sécurité** : la fonction vérifie le JWT, exige un rôle `admin` ou `superadmin`,
-ne lit que les leçons visibles par l'appelant (RLS) et n'écrit que sur une leçon
-qu'il peut modifier. Aucune clé `service_role` n'est utilisée.
-
-**Vérifier le déploiement** (sans exposer de secret) :
-
-```powershell
-curl.exe -s "https://<projet>.supabase.co/functions/v1/livre"
-```
-
-Réponse attendue : `{"ok":true,"service":"learnhub-livre","version":"2026-10-31.1","stockage":"r2","bucket":"learnhub-bibliotheque"}`.
+**Couverture** : image facultative (portrait conseillé). Sans image, la carte de
+l'élève affiche une couverture dessinée avec le nom du cours, la matière et le niveau.

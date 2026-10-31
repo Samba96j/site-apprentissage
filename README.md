@@ -18,10 +18,10 @@ Site web éducatif statique qui regroupe des cours, des fiches de révision et d
 - **Un espace par enseignant.** Chaque administrateur dispose de son propre espace cloisonné : ses exercices, leçons, ressources, classes et réglages sont invisibles pour les autres administrateurs. Un nouvel espace peut importer la bibliothèque de démonstration en un clic.
 - **Leçons et exercices personnalisés.** Chaque enseignant rédige ses propres leçons avec un éditeur riche (gras, italique, titres, listes, citations, liens) et crée ses propres quiz, associations ou textes à trous, sans toucher au code.
 - **Contact développeur.** Une page `#/contact` présente M.BA, Ingénieur en génie logiciel, avec un formulaire de message ; les messages sont consultables dans la super-administration.
-- **Classes et livres.** Un enseignant crée des classes avec un code d'inscription, publie ses leçons sous forme de **livres PDF** (couverture + contenu mis en page) déposés sur Cloudflare R2, et suit les résultats de chaque élève.
-- **Espace élève personnalisé.** En saisissant le code de sa classe, un élève rejoint l'espace de son enseignant et accède à ses livres de cours, ses chapitres et ses exercices, avec la progression réalisée exercice par exercice. Son espace l'accueille par son nom (« Bonjour … ») et n'affiche pas le nom de l'enseignant.
+- **Classes et cours.** Un enseignant crée des classes avec un code d'inscription, importe le **document de son cours** (PDF, Word, PowerPoint) avec une couverture facultative, et suit les résultats de chaque élève.
+- **Espace élève personnalisé.** En saisissant le code de sa classe, un élève rejoint l'espace de son enseignant et accède aux documents de cours de sa classe, à ses chapitres et à ses exercices, avec la progression réalisée exercice par exercice. Son espace l'accueille par son nom (« Bonjour … ») et n'affiche pas le nom de l'enseignant.
 - **Bibliothèque paginée.** La liste publique (`#/bibliotheque`, 9 documents par page) et la liste d'administration (`#/admin/bibliotheque`, 15 par page) affichent une pagination avec la plage courante (« 1–15 sur 248 »), les numéros de pages et les boutons précédent/suivant. Changer un filtre ramène à la première page ; le composant est dans [ui.js](assets/js/ui.js).- **Le mot du fondateur sur l'accueil.** Portrait, citation, introduction et quatre messages forts (accès, enseignant, IA, progrès) mis en page avec apparition au défilement. Le contenu se modifie dans `data.fondateur` ([data.js](assets/js/data.js)).
-- **Leçons ciblées par classe et support de cours.** Dans l'éditeur de leçon, un sélecteur « Classes concernées » réserve la leçon à une ou plusieurs classes (sans sélection : toutes les classes de l'enseignant). Un fichier peut y être joint (PDF, DOCX, PPT, image — 15 Mo maximum, hébergé dans Supabase Storage) ou une adresse en ligne ; l'élève le retrouve dans un bloc « Support de cours » avec les boutons Ouvrir et Télécharger. La liste d'administration affiche la colonne « Classes ».
+- **Cours ciblés par classe.** Dans le formulaire de cours, un sélecteur « Classes concernées » réserve le cours à une ou plusieurs classes (sans sélection : toutes les classes de l'enseignant). Le document importé (PDF, DOCX, PPT, EPUB — 25 Mo maximum, hébergé dans Supabase Storage) ou son adresse en ligne devient la carte que l'élève ouvre depuis son espace, exactement comme un document de la bibliothèque. La couverture est facultative : sans image, une couverture est dessinée avec le nom du cours.
 - **Filtrage strict par matière.** Un élève rattaché à une classe qui a une matière ne voit que les leçons et les exercices de cette matière (aucun basculement possible), avec un message explicite. Les visiteurs non connectés et les classes sans matière conservent l'accès à toutes les matières.
 - **Une seule matière par classe.** Une classe peut être rattachée à une matière : ses élèves ne voient alors que les exercices et les leçons de cette matière (les filtres par matière disparaissent, remplacés par un rappel).
 - **Photo de profil.** Chaque compte peut choisir une photo (recadrée en carré 384 px, stockée dans le bucket Supabase `avatars`) ou rester sur un avatar d'initiales coloré, déduit du nom. L'avatar apparaît dans l'en-tête et sur « Ma progression ».
@@ -71,9 +71,9 @@ Les identifiants du super-administrateur se remplacent directement dans `#/super
 
 1. **Créer son espace.** S'inscrire en cochant « Je suis enseignant », ou être promu administrateur. Chaque administrateur reçoit un identifiant d'espace (`esp-…`) et peut le renommer dans `#/admin/parametres`.
 2. **Créer une classe.** `#/admin/classes` → « Nouvelle classe ». Le code généré (ex. `AB12CD`) est à communiquer aux élèves.
-3. **Rejoindre une classe.** L'élève se connecte, va dans `#/profil` et saisit le code. Il voit alors les livres de cours, leçons et exercices de cet espace.
+3. **Rejoindre une classe.** L'élève se connecte, va dans `#/profil` et saisit le code. Il voit alors les cours (documents) et les exercices de cet espace.
 4. **Rédiger ses contenus.** `#/admin/lecons` → « Nouvelle leçon » (titre, matière, niveau, durée, résumé, objectifs, contenu mis en forme : gras, titres, listes, citations, liens) ; `#/admin/exercices` → « Nouvel exercice » (quiz, associations, textes à trous).
-5. **Publier une leçon.** `#/admin/lecons` → « Nouvelle leçon » : titre, matière, classes ciblées, couverture, contenu et support. À l'enregistrement, la fonction Edge `livre` fabrique le PDF et le dépose sur Cloudflare R2 ; l'élève le retrouve dans `#/lecons`.
+5. **Ajouter un cours.** `#/admin/lecons` → « Ajouter un cours » : nom du cours, matière, niveau, classes ciblées, **document** (import d'un fichier ou adresse en ligne) et couverture facultative. Dès l'enregistrement, l'élève trouve le document dans `#/lecons` sous forme de carte et l'ouvre en un clic.
 6. **Suivre les résultats.** `#/admin/statistiques` affiche, pour chaque élève, le nombre d'exercices réalisés, la moyenne, la dernière activité et le meilleur score par exercice.
 
 Les contenus publics livrés avec le site restent visibles pour les visiteurs et les élèves sans classe. Un espace enseignant est vide au départ : le bouton « Bibliothèque démo » (onglet Exercices) ou « Importer la bibliothèque de démonstration » (onglet Paramètres) y copie les 17 exercices.
@@ -89,12 +89,12 @@ Les contenus publics livrés avec le site restent visibles pour les visiteurs et
 | `#/cours/une-si-longue-lettre` | Fiche rédigée d'une œuvre du programme (section optionnelle : `…/exposes`) |
 | `#/exercices` · `#/exercices?exo=<id>` | Exercices interactifs (tous, ou un exercice assigné) |
 | `#/lecons` · `#/lecon/<id>` | Leçons de l'espace de l'élève et contenu d'une leçon |
-| `#/lecon/<id>/lire` | Lecteur plein écran du livre PDF |
+| `#/lecon/<id>` | Détail d'un cours : couverture et accès au document |
 | `#/recherche?q=polygamie` | Recherche |
 | `#/connexion` · `#/profil` | Authentification, classe et progression |
 | `#/ia` | IAFA FAMA : étude d'œuvre ou recherche/question |
 | `#/contact` | Présentation du développeur et formulaire de contact |
-| `#/admin/classes` · `#/admin/lecons` | Classes et leçons (livres PDF) de l'enseignant |
+| `#/admin/classes` · `#/admin/lecons` | Classes et cours (documents) de l'enseignant |
 | `#/admin/exercices` | Back-office (réservé aux administrateurs) |
 | `#/superadmin` | Gestion globale de tous les comptes (super-administrateur) |
 
@@ -337,7 +337,7 @@ Un domaine du type `learnhub.sn` donne un lien plus court et plus crédible :
 - **Un chapitre** : ajouter une entrée dans `matieres[].chapitres` de [data.js](assets/js/data.js) (`id`, `niveau`, `titre`, `resume`, `objectifs`, `points`, `duree`).
 - **Une matière ou un niveau** : compléter les tableaux `matieres` ou `niveaux` du même fichier. Pour une nouvelle `couleur`, ajouter la classe `bg-…` correspondante dans [styles.css](styles.css), sinon l'icône s'affiche sans fond coloré.
 - **Un exercice** : le créer depuis `#/admin/exercices` (persisté dans le navigateur, rattaché à votre espace) ou l'ajouter à `exercicesSeed`.
-- **Une leçon** : la rédiger depuis `#/admin/lecons` avec sa couverture ; le livre PDF est généré automatiquement et publié dans l'espace des élèves.
+- **Un cours** : depuis `#/admin/lecons`, importer le document (PDF de préférence) et, si besoin, une couverture ; il apparaît aussitôt dans l'espace des élèves concernés.
 
 ## Technologies
 
