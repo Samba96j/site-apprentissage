@@ -1650,6 +1650,31 @@ window.LearnHubAdmin = (function () {
                                 : 'Créez d\'abord une classe dans l\'onglet « Classes » pour cibler cette leçon.') +
                         '</div>' +
                     '</div>' +
+                    '<div class="row g-3 mb-3">' +
+                        '<div class="col-md-6">' +
+                            '<label class="form-label" for="lecon-support"><i class="fas fa-paperclip me-1"></i>Support de cours (fichier)</label>' +
+                            '<input type="file" class="form-control" id="lecon-support" accept=".pdf,.doc,.docx,.ppt,.pptx,.odt,.odp,.txt,.epub,image/*">' +
+                            '<div class="form-text">Les élèves pourront l\'ouvrir depuis la leçon. 15 Mo maximum.</div>' +
+                        '</div>' +
+                        '<div class="col-md-6">' +
+                            '<label class="form-label" for="lecon-support-url">… ou adresse d\'un support en ligne</label>' +
+                            '<input type="url" class="form-control" id="lecon-support-url" placeholder="https://…" value="' + esc(lecon && lecon.supportUrl ? lecon.supportUrl : '') + '">' +
+                            '<div class="form-text">Lien vers un document déjà hébergé.</div>' +
+                        '</div>' +
+                    '</div>' +
+                    (lecon && lecon.supportUrl
+                        ? '<div class="alert alert-light border py-2 d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
+                            '<span class="small"><i class="fas fa-file-lines me-1"></i>Support actuel : <strong>' +
+                                esc(lecon.supportNom || 'fichier') + '</strong>' +
+                                (lecon.supportTaille ? ' · ' + esc(lecon.supportTaille) : '') + '</span>' +
+                            '<a class="btn btn-sm btn-outline-primary" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
+                                '<i class="fas fa-up-right-from-square me-1"></i>Vérifier</a>' +
+                          '</div>' +
+                          '<div class="form-check mb-3">' +
+                            '<input class="form-check-input" type="checkbox" id="lecon-support-retirer">' +
+                            '<label class="form-check-label small" for="lecon-support-retirer">Retirer le support de cours</label>' +
+                          '</div>'
+                        : '') +
                     '<div class="mb-3"><label class="form-label" for="lecon-objectifs">Objectifs (un par ligne)</label>' +
                         '<textarea class="form-control" id="lecon-objectifs" rows="3" placeholder="Comprendre la structure d\'une introduction">' +
                         esc(lecon && lecon.objectifs ? lecon.objectifs.join('\n') : '') + '</textarea></div>' +
@@ -1719,7 +1744,7 @@ window.LearnHubAdmin = (function () {
                 zoneContenu.focus();
             });
 
-            form.addEventListener('submit', function (event) {
+            form.addEventListener('submit', async function (event) {
                 event.preventDefault();
                 const titre = editeur.querySelector('#lecon-titre').value.trim();
                 const contenuHtml = window.LearnHubStore.nettoyerHtml(zoneContenu.innerHTML);
@@ -1736,6 +1761,38 @@ window.LearnHubAdmin = (function () {
                     message(zoneMessage, 'Le contenu de la leçon doit contenir au moins 20 caractères.', 'danger');
                     return;
                 }
+                // Support de cours : fichier téléversé, lien, conservation ou retrait.
+                const champSupport = editeur.querySelector('#lecon-support');
+                const champSupportUrl = editeur.querySelector('#lecon-support-url');
+                const retirerSupport = editeur.querySelector('#lecon-support-retirer');
+                const fichierSupport = champSupport && champSupport.files ? champSupport.files[0] : null;
+                let supportUrl = lecon && lecon.supportUrl ? lecon.supportUrl : '';
+                let supportNom = lecon && lecon.supportNom ? lecon.supportNom : '';
+                let supportTaille = lecon && lecon.supportTaille ? lecon.supportTaille : '';
+
+                if (retirerSupport && retirerSupport.checked) {
+                    supportUrl = '';
+                    supportNom = '';
+                    supportTaille = '';
+                } else if (fichierSupport) {
+                    if (fichierSupport.size > 15 * 1024 * 1024) {
+                        message(zoneMessage, 'Le support dépasse 15 Mo.', 'danger');
+                        return;
+                    }
+                    const envoi = await window.LearnHubBackend.televerserSupport(fichierSupport);
+                    if (!envoi.ok) {
+                        message(zoneMessage, envoi.error + ' — vous pouvez aussi coller une adresse en ligne.', 'danger');
+                        return;
+                    }
+                    supportUrl = envoi.url;
+                    supportNom = envoi.nom;
+                    supportTaille = envoi.taille;
+                } else if (champSupportUrl && champSupportUrl.value.trim()) {
+                    supportUrl = champSupportUrl.value.trim();
+                    supportNom = supportUrl.split('/').pop().split('?')[0] || 'support';
+                    supportTaille = '';
+                }
+
                 const donnees = {
                     titre: titre,
                     matiere: editeur.querySelector('#lecon-matiere').value,
@@ -1747,6 +1804,9 @@ window.LearnHubAdmin = (function () {
                         .filter(Boolean),
                     classeIds: Array.prototype.slice.call(editeur.querySelector('#lecon-classes').selectedOptions || [])
                         .map(function (option) { return option.value; }),
+                    supportUrl: supportUrl,
+                    supportNom: supportNom,
+                    supportTaille: supportTaille,
                     contenu: texteContenu,
                     contenuHtml: contenuHtml
                 };

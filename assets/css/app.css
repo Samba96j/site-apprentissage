@@ -550,3 +550,57 @@
         text-align: center;
     }
 }
+/* ----------------------------- Support de cours ----------------------------- */
+
+.support-cours {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(106, 27, 154, 0.18);
+    background: linear-gradient(135deg, rgba(106, 27, 154, 0.06), rgba(138, 92, 246, 0.03));
+}
+
+.support-cours-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 0.75rem;
+    color: #ffffff;
+    background: linear-gradient(135deg, #6A1B9A, #8A5CF6);
+    flex: 0 0 auto;
+}
+
+.support-cours-texte {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1 1 12rem;
+}
+
+.support-cours-texte span {
+    font-size: 0.82rem;
+    color: #6b7280;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.support-cours-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 575.98px) {
+    .support-cours-actions {
+        width: 100%;
+    }
+    .support-cours-actions .btn {
+        flex: 1 1 auto;
+    }
+}

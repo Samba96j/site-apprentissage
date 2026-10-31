@@ -959,22 +959,6 @@
         const toutes = store.lecons.all().slice().sort(function (a, b) {
             return String(a.titre).localeCompare(String(b.titre));
         });
-        const matieresPresentes = {};
-        toutes.forEach(function (lecon) { if (lecon.matiere) matieresPresentes[lecon.matiere] = true; });
-        const pastilles = Object.keys(matieresPresentes).length > 1
-            ? '<div class="d-flex flex-wrap gap-2 mb-3" id="lecons-filtres" role="group" aria-label="Filtrer les leçons par matière">' +
-                '<button class="btn btn-sm ' + (matiereClasse ? 'btn-outline-primary' : 'btn-primary') + '" type="button" data-matiere="" aria-pressed="' + (!matiereClasse) + '">' +
-                    '<i class="fas fa-layer-group me-1"></i>Toutes <span class="badge bg-light text-dark ms-1">' + toutes.length + '</span></button>' +
-                Object.keys(matieresPresentes).sort().map(function (slug) {
-                    const matiere = data.getMatiere(slug);
-                    const nombre = toutes.filter(function (l) { return l.matiere === slug; }).length;
-                    const actif = matiereClasse === slug;
-                    return '<button class="btn btn-sm ' + (actif ? 'btn-primary' : 'btn-outline-primary') + '" type="button" data-matiere="' + esc(slug) + '" aria-pressed="' + actif + '">' +
-                        '<i class="fas ' + esc(matiere ? matiere.icone : 'fa-book') + ' me-1"></i>' + esc(matiere ? matiere.nom : slug) +
-                        ' <span class="badge bg-light text-dark ms-1">' + nombre + '</span></button>';
-                }).join('') +
-              '</div>'
-            : '';
 
         function cartesDe(liste) {
             return liste.map(function (lecon) {
@@ -1000,7 +984,9 @@
             }).join('');
         }
 
-        const lecons = toutes;
+        const lecons = matiereClasse
+            ? toutes.filter(function (lecon) { return lecon.matiere === matiereClasse; })
+            : toutes;
 
         const cartes = cartesDe(lecons);
 
@@ -1011,55 +997,26 @@
                     '<h1 class="h3 mb-1">Leçons</h1>' +
                     '<p class="text-muted mb-0">Les leçons rédigées par votre enseignant et les ressources du programme.</p>' +
                 '</div>' +
-                pastilles +
                 (matiereClasse
                     ? '<div class="alert alert-primary py-2 small"><i class="fas fa-filter me-1"></i>' +
-                        'Filtre par défaut : la matière de votre classe (<strong>' +
+                        'Votre classe travaille une seule matière : seules les leçons de <strong>' +
                         esc((data.getMatiere(matiereClasse) || {}).nom || matiereClasse) +
-                        '</strong>). Choisissez « Toutes » pour parcourir les autres matières.</div>'
+                        '</strong> sont proposées.</div>'
                     : '') +
                 (lecons.length
-                    ? '<div class="row g-3" id="lecons-liste">' + cartes + '</div>' +
-                      '<p class="text-muted small mt-3 mb-0 d-none" id="lecons-vide">Aucune leçon dans cette matière pour le moment.</p>'
+                    ? '<div class="row g-3" id="lecons-liste">' + cartes + '</div>'
                     : '<div class="content text-muted">' +
-                        '<i class="fas fa-book-open me-2"></i>Aucune leçon disponible pour le moment.' +
+                        '<i class="fas fa-book-open me-2"></i>' +
+                        (matiereClasse
+                            ? 'Aucune leçon de ' + esc((data.getMatiere(matiereClasse) || {}).nom || matiereClasse) + ' pour le moment.'
+                            : 'Aucune leçon disponible pour le moment.') +
                         '<div class="small mt-2">' +
                             (user && !auth.maClasse()
                                 ? 'Rejoignez une classe depuis <a href="#/profil">Ma progression</a> pour accéder aux leçons de votre enseignant.'
                                 : 'Votre enseignant peut en créer depuis l\'onglet « Leçons » de son espace.') +
                         '</div>' +
                       '</div>') +
-            '</div>',
-            after: function (racine) {
-                const barre = racine.querySelector('#lecons-filtres');
-                const grille = racine.querySelector('#lecons-liste');
-                const vide = racine.querySelector('#lecons-vide');
-                if (!barre || !grille) return;
-
-                function appliquer(slug) {
-                    let visibles = 0;
-                    Array.prototype.forEach.call(racine.querySelectorAll('[data-lecon-matiere]'), function (element) {
-                        const correspond = !slug || element.dataset.leconMatiere === slug;
-                        element.classList.toggle('d-none', !correspond);
-                        if (correspond) visibles += 1;
-                    });
-                    if (vide) vide.classList.toggle('d-none', visibles > 0);
-                    Array.prototype.forEach.call(barre.querySelectorAll('[data-matiere]'), function (bouton) {
-                        const actif = (bouton.dataset.matiere || '') === (slug || '');
-                        bouton.classList.toggle('btn-primary', actif);
-                        bouton.classList.toggle('btn-outline-primary', !actif);
-                        bouton.setAttribute('aria-pressed', actif ? 'true' : 'false');
-                    });
-                }
-
-                barre.addEventListener('click', function (event) {
-                    const bouton = event.target.closest('[data-matiere]');
-                    if (!bouton) return;
-                    appliquer(bouton.dataset.matiere || '');
-                });
-
-                appliquer(matiereClasse || '');
-            }
+            '</div>'
         };
     }
 
@@ -1091,6 +1048,22 @@
                             '<ul class="mb-0">' + lecon.objectifs.map(function (objectif) {
                                 return '<li>' + esc(objectif) + '</li>';
                             }).join('') + '</ul></div>'
+                        : '') +
+                    (lecon.supportUrl
+                        ? '<div class="support-cours mb-4">' +
+                            '<span class="support-cours-icone"><i class="fas fa-paperclip"></i></span>' +
+                            '<div class="support-cours-texte">' +
+                                '<strong>Support de cours</strong>' +
+                                '<span>' + esc(lecon.supportNom || 'Document joint') +
+                                    (lecon.supportTaille ? ' · ' + esc(lecon.supportTaille) : '') + '</span>' +
+                            '</div>' +
+                            '<div class="support-cours-actions">' +
+                                '<a class="btn btn-primary btn-sm" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
+                                    '<i class="fas fa-up-right-from-square me-1"></i>Ouvrir</a>' +
+                                '<a class="btn btn-outline-secondary btn-sm" href="' + esc(lecon.supportUrl) + '" download="' + esc(lecon.supportNom || 'support') + '">' +
+                                    '<i class="fas fa-download me-1"></i>Télécharger</a>' +
+                            '</div>' +
+                          '</div>'
                         : '') +
                     '<div class="lecon-contenu">' +
                         (lecon.contenuHtml ? store.nettoyerHtml(lecon.contenuHtml) : texteVersHtml(lecon.contenu)) +
@@ -1432,15 +1405,16 @@
         const exoCible = parametres ? parametres.get('exo') : null;
         const matiereClasse = auth.matiereClasse();
         const matiereNom = matiereClasse ? (data.getMatiere(matiereClasse) || {}).nom : null;
-        const tous = store.exercices.actifs();
+        const tous = store.exercices.actifs().filter(function (ex) {
+            return !matiereClasse || ex.matiere === matiereClasse;
+        });
         const actifs = exoCible
             ? tous.filter(function (ex) { return ex.id === exoCible; })
             : tous;
-        const pastilles = exoCible ? '' : ['<button class="btn btn-sm ' + (matiereClasse ? 'btn-outline-primary' : 'btn-primary') + '" data-matiere="" aria-pressed="' + (!matiereClasse) + '"><i class="fas fa-layer-group me-1"></i>Toutes <span class="badge bg-light text-dark ms-1">' + actifs.length + '</span></button>']
+        const pastilles = (exoCible || matiereClasse) ? '' : ['<button class="btn btn-sm btn-primary" data-matiere="" aria-pressed="true"><i class="fas fa-layer-group me-1"></i>Toutes <span class="badge bg-light text-dark ms-1">' + actifs.length + '</span></button>']
             .concat(data.matieres.map(function (matiere) {
                 const nombre = actifs.filter(function (ex) { return ex.matiere === matiere.slug; }).length;
-                const actif = matiereClasse === matiere.slug;
-                return '<button class="btn btn-sm ' + (actif ? 'btn-primary' : 'btn-outline-primary') + '" data-matiere="' + esc(matiere.slug) + '" aria-pressed="' + actif + '">' +
+                return '<button class="btn btn-sm btn-outline-primary" data-matiere="' + esc(matiere.slug) + '" aria-pressed="false">' +
                     '<i class="fas ' + esc(matiere.icone) + ' me-1"></i>' + esc(matiere.nom) +
                     ' <span class="badge bg-light text-dark ms-1">' + nombre + '</span></button>';
             })).join('');
@@ -1468,9 +1442,8 @@
                     : '') +
                 (matiereClasse && !exoCible
                     ? '<div class="alert alert-primary py-2 small"><i class="fas fa-filter me-1"></i>' +
-                        'Filtre par défaut : la matière de votre classe (<strong>' +
-                        esc(matiereNom || matiereClasse) + '</strong>). ' +
-                        'Les exercices des autres matières restent accessibles : cliquez sur « Toutes » ou sur une autre matière.</div>'
+                        'Votre classe travaille une seule matière : seuls les exercices de <strong>' +
+                        esc(matiereNom || matiereClasse) + '</strong> sont proposés.</div>'
                     : '') +
                 (pastilles ? '<div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filtrer les exercices par matière">' + pastilles + '</div>' : '') +
                 '<div class="content"><div id="zone-jeux"></div></div>' +
@@ -1506,7 +1479,7 @@
                     });
                 });
 
-                afficher(exoCible ? '' : (matiereClasse || ''));
+                afficher('');
             }
         };
     }

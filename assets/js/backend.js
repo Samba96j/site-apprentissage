@@ -129,6 +129,9 @@ window.LearnHubBackend = (function () {
             resume: row.resume || '',
             objectifs: row.objectifs || [],
             classeIds: row.classe_ids || [],
+            supportUrl: row.support_url || '',
+            supportNom: row.support_nom || '',
+            supportTaille: row.support_taille || '',
             contenu: row.contenu || '',
             contenuHtml: row.contenu_html || '',
             cree: row.created_at,
@@ -208,6 +211,9 @@ window.LearnHubBackend = (function () {
                 resume: item.resume || null,
                 objectifs: item.objectifs || [],
                 classe_ids: item.classeIds || [],
+                support_url: item.supportUrl || null,
+                support_nom: item.supportNom || null,
+                support_taille: item.supportTaille || null,
                 contenu: item.contenu || '',
                 contenu_html: item.contenuHtml || null
             };
@@ -931,6 +937,25 @@ window.LearnHubBackend = (function () {
         return { ok: true };
     }
 
+    /* ------------------------------ Supports de cours ------------------------------ */
+
+    async function televerserSupport(fichier) {
+        if (!estActif() || !profil) return { ok: false, error: 'Connexion requise.' };
+        if (!fichier) return { ok: false, error: 'Fichier manquant.' };
+
+        const nom = fichier.name || 'support.pdf';
+        const extension = (nom.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const chemin = 'supports/' + profil.id + '/' + Date.now().toString(36) + '-' +
+            Math.random().toString(36).slice(2, 8) + (extension ? '.' + extension : '');
+        const envoi = await client.storage.from('documents').upload(chemin, fichier, { upsert: true });
+        if (envoi.error) return { ok: false, error: envoi.error.message };
+
+        const publique = client.storage.from('documents').getPublicUrl(chemin);
+        const url = publique && publique.data ? publique.data.publicUrl : '';
+        if (!url) return { ok: false, error: 'URL publique introuvable.' };
+        return { ok: true, url: url, nom: nom, taille: formatteTaille(fichier.size) };
+    }
+
     return {
         disponible: disponible,
         estActif: estActif,
@@ -967,6 +992,7 @@ window.LearnHubBackend = (function () {
         supprimerIA: supprimerIA,
         televerserAvatar: televerserAvatar,
         effacerAvatar: effacerAvatar,
+        televerserSupport: televerserSupport,
         erreur: function () { return derniereErreur; }
     };
 })();
