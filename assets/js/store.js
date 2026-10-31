@@ -540,7 +540,8 @@ window.LearnHubStore = (function () {
     const BALISES_AUTORISEES = {
         P: true, BR: true, STRONG: true, B: true, EM: true, I: true, U: true, S: true,
         UL: true, OL: true, LI: true, H2: true, H3: true, H4: true,
-        BLOCKQUOTE: true, A: true, CODE: true, PRE: true, HR: true
+        BLOCKQUOTE: true, A: true, CODE: true, PRE: true, HR: true,
+        IMG: true, FIGURE: true, FIGCAPTION: true
     };
 
     // Balises dont le contenu doit disparaître entièrement (pas seulement la balise).
@@ -577,8 +578,25 @@ window.LearnHubStore = (function () {
                 }
                 Array.prototype.slice.call(noeud.attributes).forEach(function (attribut) {
                     if (noeud.tagName === 'A' && (attribut.name === 'href' || attribut.name === 'title')) return;
+                    if (noeud.tagName === 'IMG' &&
+                        ['src', 'alt', 'title', 'width', 'height'].indexOf(attribut.name) !== -1) return;
                     noeud.removeAttribute(attribut.name);
                 });
+                if (noeud.tagName === 'IMG') {
+                    const src = noeud.getAttribute('src') || '';
+                    // Images distantes ou collées (data URL) uniquement : pas de javascript: ni de fichier local.
+                    if (!/^(https?:\/\/|data:image\/(png|jpe?g|gif|webp);base64,)/i.test(src)) {
+                        parent.removeChild(noeud);
+                        return;
+                    }
+                    if (!noeud.getAttribute('alt')) noeud.setAttribute('alt', '');
+                    noeud.setAttribute('loading', 'lazy');
+                    ['width', 'height'].forEach(function (nom) {
+                        const valeur = noeud.getAttribute(nom);
+                        if (valeur && !/^\d{1,5}$/.test(valeur)) noeud.removeAttribute(nom);
+                    });
+                    return;
+                }
                 if (noeud.tagName === 'A') {
                     const href = noeud.getAttribute('href') || '';
                     if (!/^(https?:\/\/|mailto:|#|\/)/i.test(href)) {

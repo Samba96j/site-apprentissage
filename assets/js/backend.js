@@ -943,10 +943,20 @@ window.LearnHubBackend = (function () {
         if (!estActif() || !profil) return { ok: false, error: 'Connexion requise.' };
         if (!fichier) return { ok: false, error: 'Fichier manquant.' };
 
-        const nom = fichier.name || 'document.pdf';
-        const extension = (nom.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const extensions = {
+            'image/png': 'png',
+            'image/jpeg': 'jpg',
+            'image/webp': 'webp',
+            'image/gif': 'gif',
+            'application/pdf': 'pdf'
+        };
+        const nom = fichier.name || 'fichier';
+        let extension = nom.indexOf('.') !== -1
+            ? (nom.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+            : '';
+        if (!extension) extension = extensions[fichier.type] || 'bin';
         const chemin = (prefixe || 'fichiers') + '/' + profil.id + '/' + Date.now().toString(36) + '-' +
-            Math.random().toString(36).slice(2, 8) + (extension ? '.' + extension : '');
+            Math.random().toString(36).slice(2, 8) + '.' + extension;
         const envoi = await client.storage.from('documents').upload(chemin, fichier, { upsert: true });
         if (envoi.error) return { ok: false, error: envoi.error.message };
 

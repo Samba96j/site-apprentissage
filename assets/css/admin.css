@@ -97,6 +97,14 @@
 .rich-editor ul,
 .rich-editor ol { padding-left: 1.5rem; }
 .rich-editor p:last-child { margin-bottom: 0; }
+.rich-editor img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0.75rem 0;
+    border-radius: 10px;
+    border: 1px solid #dee2e6;
+}
 
 .rich-toolbar .btn {
     padding: 0.15rem 0.45rem;
@@ -115,3 +123,18 @@
 .lecon-contenu ol { padding-left: 1.5rem; margin-bottom: 1rem; }
 .lecon-contenu p { margin-bottom: 0.9rem; }
 .lecon-contenu a { color: #6a1b9a; text-decoration: underline; }
+.lecon-contenu img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 1rem 0;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+}
+.lecon-contenu figure { margin: 0 0 1rem; }
+.lecon-contenu figcaption {
+    font-size: 0.85rem;
+    color: #6c757d;
+    text-align: center;
+    margin-top: 0.35rem;
+}

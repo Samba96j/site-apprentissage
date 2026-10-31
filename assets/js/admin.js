@@ -77,6 +77,73 @@ window.LearnHubAdmin = (function () {
         }).join('');
     }
 
+    /** Convertit une URL « data: » en Blob pour l'envoyer vers le stockage. */
+    function dataUrlVersBlob(dataUrl) {
+        const morceaux = String(dataUrl || '').split(',');
+        if (morceaux.length < 2) return null;
+        const entete = morceaux[0];
+        const type = (entete.match(/^data:([^;]+)/i) || [])[1] || 'image/png';
+        try {
+            if (!/;base64/i.test(entete)) return new Blob([decodeURIComponent(morceaux[1])], { type: type });
+            const binaire = atob(morceaux[1]);
+            const octets = new Uint8Array(binaire.length);
+            for (let i = 0; i < binaire.length; i += 1) octets[i] = binaire.charCodeAt(i);
+            return new Blob([octets], { type: type });
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /**
+     * Prépare du HTML collé : nettoie, puis remplace les images « data: » par une URL publique.
+     * Renvoie le HTML insérable et le nombre d'images abandonnées (trop lourdes).
+     */
+    async function preparerHtmlColle(html) {
+        const propre = window.LearnHubStore.nettoyerHtml(html || '');
+        if (!propre) return { html: '', perdues: 0 };
+        const conteneur = document.createElement('div');
+        conteneur.innerHTML = propre;
+        const images = Array.prototype.slice.call(conteneur.querySelectorAll('img'));
+        let perdues = 0;
+        for (let i = 0; i < images.length; i += 1) {
+            const image = images[i];
+            const src = image.getAttribute('src') || '';
+            if (!/^data:image\//i.test(src)) continue;
+            const blob = dataUrlVersBlob(src);
+            if (!blob || blob.size > LIMITE_FICHIER_DISTANT) {
+                image.parentNode.removeChild(image);
+                perdues += 1;
+                continue;
+            }
+            let url = '';
+            const backend = window.LearnHubBackend;
+            if (backend && backend.estActif()) {
+                const envoi = await backend.televerserFichier(blob, 'lecons');
+                if (envoi && envoi.ok) url = envoi.url;
+            } else if (blob.size <= 400 * 1024) {
+                url = src;
+            }
+            if (url) {
+                image.setAttribute('src', url);
+            } else {
+                image.parentNode.removeChild(image);
+                perdues += 1;
+            }
+        }
+        return { html: conteneur.innerHTML, perdues: perdues };
+    }
+
+    /** Téléverse une image choisie dans le presse-papiers et renvoie son HTML. */
+    async function htmlDepuisFichierImage(fichier) {
+        if (!fichier || !/^image\//i.test(fichier.type || '')) return '';
+        if (fichier.size > LIMITE_FICHIER_DISTANT) return '';
+        const backend = window.LearnHubBackend;
+        if (!backend || !backend.estActif()) return '';
+        const envoi = await backend.televerserFichier(fichier, 'lecons');
+        if (!envoi || !envoi.ok) return '';
+        return '<p><img src="' + esc(envoi.url) + '" alt=""></p>';
+    }
+
     function moyennePourcentage(tentatives) {
         if (!tentatives.length) return null;
         let points = 0;
@@ -1734,7 +1801,7 @@ window.LearnHubAdmin = (function () {
                         '</div>' +
                         '<div class="form-control rich-editor" id="lecon-editeur" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="lecon-editeur-label"></div>' +
                         '<span class="visually-hidden" id="lecon-editeur-label">Contenu de la leçon</span>' +
-                        '<div class="form-text">Gras, italique, titres, listes, citation et liens. Le contenu est nettoyé automatiquement à l\'enregistrement.</div>' +
+                        '<div class="form-text">Gras, italique, titres, listes, citation et liens. Vous pouvez coller une capture d\'écran directement dans la zone : elle est envoyée automatiquement. Le contenu est nettoyé à l\'enregistrement.</div>' +
                     '</div>' +
                     '<div class="d-flex gap-2">' +
                         '<button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk me-1"></i>Enregistrer</button>' +
@@ -1748,11 +1815,36 @@ window.LearnHubAdmin = (function () {
                 ? (lecon.contenuHtml ? window.LearnHubStore.nettoyerHtml(lecon.contenuHtml) : texteSimpleVersHtml(lecon.contenu))
                 : '<p><br></p>';
 
-            zoneContenu.addEventListener('paste', function (event) {
-                const html = event.clipboardData && event.clipboardData.getData('text/html');
-                if (!html) return;
+            zoneContenu.addEventListener('paste', async function (event) {
+                const presse = event.clipboardData;
+                if (!presse) return;
+                const html = presse.getData('text/html');
+                const fichiers = Array.prototype.slice.call(presse.files || []).filter(function (f) {
+                    return /^image\//i.test(f.type || '');
+                });
+                if (!html && !fichiers.length) return;
                 event.preventDefault();
-                document.execCommand('insertHTML', false, window.LearnHubStore.nettoyerHtml(html));
+                zoneContenu.focus();
+
+                let insere = '';
+                let perdues = 0;
+                if (html) {
+                    const prepare = await preparerHtmlColle(html);
+                    insere = prepare.html;
+                    perdues += prepare.perdues;
+                }
+                if (fichiers.length && !/<img\s/i.test(insere)) {
+                    for (let i = 0; i < fichiers.length; i += 1) {
+                        const bloc = await htmlDepuisFichierImage(fichiers[i]);
+                        if (bloc) insere += bloc; else perdues += 1;
+                    }
+                }
+                if (insere) document.execCommand('insertHTML', false, insere);
+                if (perdues) {
+                    message(zoneMessage,
+                        perdues + ' image(s) ignorée(s) : taille trop lourde ou envoi impossible. ' +
+                        'Utilisez la section « Support de cours » pour un fichier volumineux.', 'warning');
+                }
             });
 
             const barre = editeur.querySelector('.rich-toolbar');
@@ -1789,8 +1881,8 @@ window.LearnHubAdmin = (function () {
                     message(zoneMessage, 'Le titre de la leçon doit contenir au moins 3 caractères.', 'danger');
                     return;
                 }
-                if (texteContenu.length < 20) {
-                    message(zoneMessage, 'Le contenu de la leçon doit contenir au moins 20 caractères.', 'danger');
+                if (texteContenu.length < 20 && !/<img\s[^>]*src=/i.test(contenuHtml)) {
+                    message(zoneMessage, 'Le contenu de la leçon doit contenir au moins 20 caractères de texte ou au moins une image.', 'danger');
                     return;
                 }
                 // Support de cours : fichier téléversé, lien, conservation ou retrait.
