@@ -16,7 +16,6 @@ Le site reste hébergé sur **GitHub Pages**. Supabase fournit uniquement l'auth
 
 Si le projet a été créé avec une première version du schéma, exécuter une fois les scripts de migration (idempotents) :
 
-- [migration-seances-text-ids.sql](migration-seances-text-ids.sql) — colonnes de `seances` en `text[]` ;
 - [migration-profil-trigger.sql](migration-profil-trigger.sql) — déclencheur des profils : attribution du rôle `superadmin` depuis le SQL Editor, suppression d'une classe peuplée, et blocage de l'affectation directe à une classe ;
 - [migration-comptes-admin.sql](migration-comptes-admin.sql) — fonctions `admin_supprimer_compte` et `admin_changer_role` qui permettent la gestion des comptes depuis la page Super-administration ;
 - [migration-bibliotheque.sql](migration-bibliotheque.sql) — table `documents` et bucket de stockage `documents` de la bibliothèque publique ;
@@ -25,7 +24,9 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 - [migration-ia-quota.sql](migration-ia-quota.sql) — table `ia_quotas` et fonctions `ia_consommer()` / `ia_liberer()` : quota quotidien tenu côté base, impossible à remettre à zéro depuis le navigateur ;
 - [migration-classes-avatars.sql](migration-classes-avatars.sql) — colonne `classes.matiere`, colonne `profiles.avatar_url` et bucket de stockage public `avatars` (écriture limitée au dossier de chaque compte) ;
 - [migration-lecons-classes.sql](migration-lecons-classes.sql) — colonne `lessons.classe_ids` : ciblage d'une leçon sur une ou plusieurs classes ;
-- [migration-lecons-support.sql](migration-lecons-support.sql) — colonnes `support_url`, `support_nom`, `support_taille` : support de cours joint à une leçon (fichier stocké dans le bucket `documents`, préfixe `supports/`).
+- [migration-lecons-support.sql](migration-lecons-support.sql) — colonnes `support_url`, `support_nom`, `support_taille` : support de cours joint à une leçon (fichier stocké dans le bucket `documents`, préfixe `supports/`) ;
+- [migration-lecons-livre.sql](migration-lecons-livre.sql) — colonnes `couverture_url`, `livre_url`, `livre_taille`, `livre_maj` : livre PDF d'une leçon publié par la fonction Edge `livre` ;
+- [migration-suppression-seances.sql](migration-suppression-seances.sql) — supprime la table `seances` (fonctionnalité remplacée par les livres de leçons).
 
 ## 3. Authentification
 
@@ -58,10 +59,9 @@ Ces deux valeurs seront placées dans un fichier `assets/js/supabase-config.js` 
 | `espaces` | Espace de travail d'un enseignant (propriétaire) |
 | `profiles` | Compte : rôle `eleve`, `admin` ou `superadmin`, espace, classe |
 | `classes` | Classe d'un espace, rejointe avec un code |
-| `lessons` | Leçons (texte + HTML nettoyé) |
+| `lessons` | Leçons (texte + HTML nettoyé), couverture et livre PDF |
 | `exercises` | Quiz, associations, textes à trous (JSONB) |
 | `resources` | Liens et documents |
-| `seances` | Séances : date, durée, classes, chapitres, leçons, exercices |
 | `attempts` | Résultats des élèves |
 | `messages` | Formulaire de contact (insertion publique, lecture super-admin) |
 | `documents` | Bibliothèque publique : livres et documents (lecture publique, écriture admin) |
@@ -100,7 +100,7 @@ La restriction est appliquée par la politique RLS `documents_select`, pas seule
 Les comptes actuels sont stockés dans le navigateur avec un mot de passe **haché localement** : il est impossible de les transférer vers Supabase Auth. La migration se fait donc ainsi :
 
 1. Chaque personne crée son compte Supabase avec le même nom d'utilisateur.
-2. Les contenus (leçons, exercices, séances) et les résultats peuvent être importés depuis le navigateur vers Supabase par un script ponctuel (à exécuter avec la session de l'utilisateur).
+2. Les contenus (leçons, exercices) et les résultats peuvent être importés depuis le navigateur vers Supabase par un script ponctuel (à exécuter avec la session de l'utilisateur).
 
 Un écran d'import pourra être ajouté dans `#/admin/parametres` lors de l'intégration.
 
@@ -185,3 +185,49 @@ Réponse attendue : `{"ok":true,"service":"learnhub-ia","version":"2026-10-29","
 Un `405 Méthode non autorisée` signifie que le code en ligne est une version antérieure : il faut redéployer.
 
 > Le fichier [functions/ia/deno.d.ts](functions/ia/deno.d.ts) ne sert qu'à l'éditeur : il déclare les globales `Deno` et les imports par URL, que l'extension TypeScript de VS Code ne connaît pas. Il n'est pas utilisé au déploiement. Si vous installez l'extension VS Code « Deno », il devient inutile.
+
+## 10. Livres PDF des leçons (Edge Function `livre`)
+
+Chaque leçon enregistrée par un enseignant devient un **livre PDF** : une couverture
+(image choisie, ou couverture dessinée automatiquement), puis le contenu mis en page
+(titres, paragraphes, listes, citations, images), avec en-tête et pagination. Le
+fichier est déposé sur **Cloudflare R2** et son adresse est enregistrée dans
+`lessons.livre_url` ; l'élève l'ouvre depuis `#/lecons`.
+
+1. Exécuter [migration-lecons-livre.sql](migration-lecons-livre.sql) dans le SQL Editor.
+2. Créer le bucket R2 (le même que la bibliothèque, `learnhub-bibliotheque`, suffit)
+   et un jeton **Object Read & Write** (voir `scripts/README.md`).
+3. Enregistrer les secrets et déployer :
+
+```bash
+supabase secrets set R2_ACCOUNT_ID=votre_compte R2_ACCESS_KEY_ID=cle R2_SECRET_ACCESS_KEY=secret
+supabase secrets set R2_BUCKET=learnhub-bibliotheque R2_PUBLIC_BASE=https://pub-xxxx.r2.dev
+supabase functions deploy livre
+```
+
+| Variable | Rôle |
+|---|---|
+| `R2_ACCOUNT_ID` | Identifiant de compte Cloudflare (affiché dans R2) |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Jeton API R2 (Object Read & Write) |
+| `R2_BUCKET` | Bucket de destination (`learnhub-bibliotheque` par défaut) |
+| `R2_PUBLIC_BASE` | URL publique du bucket (r2.dev ou domaine personnalisé) |
+
+Les fichiers sont écrits sous `livres/<espace>/<leçon>.pdf` : une nouvelle
+publication remplace l'ancienne, sans accumuler de doublons.
+
+**Sans secrets R2**, la fonction dépose le PDF dans le bucket Supabase `documents`
+(préfixe `livres/`) : la génération continue de fonctionner, et la réponse indique
+`"stockage":"supabase"`. Dès que les secrets R2 sont présents, les nouveaux livres
+partent sur Cloudflare.
+
+**Sécurité** : la fonction vérifie le JWT, exige un rôle `admin` ou `superadmin`,
+ne lit que les leçons visibles par l'appelant (RLS) et n'écrit que sur une leçon
+qu'il peut modifier. Aucune clé `service_role` n'est utilisée.
+
+**Vérifier le déploiement** (sans exposer de secret) :
+
+```powershell
+curl.exe -s "https://<projet>.supabase.co/functions/v1/livre"
+```
+
+Réponse attendue : `{"ok":true,"service":"learnhub-livre","version":"2026-10-31.1","stockage":"r2","bucket":"learnhub-bibliotheque"}`.

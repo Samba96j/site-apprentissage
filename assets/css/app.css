@@ -604,3 +604,147 @@
         flex: 1 1 auto;
     }
 }
+/* ------------------------------- Livres (PDF) ------------------------------- */
+/* Chaque leçon est publiée sous forme de livre PDF : couverture, carte et lecteur. */
+
+.livre-couverture {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    padding: 0.85rem;
+    border-radius: 12px;
+    background: linear-gradient(150deg, var(--primary) 0%, var(--dark) 55%, var(--secondary) 100%);
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(49, 27, 79, 0.28);
+}
+
+.livre-couverture::after {
+    content: "";
+    position: absolute;
+    inset: 8px 8px 8px 0;
+    border-left: 3px solid rgba(255, 255, 255, 0.35);
+    border-radius: 8px;
+    pointer-events: none;
+}
+
+.livre-couverture-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.livre-couverture.avec-image .livre-couverture-texte {
+    background: linear-gradient(180deg, rgba(15, 8, 28, 0) 0%, rgba(15, 8, 28, 0.86) 55%);
+    margin: -0.85rem;
+    padding: 2.5rem 0.9rem 0.9rem;
+}
+
+.livre-couverture-texte {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.livre-couverture-marque {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    opacity: 0.85;
+}
+
+.livre-couverture-matiere {
+    align-self: flex-start;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: rgba(255, 255, 255, 0.22);
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+}
+
+.livre-couverture-titre {
+    font-size: 1rem;
+    line-height: 1.25;
+    font-weight: 700;
+}
+
+.livre-couverture-meta,
+.livre-couverture-pied {
+    font-size: 0.72rem;
+    opacity: 0.85;
+}
+
+.livre-couverture-pied {
+    margin-top: 0.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    padding-top: 0.35rem;
+}
+
+.livre-carte {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+}
+
+.livre-carte-couverture {
+    flex: 0 0 92px;
+}
+
+.livre-carte-texte {
+    min-width: 0;
+}
+
+.livre-presentation {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+@media (max-width: 767.98px) {
+    .livre-presentation {
+        grid-template-columns: 1fr;
+    }
+
+    .livre-presentation-couverture {
+        max-width: 210px;
+    }
+}
+
+/* Lecteur plein écran du PDF */
+.lecteur-livre {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 76px);
+    background: var(--dark);
+}
+
+.lecteur-barre {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+}
+
+.lecteur-titre {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.lecteur-cadre {
+    flex: 1 1 auto;
+    width: 100%;
+    border: 0;
+    background: #525659;
+}

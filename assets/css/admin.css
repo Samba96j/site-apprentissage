@@ -138,3 +138,24 @@
     text-align: center;
     margin-top: 0.35rem;
 }
+
+/* Aperçu de la couverture du livre dans l'éditeur de leçon */
+.couverture-apercu {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 120px;
+    padding: 0.5rem;
+    border: 1px dashed #ced4da;
+    border-radius: 10px;
+    background: #fbf9fd;
+}
+
+.couverture-apercu img {
+    width: 84px;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 6px 14px rgba(49, 27, 79, 0.24);
+}

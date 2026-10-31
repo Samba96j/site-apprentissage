@@ -21,7 +21,6 @@ window.LearnHubBackend = (function () {
         ressources: 'resources',
         lecons: 'lessons',
         classes: 'classes',
-        seances: 'seances',
         messages: 'messages'
     };
 
@@ -132,6 +131,10 @@ window.LearnHubBackend = (function () {
             supportUrl: row.support_url || '',
             supportNom: row.support_nom || '',
             supportTaille: row.support_taille || '',
+            couvertureUrl: row.couverture_url || '',
+            livreUrl: row.livre_url || '',
+            livreTaille: row.livre_taille || '',
+            livreMaj: row.livre_maj || null,
             contenu: row.contenu || '',
             contenuHtml: row.contenu_html || '',
             cree: row.created_at,
@@ -168,24 +171,6 @@ window.LearnHubBackend = (function () {
         };
     }
 
-    function versSeance(row) {
-        return {
-            id: row.id,
-            espaceId: row.espace_id,
-            titre: row.titre,
-            description: row.description || '',
-            date: row.date,
-            duree: row.duree || 60,
-            publie: row.publie !== false,
-            classeIds: row.classe_ids || [],
-            chapitres: row.chapter_ids || [],
-            lecons: row.lesson_ids || [],
-            exercices: row.exercise_ids || [],
-            cree: row.created_at,
-            maj: row.updated_at
-        };
-    }
-
     function versLigne(cle, item) {
         const espaceId = item.espaceId || (profil && profil.espace_id) || null;
 
@@ -214,6 +199,7 @@ window.LearnHubBackend = (function () {
                 support_url: item.supportUrl || null,
                 support_nom: item.supportNom || null,
                 support_taille: item.supportTaille || null,
+                couverture_url: item.couvertureUrl || null,
                 contenu: item.contenu || '',
                 contenu_html: item.contenuHtml || null
             };
@@ -240,21 +226,6 @@ window.LearnHubBackend = (function () {
                 type: item.type || null,
                 url: item.url,
                 taille: item.taille || null
-            };
-        }
-        if (cle === 'seances') {
-            return {
-                id: item.id,
-                espace_id: espaceId,
-                titre: item.titre,
-                description: item.description || null,
-                date: item.date,
-                duree: item.duree || 60,
-                publie: item.publie !== false,
-                classe_ids: item.classeIds || [],
-                chapter_ids: item.chapitres || [],
-                lesson_ids: item.lecons || [],
-                exercise_ids: item.exercices || []
             };
         }
         if (cle === 'messages') {
@@ -299,7 +270,6 @@ window.LearnHubBackend = (function () {
             client.from('lessons').select('*'),
             client.from('exercises').select('*'),
             client.from('resources').select('*'),
-            client.from('seances').select('*'),
             client.from('attempts').select('*'),
             client.from('messages').select('*'),
             client.from('ia_contenus').select('*')
@@ -315,10 +285,9 @@ window.LearnHubBackend = (function () {
         const leconsRows = reponses[3].data || [];
         const exercicesRows = reponses[4].data || [];
         const ressourcesRows = reponses[5].data || [];
-        const seancesRows = reponses[6].data || [];
-        const attemptsRows = reponses[7].data || [];
-        const messagesRows = reponses[8].data || [];
-        const iaRows = reponses[9].data || [];
+        const attemptsRows = reponses[6].data || [];
+        const messagesRows = reponses[7].data || [];
+        const iaRows = reponses[8].data || [];
 
         espaces = espacesRows;
         utilisateurs = profilsRows.map(versUtilisateur);
@@ -328,7 +297,6 @@ window.LearnHubBackend = (function () {
         cache[cles.lecons] = leconsRows.map(versLecon);
         cache[cles.exercices] = exercicesRows.map(versExercice);
         cache[cles.ressources] = ressourcesRows.map(versRessource);
-        cache[cles.seances] = seancesRows.map(versSeance);
         cache[cles.messages] = messagesRows.map(function (row) {
             return {
                 id: row.id,
@@ -970,6 +938,54 @@ window.LearnHubBackend = (function () {
         return televerserFichier(fichier, 'supports');
     }
 
+    /* ------------------------------- Livre PDF -------------------------------- */
+
+    /**
+     * Demande la fabrication du livre PDF d'une leçon : la fonction Edge met en
+     * page la leçon (couverture + contenu) et dépose le fichier sur Cloudflare R2.
+     */
+    async function genererLivre(leconId) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        if (!leconId) return { ok: false, error: 'Leçon introuvable.' };
+        try {
+            const resultat = await client.functions.invoke('livre', { body: { leconId: leconId } });
+            let corps = resultat.data || null;
+            if (resultat.error) {
+                if (!corps && resultat.error.context && typeof resultat.error.context.json === 'function') {
+                    corps = await resultat.error.context.json().catch(function () { return null; });
+                }
+                if (!corps) {
+                    const statut = resultat.error.status || resultat.error.context?.status;
+                    return {
+                        ok: false,
+                        error: statut === 404
+                            ? 'La fonction « livre » n\'est pas encore déployée sur Supabase (supabase functions deploy livre).'
+                            : 'Génération du livre impossible.'
+                    };
+                }
+            }
+            if (!corps || !corps.ok) {
+                return {
+                    ok: false,
+                    code: (corps && corps.code) || 'indisponible',
+                    error: (corps && corps.error) || 'Génération du livre impossible.'
+                };
+            }
+            // Le cache local reflète immédiatement le nouveau fichier.
+            if (cache && cache[window.LearnHubStore.keys.lecons]) {
+                cache[window.LearnHubStore.keys.lecons].forEach(function (lecon) {
+                    if (lecon.id !== leconId) return;
+                    lecon.livreUrl = corps.url || '';
+                    lecon.livreTaille = corps.taille || '';
+                    lecon.livreMaj = corps.date || new Date().toISOString();
+                });
+            }
+            return { ok: true, url: corps.url, taille: corps.taille, stockage: corps.stockage || '', pages: corps.pages || 0 };
+        } catch (erreur) {
+            return { ok: false, error: 'Génération du livre impossible.' };
+        }
+    }
+
     return {
         disponible: disponible,
         estActif: estActif,
@@ -1008,6 +1024,7 @@ window.LearnHubBackend = (function () {
         effacerAvatar: effacerAvatar,
         televerserSupport: televerserSupport,
         televerserFichier: televerserFichier,
+        genererLivre: genererLivre,
         erreur: function () { return derniereErreur; }
     };
 })();

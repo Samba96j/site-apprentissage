@@ -13,7 +13,6 @@ window.LearnHubStore = (function () {
         ressources: PREFIX + 'ressources',
         settings: PREFIX + 'settings',
         classes: PREFIX + 'classes',
-        seances: PREFIX + 'seances',
         lecons: PREFIX + 'lecons',
         messages: PREFIX + 'messages',
         seeded: PREFIX + 'seeded'
@@ -146,7 +145,6 @@ window.LearnHubStore = (function () {
             write(KEYS.ressources, clone(window.LearnHubData.ressourcesSeed));
             write(KEYS.settings, clone(DEFAULT_SETTINGS));
             write(KEYS.classes, []);
-            write(KEYS.seances, []);
             write(KEYS.lecons, []);
             write(KEYS.messages, []);
             write(KEYS.seeded, SEED_VERSION);
@@ -212,7 +210,6 @@ window.LearnHubStore = (function () {
             write(KEYS.ressources, ressources);
         }
         if (!read(KEYS.classes, null)) write(KEYS.classes, []);
-        if (!read(KEYS.seances, null)) write(KEYS.seances, []);
         if (!read(KEYS.lecons, null)) write(KEYS.lecons, []);
         if (!read(KEYS.messages, null)) write(KEYS.messages, []);
         if (version < SEED_VERSION) amorcerEspacesAdmins();
@@ -414,69 +411,7 @@ window.LearnHubStore = (function () {
             if (window.LearnHubAuth && typeof window.LearnHubAuth.detacherClasse === 'function') {
                 window.LearnHubAuth.detacherClasse(id);
             }
-            const seances = read(KEYS.seances, []).map(function (seance) {
-                return Object.assign({}, seance, {
-                    classeIds: (seance.classeIds || []).filter(function (cid) { return cid !== id; })
-                });
-            });
-            write(KEYS.seances, seances);
             return write(KEYS.classes, liste.filter(function (c) { return c.id !== id; }));
-        },
-        count: function () {
-            return this.miens().length;
-        }
-    };
-
-    /* ---------------------------------- Séances ---------------------------------- */
-
-    const seances = {
-        all: function () {
-            return read(KEYS.seances, []).filter(visible);
-        },
-        miens: function () {
-            const espace = espaceActif();
-            if (!espace) return [];
-            return read(KEYS.seances, []).filter(dansEspaceActif);
-        },
-        get: function (id) {
-            return this.all().find(function (s) { return s.id === id; }) || null;
-        },
-        pourClasse: function (classeId) {
-            if (!classeId) return [];
-            return this.all().filter(function (s) {
-                if (s.publie === false) return false;
-                const cibles = s.classeIds || [];
-                return !cibles.length || cibles.indexOf(classeId) >= 0;
-            });
-        },
-        save: function (data) {
-            const espace = espaceActif();
-            if (!espace) return null;
-            const liste = read(KEYS.seances, []);
-            const index = data.id ? liste.findIndex(function (s) { return s.id === data.id; }) : -1;
-            if (index >= 0 && liste[index].espaceId !== espace) return null;
-            const enregistrement = Object.assign({}, data, {
-                id: data.id || uid('seance'),
-                espaceId: espace,
-                classeIds: Array.isArray(data.classeIds) ? data.classeIds : [],
-                chapitres: Array.isArray(data.chapitres) ? data.chapitres : [],
-                lecons: Array.isArray(data.lecons) ? data.lecons : [],
-                exercices: Array.isArray(data.exercices) ? data.exercices : [],
-                maj: new Date().toISOString()
-            });
-            if (index >= 0) {
-                liste[index] = Object.assign({}, liste[index], enregistrement);
-            } else {
-                enregistrement.cree = new Date().toISOString();
-                liste.push(enregistrement);
-            }
-            return write(KEYS.seances, liste) ? enregistrement : null;
-        },
-        remove: function (id) {
-            const liste = read(KEYS.seances, []);
-            const cible = liste.find(function (s) { return s.id === id; });
-            if (!cible || !dansEspaceActif(cible)) return false;
-            return write(KEYS.seances, liste.filter(function (s) { return s.id !== id; }));
         },
         count: function () {
             return this.miens().length;
@@ -508,6 +443,7 @@ window.LearnHubStore = (function () {
                 espaceId: espace,
                 objectifs: Array.isArray(data.objectifs) ? data.objectifs : [],
                 classeIds: Array.isArray(data.classeIds) ? data.classeIds : [],
+                couvertureUrl: data.couvertureUrl || '',
                 maj: new Date().toISOString()
             });
             if (index >= 0) {
@@ -522,12 +458,6 @@ window.LearnHubStore = (function () {
             const liste = read(KEYS.lecons, []);
             const cible = liste.find(function (l) { return l.id === id; });
             if (!cible || !dansEspaceActif(cible)) return false;
-            const seances = read(KEYS.seances, []).map(function (seance) {
-                return Object.assign({}, seance, {
-                    lecons: (seance.lecons || []).filter(function (lid) { return lid !== id; })
-                });
-            });
-            write(KEYS.seances, seances);
             return write(KEYS.lecons, liste.filter(function (l) { return l.id !== id; }));
         },
         count: function () {
@@ -652,7 +582,7 @@ window.LearnHubStore = (function () {
         const espace = espaceActif();
         if (!espace) return null;
         const resultat = {};
-        [['exercices', KEYS.exercices], ['ressources', KEYS.ressources], ['seances', KEYS.seances], ['lecons', KEYS.lecons]].forEach(function (paire) {
+        [['exercices', KEYS.exercices], ['ressources', KEYS.ressources], ['lecons', KEYS.lecons]].forEach(function (paire) {
             const liste = read(paire[1], []);
             const garde = liste.filter(function (entree) { return entree.espaceId !== espace; });
             resultat[paire[0]] = liste.length - garde.length;
@@ -672,7 +602,6 @@ window.LearnHubStore = (function () {
         ressources: ressources,
         settings: settings,
         classes: classes,
-        seances: seances,
         lecons: lecons,
         messages: messages
     };

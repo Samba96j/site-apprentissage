@@ -179,7 +179,6 @@
                                 '<li><a class="dropdown-item" href="#/lecons"><i class="fas fa-book-open me-2"></i>Leçons</a></li>' +
                                 '<li><a class="dropdown-item" href="#/bibliotheque"><i class="fas fa-book me-2"></i>Bibliothèque</a></li>' +
                                 '<li><a class="dropdown-item" href="#/exercices"><i class="fas fa-gamepad me-2"></i>Exercices</a></li>' +
-                                '<li><a class="dropdown-item" href="#/seances"><i class="fas fa-calendar-days me-2"></i>Séances</a></li>' +
                             '</ul>' +
                         '</li>' +
                         '<li class="nav-item"><a class="nav-link text-nowrap" href="#/ia" data-nav="ia"><i class="fas fa-wand-magic-sparkles me-1"></i>' + NOM_IA + BADGE_IA + '</a></li>' +
@@ -337,7 +336,6 @@
                             '<li><a href="#/bibliotheque">Bibliothèque</a></li>' +
                             '<li><a href="#/exercices">Exercices</a></li>' +
                             '<li><a href="#/ia">' + NOM_IA + ' (IA)</a></li>' +
-                            '<li><a href="#/seances">Mes séances</a></li>' +
                             '<li><a href="#/recherche">Recherche</a></li>' +
                             '<li><a href="#/profil">Ma progression</a></li>' +
                             '<li><a href="#/contact">Contact</a></li>' +
@@ -349,7 +347,6 @@
                             '<li><a href="#/admin">Tableau de bord</a></li>' +
                             '<li><a href="#/admin/classes">Classes</a></li>' +
                             '<li><a href="#/admin/lecons">Leçons</a></li>' +
-                            '<li><a href="#/admin/seances">Séances</a></li>' +
                             '<li><a href="#/admin/exercices">Exercices</a></li>' +
                             '<li><a href="#/admin/ressources">Ressources</a></li>' +
                             '<li><a href="#/admin/bibliotheque">Bibliothèque</a></li>' +
@@ -383,7 +380,7 @@
             '</button>' +
             '<ul class="dropdown-menu dropdown-menu-end">' +
                 '<li><a class="dropdown-item" href="#/profil"><i class="fas fa-chart-line me-2"></i>Ma progression</a></li>' +
-                '<li><a class="dropdown-item" href="#/seances"><i class="fas fa-calendar-days me-2"></i>Mes séances</a></li>' +
+                '<li><a class="dropdown-item" href="#/lecons"><i class="fas fa-book-open me-2"></i>Mes leçons</a></li>' +
                 '<li><a class="dropdown-item" href="#/ia"><i class="fas fa-wand-magic-sparkles me-2"></i>' + NOM_IA + ' (IA)</a></li>' +
                 (user.role === 'admin' ? '<li><a class="dropdown-item" href="#/admin"><i class="fas fa-user-cog me-2"></i>Administration</a></li>' : '') +
                 (user.role === 'superadmin' ? '<li><a class="dropdown-item" href="#/superadmin"><i class="fas fa-shield-halved me-2"></i>Super-administration</a></li>' : '') +
@@ -393,7 +390,7 @@
         '</div>';
     }
 
-    const SECTIONS_APPRENDRE = ['lecons', 'lecon', 'bibliotheque', 'exercices', 'seances'];
+    const SECTIONS_APPRENDRE = ['lecons', 'lecon', 'bibliotheque', 'exercices'];
 
     function majEntete(segments) {
         const zoneAuth = document.getElementById('zone-auth');
@@ -967,18 +964,29 @@
                 const pourMaClasse = matiereClasse && lecon.matiere === matiereClasse;
                 return '<div class="col-md-6 col-xl-4" data-lecon-matiere="' + esc(lecon.matiere || '') + '">' +
                     '<div class="content h-100 d-flex flex-column' + (pourMaClasse ? ' border border-primary border-opacity-25' : '') + '">' +
-                        '<div class="d-flex justify-content-between align-items-start gap-2 mb-2">' +
-                            '<h2 class="h5 mb-0">' + esc(lecon.titre) + '</h2>' +
-                            (matiere ? '<span class="badge bg-primary bg-opacity-10 text-primary">' + esc(matiere.nom) + '</span>' : '') +
+                        '<div class="livre-carte">' +
+                            '<div class="livre-carte-couverture">' + couvertureLivre(lecon) + '</div>' +
+                            '<div class="livre-carte-texte">' +
+                                '<h2 class="h6 mb-1">' + esc(lecon.titre) + '</h2>' +
+                                '<p class="text-muted small mb-1">' +
+                                    (matiere ? esc(matiere.nom) + ' · ' : '') +
+                                    (niveau ? esc(niveau.nom) : 'Tous niveaux') +
+                                '</p>' +
+                                '<p class="text-muted small mb-0">' +
+                                    '<i class="fas fa-clock me-1"></i>' + (lecon.duree || 30) + ' min' +
+                                    (pourMaClasse ? ' · <span class="text-primary">votre classe</span>' : '') +
+                                '</p>' +
+                            '</div>' +
                         '</div>' +
-                        '<p class="text-muted small mb-2">' +
-                            '<i class="fas fa-clock me-1"></i>' + (lecon.duree || 30) + ' min' +
-                            (niveau ? ' · ' + esc(niveau.nom) : ' · Tous niveaux') +
-                            (pourMaClasse ? ' · <span class="text-primary">votre classe</span>' : '') +
-                        '</p>' +
-                        (lecon.resume ? '<p class="mb-3">' + esc(lecon.resume) + '</p>' : '') +
-                        '<a class="btn btn-outline-primary btn-sm mt-auto align-self-start" href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
-                            '<i class="fas fa-book-open me-1"></i>Lire la leçon</a>' +
+                        (lecon.resume ? '<p class="mb-3 mt-2 small">' + esc(lecon.resume) + '</p>' : '') +
+                        '<div class="mt-auto d-flex flex-wrap gap-2">' +
+                            '<a class="btn btn-primary btn-sm" href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
+                                '<i class="fas fa-book-open me-1"></i>Ouvrir le livre</a>' +
+                            (lecon.livreUrl
+                                ? '<a class="btn btn-outline-secondary btn-sm" href="' + esc(lecon.livreUrl) + '" target="_blank" rel="noopener" title="Télécharger le PDF">' +
+                                    '<i class="fas fa-file-pdf"></i></a>'
+                                : '') +
+                        '</div>' +
                     '</div>' +
                 '</div>';
             }).join('');
@@ -1020,11 +1028,75 @@
         };
     }
 
-    function vueLecon(id) {
+    /** Couverture d'un livre : image du professeur, sinon couverture dessinée en CSS. */
+    function couvertureLivre(lecon, options) {
+        const reglages = options || {};
+        const matiere = data.getMatiere(lecon.matiere);
+        const niveau = lecon.niveau ? data.getNiveau(lecon.niveau) : null;
+        const classes = (lecon.classeIds || []).map(function (id) {
+            const classe = store.classes.get(id);
+            return classe ? classe.nom : '';
+        }).filter(Boolean);
+        const badgeMatiere = matiere
+            ? '<span class="livre-couverture-matiere">' + esc(matiere.nom) + '</span>'
+            : '';
+        const image = lecon.couvertureUrl
+            ? '<img class="livre-couverture-image" src="' + esc(lecon.couvertureUrl) + '" alt="Couverture de ' + esc(lecon.titre) + '" loading="lazy">'
+            : '';
+        return '<div class="livre-couverture' + (lecon.couvertureUrl ? ' avec-image' : '') +
+                (reglages.grande ? ' livre-couverture-grande' : '') + '">' +
+            image +
+            '<div class="livre-couverture-texte">' +
+                '<span class="livre-couverture-marque"><i class="fas fa-graduation-cap me-1"></i>LearnHub</span>' +
+                badgeMatiere +
+                '<strong class="livre-couverture-titre">' + esc(lecon.titre) + '</strong>' +
+                '<span class="livre-couverture-meta">' +
+                    (niveau ? esc(niveau.nom) : 'Tous niveaux') +
+                    (classes.length ? ' · ' + esc(classes.join(', ')) : '') +
+                '</span>' +
+                '<span class="livre-couverture-pied"><i class="fas fa-file-pdf me-1"></i>Livre de cours</span>' +
+            '</div>' +
+        '</div>';
+    }
+
+    function vueLecon(id, mode) {
         const lecon = store.lecons.get(id);
         if (!lecon) return vueIntrouvable('Cette leçon n\'existe pas ou n\'est pas accessible depuis votre espace.');
         const matiere = data.getMatiere(lecon.matiere);
         const niveau = lecon.niveau ? data.getNiveau(lecon.niveau) : null;
+        const lecteur = mode === 'lire';
+
+        if (lecteur) {
+            const url = lecon.livreUrl || lecon.supportUrl || '';
+            if (!url) {
+                return {
+                    titre: lecon.titre,
+                    html: '<div class="container py-5"><div class="content text-center">' +
+                        '<i class="fas fa-book fa-3x text-primary mb-3"></i>' +
+                        '<h1 class="h4">Le livre n\'est pas encore disponible</h1>' +
+                        '<p class="text-muted">Votre enseignant n\'a pas encore publié ce cours au format PDF.</p>' +
+                        '<a class="btn btn-primary" href="#/lecon/' + encodeURIComponent(lecon.id) + '">Revenir à la leçon</a>' +
+                    '</div></div>'
+                };
+            }
+            return {
+                titre: 'Lire — ' + lecon.titre,
+                html: '<div class="lecteur-livre">' +
+                    '<div class="lecteur-barre">' +
+                        '<a class="btn btn-sm btn-outline-light" href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
+                            '<i class="fas fa-arrow-left me-1"></i>Quitter la lecture</a>' +
+                        '<span class="lecteur-titre"><i class="fas fa-book-open me-2"></i>' + esc(lecon.titre) + '</span>' +
+                        '<a class="btn btn-sm btn-light" href="' + esc(url) + '" target="_blank" rel="noopener" download>' +
+                            '<i class="fas fa-download me-1"></i>Télécharger</a>' +
+                    '</div>' +
+                    '<iframe class="lecteur-cadre" src="' + esc(url) + '#view=FitH" title="Livre : ' + esc(lecon.titre) + '"></iframe>' +
+                '</div>'
+            };
+        }
+
+        const lienLecture = lecon.livreUrl
+            ? '#/lecon/' + encodeURIComponent(lecon.id) + '/lire'
+            : '';
 
         return {
             titre: lecon.titre,
@@ -1037,34 +1109,48 @@
                     '</ol>' +
                 '</nav>' +
                 '<article class="content">' +
-                    '<h1 class="h3 mb-2">' + esc(lecon.titre) + '</h1>' +
-                    '<p class="text-muted small mb-3">' +
-                        (matiere ? '<span class="badge bg-primary bg-opacity-10 text-primary me-2">' + esc(matiere.nom) + '</span>' : '') +
-                        (niveau ? esc(niveau.nom) : 'Tous niveaux') + ' · ' + (lecon.duree || 30) + ' min' +
-                    '</p>' +
-                    (lecon.resume ? '<p class="lead">' + esc(lecon.resume) + '</p>' : '') +
-                    ((lecon.objectifs || []).length
-                        ? '<div class="alert alert-info py-2"><strong class="d-block mb-1">Objectifs</strong>' +
-                            '<ul class="mb-0">' + lecon.objectifs.map(function (objectif) {
-                                return '<li>' + esc(objectif) + '</li>';
-                            }).join('') + '</ul></div>'
-                        : '') +
-                    (lecon.supportUrl
-                        ? '<div class="support-cours mb-4">' +
-                            '<span class="support-cours-icone"><i class="fas fa-paperclip"></i></span>' +
-                            '<div class="support-cours-texte">' +
-                                '<strong>Support de cours</strong>' +
-                                '<span>' + esc(lecon.supportNom || 'Document joint') +
-                                    (lecon.supportTaille ? ' · ' + esc(lecon.supportTaille) : '') + '</span>' +
+                    '<div class="livre-presentation">' +
+                        '<div class="livre-presentation-couverture">' + couvertureLivre(lecon, { grande: true }) + '</div>' +
+                        '<div class="livre-presentation-texte">' +
+                            '<h1 class="h3 mb-2">' + esc(lecon.titre) + '</h1>' +
+                            '<p class="text-muted small mb-3">' +
+                                (matiere ? '<span class="badge bg-primary bg-opacity-10 text-primary me-2">' + esc(matiere.nom) + '</span>' : '') +
+                                (niveau ? esc(niveau.nom) : 'Tous niveaux') + ' · ' + (lecon.duree || 30) + ' min de lecture' +
+                            '</p>' +
+                            (lecon.resume ? '<p class="lead">' + esc(lecon.resume) + '</p>' : '') +
+                            ((lecon.objectifs || []).length
+                                ? '<div class="alert alert-info py-2"><strong class="d-block mb-1">Objectifs</strong>' +
+                                    '<ul class="mb-0">' + lecon.objectifs.map(function (objectif) {
+                                        return '<li>' + esc(objectif) + '</li>';
+                                    }).join('') + '</ul></div>'
+                                : '') +
+                            '<div class="d-flex flex-wrap gap-2 mb-2">' +
+                                (lienLecture
+                                    ? '<a class="btn btn-primary" href="' + lienLecture + '"><i class="fas fa-book-open me-1"></i>Lire le livre</a>' +
+                                      '<a class="btn btn-outline-primary" href="' + esc(lecon.livreUrl) + '" target="_blank" rel="noopener">' +
+                                        '<i class="fas fa-up-right-from-square me-1"></i>Plein écran</a>' +
+                                      '<a class="btn btn-outline-secondary" href="' + esc(lecon.livreUrl) + '" download>' +
+                                        '<i class="fas fa-download me-1"></i>Télécharger le PDF</a>'
+                                    : '<span class="badge bg-secondary bg-opacity-25 text-dark align-self-center">' +
+                                        '<i class="fas fa-hourglass-half me-1"></i>Livre PDF en préparation</span>') +
                             '</div>' +
-                            '<div class="support-cours-actions">' +
-                                '<a class="btn btn-primary btn-sm" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
-                                    '<i class="fas fa-up-right-from-square me-1"></i>Ouvrir</a>' +
-                                '<a class="btn btn-outline-secondary btn-sm" href="' + esc(lecon.supportUrl) + '" download="' + esc(lecon.supportNom || 'support') + '">' +
-                                    '<i class="fas fa-download me-1"></i>Télécharger</a>' +
-                            '</div>' +
-                          '</div>'
-                        : '') +
+                            (lecon.supportUrl
+                                ? '<div class="support-cours mt-3">' +
+                                    '<span class="support-cours-icone"><i class="fas fa-paperclip"></i></span>' +
+                                    '<div class="support-cours-texte">' +
+                                        '<strong>Support de cours</strong>' +
+                                        '<span>' + esc(lecon.supportNom || 'Document joint') +
+                                            (lecon.supportTaille ? ' · ' + esc(lecon.supportTaille) : '') + '</span>' +
+                                    '</div>' +
+                                    '<div class="support-cours-actions">' +
+                                        '<a class="btn btn-outline-secondary btn-sm" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
+                                            '<i class="fas fa-up-right-from-square me-1"></i>Ouvrir</a>' +
+                                    '</div>' +
+                                  '</div>'
+                                : '') +
+                        '</div>' +
+                    '</div>' +
+                    '<hr>' +
                     '<div class="lecon-contenu">' +
                         (lecon.contenuHtml ? store.nettoyerHtml(lecon.contenuHtml) : texteVersHtml(lecon.contenu)) +
                     '</div>' +
@@ -1072,13 +1158,11 @@
                     '<div class="d-flex flex-wrap gap-2">' +
                         '<a class="btn btn-outline-secondary btn-sm" href="#/lecons"><i class="fas fa-arrow-left me-1"></i>Toutes les leçons</a>' +
                         '<a class="btn btn-outline-primary btn-sm" href="#/exercices"><i class="fas fa-gamepad me-1"></i>S\'entraîner</a>' +
-                        '<a class="btn btn-outline-primary btn-sm" href="#/seances"><i class="fas fa-calendar-days me-1"></i>Mes séances</a>' +
                     '</div>' +
                 '</article>' +
             '</div>'
         };
     }
-
     /* -------------------------------- Bibliothèque -------------------------------- */
 
     const LIBELLES_DOC = { pdf: 'PDF', word: 'Word / Texte', texte: 'Texte', autre: 'Document' };
@@ -1437,7 +1521,7 @@
                 '</div>' +
                 (exoCible
                     ? '<div class="alert alert-info py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">' +
-                        '<span><i class="fas fa-calendar-check me-1"></i>Exercice assigné dans une séance.</span>' +
+                        '<span><i class="fas fa-book-open me-1"></i>Exercice choisi depuis une leçon.</span>' +
                         '<a class="alert-link" href="#/exercices">Voir tous les exercices</a></div>'
                     : '') +
                 (matiereClasse && !exoCible
@@ -1839,7 +1923,12 @@
         const badges = auth.badges(user.username);
         const tentatives = auth.attempts(user.username).slice().sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
         const classe = auth.maClasse();
-        const seances = classe ? store.seances.pourClasse(classe.id) : [];
+        const leconsClasse = classe
+            ? store.lecons.all().filter(function (lecon) {
+                const cibles = lecon.classeIds || [];
+                return !cibles.length || cibles.indexOf(classe.id) >= 0;
+            })
+            : [];
 
         return {
             titre: 'Ma progression',
@@ -1876,9 +1965,9 @@
                         '</div>' +
                         (classe
                             ? '<p class="mb-1"><strong>' + esc(classe.nom) + '</strong></p>' +
-                              '<p class="text-muted small mb-0">' + seances.length + ' séance(s) pour votre classe. ' +
-                                '<a href="#/seances">Consulter mes séances</a></p>'
-                            : '<p class="text-muted small">Vous n\'êtes rattaché à aucune classe. Saisissez le code fourni par votre enseignant pour accéder à ses séances et exercices.</p>' +
+                              '<p class="text-muted small mb-0">' + leconsClasse.length + ' livre(s) de cours pour votre classe. ' +
+                                '<a href="#/lecons">Ouvrir mes livres</a></p>'
+                            : '<p class="text-muted small">Vous n\'êtes rattaché à aucune classe. Saisissez le code fourni par votre enseignant pour accéder à ses livres de cours et exercices.</p>' +
                               '<form class="row g-2 align-items-end" id="form-classe">' +
                                 '<div class="col-sm-6"><label class="form-label" for="code-classe">Code de la classe</label>' +
                                     '<input class="form-control" id="code-classe" maxlength="10" placeholder="ex. AB12CD" autocomplete="off"></div>' +
@@ -1990,7 +2079,7 @@
                 const quitter = racine.querySelector('#quitter-classe');
                 if (quitter) {
                     quitter.addEventListener('click', async function () {
-                        if (!window.confirm('Quitter votre classe ? Vous n\'aurez plus accès à ses séances.')) return;
+                        if (!window.confirm('Quitter votre classe ? Vous n\'aurez plus accès à ses livres de cours.')) return;
                         const resultat = await auth.quitterClasse();
                         if (!resultat.ok) {
                             toast(resultat.error, 'danger');
@@ -2001,121 +2090,6 @@
                     });
                 }
             }
-        };
-    }
-
-    function vueSeances() {
-        const user = auth.current();
-        if (!user) {
-            return {
-                titre: 'Mes séances',
-                html: '<div class="container py-4"><div class="alert alert-info mb-0">' +
-                    'Connectez-vous pour consulter les séances de votre classe. ' +
-                    '<a href="#/connexion?next=seances" class="alert-link">Se connecter</a>' +
-                '</div></div>'
-            };
-        }
-
-        const classe = auth.maClasse();
-        const toutes = classe ? store.seances.pourClasse(classe.id) : [];
-        const seances = toutes.slice().sort(function (a, b) {
-            return new Date(b.date || 0) - new Date(a.date || 0);
-        });
-        const aujourdhui = new Date();
-        aujourdhui.setHours(0, 0, 0, 0);
-
-        function scoreExercice(exerciceId) {
-            const essais = auth.attempts(user.username).filter(function (t) { return t.exerciceId === exerciceId; });
-            if (!essais.length) return null;
-            return essais.reduce(function (acc, t) {
-                const ratio = t.total > 0 ? Math.round((t.score / t.total) * 100) : 0;
-                return Math.max(acc, ratio);
-            }, 0);
-        }
-
-        const cartes = seances.map(function (seance) {
-            const exercices = (seance.exercices || []).map(function (id) {
-                const exercice = store.exercices.get(id);
-                return exercice ? { id: id, titre: exercice.titre, type: exercice.type } : null;
-            }).filter(Boolean);
-            const chapitres = (seance.chapitres || []).map(function (id) { return data.getChapitre(id); }).filter(Boolean);
-            const lecons = (seance.lecons || []).map(function (id) { return store.lecons.get(id); }).filter(Boolean);
-            const faits = exercices.filter(function (ex) { return scoreExercice(ex.id) !== null; }).length;
-            const moyenne = exercices.length
-                ? Math.round(exercices.reduce(function (acc, ex) {
-                    const score = scoreExercice(ex.id);
-                    return acc + (score === null ? 0 : score);
-                }, 0) / exercices.length)
-                : 0;
-            const date = seance.date ? new Date(seance.date) : null;
-            const passee = date && date < aujourdhui;
-
-            return '<div class="content mb-3">' +
-                '<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">' +
-                    '<div>' +
-                        '<h2 class="h5 mb-1">' + esc(seance.titre) + '</h2>' +
-                        '<p class="text-muted small mb-0"><i class="fas fa-calendar-day me-1"></i>' +
-                            (date ? date.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'Date à préciser') +
-                            ' · ' + (seance.duree || 60) + ' min</p>' +
-                    '</div>' +
-                    '<span class="badge ' + (passee ? 'bg-secondary' : 'bg-success') + '">' + (passee ? 'Passée' : 'À venir') + '</span>' +
-                '</div>' +
-                (seance.description ? '<p class="mb-3">' + esc(seance.description) + '</p>' : '') +
-                (chapitres.length
-                    ? '<h3 class="h6">Chapitres à revoir</h3>' +
-                      '<ul class="list-unstyled mb-3">' + chapitres.map(function (chapitre) {
-                        return '<li class="border-bottom py-1"><a href="#/chapitre/' + esc(chapitre.id) + '">' +
-                            '<i class="fas fa-book-open me-1 text-primary"></i>' + esc(chapitre.titre) + '</a>' +
-                            '<span class="text-muted small ms-2">' + esc(chapitre.matiereNom || '') + '</span></li>';
-                      }).join('') + '</ul>'
-                    : '') +
-                (lecons.length
-                    ? '<h3 class="h6">Leçons à étudier</h3>' +
-                      '<ul class="list-unstyled mb-3">' + lecons.map(function (lecon) {
-                        const matiere = data.getMatiere(lecon.matiere);
-                        return '<li class="border-bottom py-1"><a href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
-                            '<i class="fas fa-book-open me-1 text-primary"></i>' + esc(lecon.titre) + '</a>' +
-                            (matiere ? '<span class="text-muted small ms-2">' + esc(matiere.nom) + '</span>' : '') + '</li>';
-                      }).join('') + '</ul>'
-                    : '') +
-                (exercices.length
-                    ? '<h3 class="h6">Exercices de la séance</h3>' +
-                      '<div class="d-flex flex-wrap gap-2 mb-3">' + exercices.map(function (exercice) {
-                        const score = scoreExercice(exercice.id);
-                        return '<a class="btn btn-sm ' + (score === null ? 'btn-outline-primary' : 'btn-success') + '" href="#/exercices?exo=' + encodeURIComponent(exercice.id) + '">' +
-                            '<i class="fas fa-gamepad me-1"></i>' + esc(exercice.titre) +
-                            (score === null ? '' : ' <span class="badge bg-light text-dark ms-1">' + score + ' %</span>') + '</a>';
-                      }).join('') + '</div>' +
-                      '<div class="d-flex justify-content-between small text-muted mb-1">' +
-                        '<span>Exercices réalisés : ' + faits + '/' + exercices.length + '</span>' +
-                        '<span>Moyenne : ' + (faits ? moyenne + ' %' : '—') + '</span>' +
-                      '</div>' +
-                      '<div class="progress" style="height:8px"><div class="progress-bar bg-success" style="width:' +
-                        (exercices.length ? Math.round((faits / exercices.length) * 100) : 0) + '%"></div></div>'
-                    : '') +
-            '</div>';
-        });
-
-        return {
-            titre: 'Mes séances',
-            html: '<div class="container py-4">' +
-                '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">' +
-                    '<div>' +
-                        '<h1 class="h3 mb-1">Mes séances</h1>' +
-                        '<p class="text-muted mb-0">' +
-                            (classe
-                                ? 'Classe ' + esc(classe.nom)
-                                : 'Aucune classe rejointe') +
-                        '</p>' +
-                    '</div>' +
-                    '<a class="btn btn-outline-primary btn-sm" href="#/profil"><i class="fas fa-users-rectangle me-1"></i>Ma classe</a>' +
-                '</div>' +
-                (!classe
-                    ? '<div class="alert alert-info">Rejoignez une classe depuis <a href="#/profil" class="alert-link">Ma progression</a> avec le code fourni par votre enseignant.</div>'
-                    : (!cartes.length
-                        ? '<div class="content text-muted"><i class="fas fa-calendar-xmark me-2"></i>Aucune séance programmée pour le moment.</div>'
-                        : cartes.join(''))) +
-            '</div>'
         };
     }
 
@@ -2587,7 +2561,7 @@
         const totalAdmins = comptes.filter(function (c) { return c.role === 'admin'; }).length;
         const totalSupers = comptes.filter(function (c) { return c.role === 'superadmin'; }).length;
         const totalClasses = store.classes.all().length;
-        const totalSeances = store.seances.all().length;
+        const totalLivres = store.lecons.all().filter(function (lecon) { return !!lecon.livreUrl; }).length;
         const messages = store.messages.all().slice().sort(function (a, b) {
             return new Date(b.date) - new Date(a.date);
         });
@@ -2706,7 +2680,7 @@
                 '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">' +
                     '<div>' +
                         '<h1 class="h3 mb-1"><i class="fas fa-shield-halved me-2"></i>Super-administration</h1>' +
-                        '<p class="text-muted mb-0">Tous les comptes, espaces, classes et séances de la plateforme.</p>' +
+                        '<p class="text-muted mb-0">Tous les comptes, espaces, classes et livres de la plateforme.</p>' +
                     '</div>' +
                     '<button class="btn btn-outline-primary btn-sm" id="export-comptes"><i class="fas fa-file-csv me-1"></i>Exporter en CSV</button>' +
                 '</div>' +
@@ -2748,7 +2722,7 @@
                 '</div>' +
                 '<div class="content mb-4">' +
                     '<h2 class="h5 mb-3"><i class="fas fa-user-plus me-2"></i>Créer un compte</h2>' +
-                    '<p class="text-muted small">' + totalClasses + ' classe(s) et ' + totalSeances + ' séance(s) sur la plateforme.</p>' +
+                    '<p class="text-muted small">' + totalClasses + ' classe(s) et ' + totalLivres + ' livre(s) PDF sur la plateforme.</p>' +
                     '<form class="row g-3 align-items-end" id="form-compte">' +
                         '<div class="col-md-3"><label class="form-label" for="compte-username">Nom d\'utilisateur</label>' +
                             '<input class="form-control" id="compte-username" required minlength="3" autocomplete="off"></div>' +
@@ -2983,7 +2957,6 @@
         { slug: 'dashboard', titre: 'Tableau de bord', icone: 'fa-tachometer-alt' },
         { slug: 'classes', titre: 'Classes', icone: 'fa-users-rectangle' },
         { slug: 'lecons', titre: 'Leçons', icone: 'fa-book-open' },
-        { slug: 'seances', titre: 'Séances', icone: 'fa-calendar-days' },
         { slug: 'exercices', titre: 'Exercices', icone: 'fa-tasks' },
         { slug: 'ressources', titre: 'Ressources', icone: 'fa-file-pdf' },
         { slug: 'bibliotheque', titre: 'Bibliothèque', icone: 'fa-book' },
@@ -3067,11 +3040,10 @@
             case 'chapitre': return vueChapitre(segments[1]);
             case 'cours': return vueCours(segments[1], segments[2]);
             case 'lecons': return vueLecons();
-            case 'lecon': return vueLecon(segments[1]);
+            case 'lecon': return vueLecon(segments[1], segments[2]);
             case 'bibliotheque': return vueBibliotheque(parametres);
             case 'contact': return vueContact();
             case 'exercices': return vueExercices(parametres);
-            case 'seances': return vueSeances();
             case 'recherche': return vueRecherche(parametres);
             case 'connexion': return vueConnexion(parametres);
             case 'profil': return vueProfil();

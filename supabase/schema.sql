@@ -8,10 +8,9 @@
 --   espaces    : espace de travail d'un enseignant (propriétaire)
 --   profiles   : compte (élève, enseignant/admin, super-admin), lié à auth.users
 --   classes    : classe d'un espace, rejointe par un code
---   lessons    : leçons rédigées par un enseignant
+--   lessons    : leçons rédigées par un enseignant (livre PDF + couverture)
 --   exercises  : exercices (quiz, associations, textes à trous)
 --   resources  : liens et documents
---   seances    : séances planifiées
 --   attempts   : résultats des élèves
 --   messages   : messages du formulaire de contact
 --
@@ -73,6 +72,14 @@ create table if not exists public.lessons (
     objectifs text[] not null default '{}',
     contenu text not null,
     contenu_html text,
+    support_url text,
+    support_nom text,
+    support_taille text,
+    classe_ids text[] not null default '{}',
+    couverture_url text,
+    livre_url text,
+    livre_taille text,
+    livre_maj timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
@@ -101,44 +108,6 @@ create table if not exists public.resources (
     taille text,
     created_at timestamptz not null default now()
 );
-
-create table if not exists public.seances (
-    id text primary key,
-    espace_id uuid not null references public.espaces(id) on delete cascade,
-    titre text not null,
-    description text,
-    date date not null,
-    duree int not null default 60,
-    publie boolean not null default true,
-    classe_ids text[] not null default '{}',
-    chapter_ids text[] not null default '{}',
-    lesson_ids text[] not null default '{}',
-    exercise_ids text[] not null default '{}',
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
-);
-
--- Migration : les premières versions du schéma utilisaient uuid[] pour ces
--- colonnes. Les identifiants de contenu sont textuels, on convertit donc.
-do $$
-declare
-    col text;
-begin
-    foreach col in array array['classe_ids', 'chapter_ids', 'lesson_ids', 'exercise_ids'] loop
-        if exists (
-            select 1 from information_schema.columns
-            where table_schema = 'public'
-              and table_name = 'seances'
-              and column_name = col
-              and udt_name <> '_text'
-        ) then
-            execute format('alter table public.seances alter column %I drop default', col);
-            execute format('alter table public.seances alter column %I type text[] using %I::text[]', col, col);
-            execute format('alter table public.seances alter column %I set default ''{}''::text[]', col);
-        end if;
-    end loop;
-end;
-$$;
 
 create table if not exists public.attempts (
     id text primary key,
@@ -202,7 +171,6 @@ create index if not exists idx_classes_espace on public.classes (espace_id);
 create index if not exists idx_lessons_espace on public.lessons (espace_id);
 create index if not exists idx_exercises_espace on public.exercises (espace_id);
 create index if not exists idx_resources_espace on public.resources (espace_id);
-create index if not exists idx_seances_espace on public.seances (espace_id);
 create index if not exists idx_attempts_user on public.attempts (user_id);
 create index if not exists idx_attempts_exercise on public.attempts (exercise_id);
 
@@ -465,7 +433,6 @@ alter table public.classes enable row level security;
 alter table public.lessons enable row level security;
 alter table public.exercises enable row level security;
 alter table public.resources enable row level security;
-alter table public.seances enable row level security;
 alter table public.attempts enable row level security;
 alter table public.messages enable row level security;
 
@@ -521,7 +488,7 @@ create policy classes_write on public.classes
         or (public.mon_role() = 'admin' and espace_id = public.mon_espace())
     );
 
--- Contenus (leçons, exercices, ressources, séances) ---------------------------
+-- Contenus (leçons, exercices, ressources) ------------------------------------
 drop policy if exists lessons_select on public.lessons;
 create policy lessons_select on public.lessons
     for select using (espace_id = public.mon_espace() or public.mon_role() = 'superadmin');
@@ -558,21 +525,6 @@ create policy resources_select on public.resources
 
 drop policy if exists resources_write on public.resources;
 create policy resources_write on public.resources
-    for all using (
-        public.mon_role() = 'superadmin'
-        or (public.mon_role() = 'admin' and espace_id = public.mon_espace())
-    )
-    with check (
-        public.mon_role() = 'superadmin'
-        or (public.mon_role() = 'admin' and espace_id = public.mon_espace())
-    );
-
-drop policy if exists seances_select on public.seances;
-create policy seances_select on public.seances
-    for select using (espace_id = public.mon_espace() or public.mon_role() = 'superadmin');
-
-drop policy if exists seances_write on public.seances;
-create policy seances_write on public.seances
     for all using (
         public.mon_role() = 'superadmin'
         or (public.mon_role() = 'admin' and espace_id = public.mon_espace())

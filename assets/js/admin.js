@@ -223,24 +223,18 @@ window.LearnHubAdmin = (function () {
         const exercices = window.LearnHubStore.exercices.miens();
         const ressources = window.LearnHubStore.ressources.miens();
         const classes = window.LearnHubStore.classes.miens();
-        const seances = window.LearnHubStore.seances.miens();
         const lecons = window.LearnHubStore.lecons.miens();
         const eleves = elevesEspace();
         const tentatives = tentativesEspace();
         const actifs = exercices.filter(function (ex) { return ex.actif !== false; });
         const activite = tentatives.slice(0, 6);
-        const aujourdhui = new Date();
-        aujourdhui.setHours(0, 0, 0, 0);
-        const prochaines = seances
-            .filter(function (s) { return s.date && new Date(s.date) >= aujourdhui; })
-            .sort(function (a, b) { return new Date(a.date) - new Date(b.date); })
-            .slice(0, 4);
+        const livres = lecons.filter(function (lecon) { return !!lecon.livreUrl; });
 
         racine.innerHTML =
             '<div class="row g-3 mb-4">' +
                 carte('bg-primary', 'fa-tasks', 'Exercices actifs', actifs.length, exercices.length + ' dans mon espace') +
                 carte('bg-success', 'fa-users', 'Mes élèves', eleves.length, classes.length + ' classe(s)') +
-                carte('bg-warning', 'fa-calendar-days', 'Séances', seances.length, prochaines.length + ' à venir') +
+                carte('bg-warning', 'fa-book', 'Livres publiés', livres.length, lecons.length + ' leçon(s) au total') +
                 carte('bg-info', 'fa-chart-simple', 'Tentatives', tentatives.length, 'réalisées par mes élèves') +
             '</div>' +
             '<div class="row g-4">' +
@@ -263,7 +257,7 @@ window.LearnHubAdmin = (function () {
                     '<div class="admin-panel h-100">' +
                         '<h4 class="mb-3"><i class="fas fa-bolt me-2"></i>Actions rapides</h4>' +
                         '<div class="d-grid gap-2">' +
-                            '<a class="btn btn-outline-primary" href="#/admin/seances"><i class="fas fa-calendar-plus me-1"></i>Planifier une séance</a>' +
+                            '<a class="btn btn-outline-primary" href="#/admin/lecons"><i class="fas fa-book-open me-1"></i>Rédiger une leçon</a>' +
                             '<a class="btn btn-outline-primary" href="#/admin/classes"><i class="fas fa-users-rectangle me-1"></i>Créer une classe</a>' +
                             '<a class="btn btn-outline-secondary" href="#/admin/exercices"><i class="fas fa-plus me-1"></i>Créer un exercice</a>' +
                             '<a class="btn btn-outline-secondary" href="#/admin/statistiques"><i class="fas fa-chart-bar me-1"></i>Consulter les statistiques</a>' +
@@ -281,17 +275,7 @@ window.LearnHubAdmin = (function () {
                         '<p class="text-muted small mb-0">' + lecons.length + ' leçon(s), ' + exercices.length + ' exercice(s) et ' + ressources.length + ' ressource(s) dans mon espace.</p>' +
                     '</div>' +
                 '</div>' +
-            '</div>' +
-            (prochaines.length
-                ? '<div class="admin-panel mt-4"><h4 class="mb-3"><i class="fas fa-calendar-check me-2"></i>Prochaines séances</h4>' +
-                    '<div class="list-group">' + prochaines.map(function (s) {
-                        return '<div class="list-group-item d-flex justify-content-between align-items-center">' +
-                            '<div><div class="fw-semibold">' + esc(s.titre) + '</div>' +
-                            '<small class="text-muted">' + formaterDate(s.date) + ' · ' + (s.duree || 60) + ' min · ' +
-                            esc((s.classeIds || []).map(nomClasse).join(', ') || 'Toutes mes classes') + '</small></div>' +
-                            '<a class="btn btn-sm btn-outline-primary" href="#/admin/seances">Ouvrir</a></div>';
-                    }).join('') + '</div></div>'
-                : '');
+            '</div>';
     }
 
     function carte(couleur, icone, titre, valeur, sousTitre) {
@@ -1013,12 +997,12 @@ window.LearnHubAdmin = (function () {
                 ? '<div class="admin-panel border border-success">' +
                     '<h4 class="mb-2 text-success"><i class="fas fa-cloud me-2"></i>Backend Supabase actif</h4>' +
                     '<p class="small mb-1">Données synchronisées avec <code>' + esc(window.LearnHubConfig.supabaseUrl) + '</code>.</p>' +
-                    '<p class="small text-muted mb-0">Comptes, classes, leçons, exercices, séances et résultats sont partagés entre appareils. La gestion des comptes (création, rôle, suppression) est réservée au super-administrateur.</p>' +
+                    '<p class="small text-muted mb-0">Comptes, classes, leçons, exercices et résultats sont partagés entre appareils. La gestion des comptes (création, rôle, suppression) est réservée au super-administrateur.</p>' +
                   '</div>'
                 : '') +
             '<div class="admin-panel">' +
                 '<h4 class="mb-3"><i class="fas fa-door-open me-2"></i>Mon espace</h4>' +
-                '<p class="text-muted small">Chaque administrateur travaille dans son propre espace : exercices, ressources, classes et séances sont cloisonnés.</p>' +
+                '<p class="text-muted small">Chaque administrateur travaille dans son propre espace : exercices, ressources, classes et leçons sont cloisonnés.</p>' +
                 '<div class="row g-3 align-items-end">' +
                     '<div class="col-md-8"><label class="form-label" for="espace-nom">Nom de mon espace</label>' +
                         '<input type="text" class="form-control" id="espace-nom" value="' + esc(espace ? espace.nom : '') + '"></div>' +
@@ -1112,7 +1096,7 @@ window.LearnHubAdmin = (function () {
         });
 
         racine.querySelector('#vider-espace').addEventListener('click', function () {
-            if (!window.confirm('Supprimer tous vos exercices, leçons, ressources et séances ? Vos classes et les comptes élèves sont conservés.')) return;
+            if (!window.confirm('Supprimer tous vos exercices, leçons et ressources ? Vos classes et les comptes élèves sont conservés.')) return;
             const resultat = window.LearnHubStore.viderEspace();
             if (!resultat) {
                 message(zoneMessage, 'Aucun espace actif.', 'danger');
@@ -1120,7 +1104,7 @@ window.LearnHubAdmin = (function () {
             }
             message(
                 zoneMessage,
-                'Espace vidé : ' + resultat.exercices + ' exercice(s), ' + resultat.lecons + ' leçon(s), ' + resultat.ressources + ' ressource(s) et ' + resultat.seances + ' séance(s) supprimés.',
+                'Espace vidé : ' + resultat.exercices + ' exercice(s), ' + resultat.lecons + ' leçon(s) et ' + resultat.ressources + ' ressource(s) supprimés.',
                 'success'
             );
         });
@@ -1162,19 +1146,14 @@ window.LearnHubAdmin = (function () {
         function rafraichir() {
             const classes = window.LearnHubStore.classes.miens();
             if (!classes.length) {
-                liste.innerHTML = '<p class="text-muted mb-0">Vous n\'avez encore aucune classe. Créez-en une pour organiser vos séances et suivre vos élèves.</p>';
+                liste.innerHTML = '<p class="text-muted mb-0">Vous n\'avez encore aucune classe. Créez-en une pour organiser vos leçons et suivre vos élèves.</p>';
                 return;
             }
-            const seances = window.LearnHubStore.seances.miens();
             liste.innerHTML =
                 '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
-                    '<thead><tr><th>Classe</th><th>Matière</th><th>Niveau</th><th>Code d\'inscription</th><th>Élèves</th><th>Séances</th><th class="text-end">Actions</th></tr></thead>' +
+                    '<thead><tr><th>Classe</th><th>Matière</th><th>Niveau</th><th>Code d\'inscription</th><th>Élèves</th><th class="text-end">Actions</th></tr></thead>' +
                     '<tbody>' + classes.map(function (classe) {
                         const membres = window.LearnHubAuth.membresClasse(classe.id);
-                        const nombreSeances = seances.filter(function (s) {
-                            const cibles = s.classeIds || [];
-                            return !cibles.length || cibles.indexOf(classe.id) >= 0;
-                        }).length;
                         const niveau = classe.niveau ? window.LearnHubData.getNiveau(classe.niveau) : null;
                         const matiere = classe.matiere ? window.LearnHubData.getMatiere(classe.matiere) : null;
                         return '<tr>' +
@@ -1187,7 +1166,6 @@ window.LearnHubAdmin = (function () {
                             '<td><span class="badge bg-primary me-1">' + esc(classe.code) + '</span>' +
                                 '<button class="btn btn-sm btn-outline-secondary" data-action="copier" data-id="' + esc(classe.id) + '" title="Copier le code"><i class="fas fa-copy"></i></button></td>' +
                             '<td>' + membres.length + '</td>' +
-                            '<td>' + nombreSeances + '</td>' +
                             '<td class="text-end text-nowrap">' +
                                 '<button class="btn btn-sm btn-outline-secondary me-1" data-action="membres" data-id="' + esc(classe.id) + '" title="Voir les élèves"><i class="fas fa-user-group"></i></button>' +
                                 '<button class="btn btn-sm btn-outline-success me-1" data-action="export" data-id="' + esc(classe.id) + '" title="Exporter les comptes des élèves (CSV)" ' + (membres.length ? '' : 'disabled') + '><i class="fas fa-file-csv"></i></button>' +
@@ -1386,261 +1364,6 @@ window.LearnHubAdmin = (function () {
         rafraichir();
     }
 
-    /* ---------------------------------- Séances ---------------------------------- */
-
-    function renderSeances(racine) {
-        const classes = window.LearnHubStore.classes.miens();
-        racine.innerHTML =
-            '<div id="admin-message" class="d-none"></div>' +
-            '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
-                '<h2 class="mb-0"><i class="fas fa-calendar-days me-2"></i>Mes séances</h2>' +
-                '<button class="btn btn-primary btn-sm" id="nouvelle-seance"><i class="fas fa-plus me-1"></i>Nouvelle séance</button>' +
-            '</div>' +
-            '<p class="text-muted small">Une séance rassemble des chapitres et des exercices pour une ou plusieurs de vos classes, à une date donnée.</p>' +
-            (classes.length
-                ? ''
-                : '<div class="alert alert-warning py-2"><i class="fas fa-triangle-exclamation me-1"></i>Aucune classe pour l\'instant : ' +
-                    '<a href="#/admin/classes" class="alert-link">créez une classe</a> pour cibler des élèves.</div>') +
-            '<div id="editeur-seance" class="d-none"></div>' +
-            '<div class="admin-panel"><div id="liste-seances"></div></div>' +
-            '<div id="suivi-seance"></div>';
-
-        const zoneMessage = racine.querySelector('#admin-message');
-        const editeur = racine.querySelector('#editeur-seance');
-        const liste = racine.querySelector('#liste-seances');
-        const zoneSuivi = racine.querySelector('#suivi-seance');
-
-        function trier(listeSeances) {
-            return listeSeances.slice().sort(function (a, b) {
-                return new Date(b.date || 0) - new Date(a.date || 0);
-            });
-        }
-
-        function rafraichir() {
-            const seances = trier(window.LearnHubStore.seances.miens());
-            if (!seances.length) {
-                liste.innerHTML = '<p class="text-muted mb-0">Aucune séance planifiée. Créez votre première séance pour organiser un cours ou une série d\'exercices.</p>';
-                return;
-            }
-            liste.innerHTML =
-                '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
-                    '<thead><tr><th>Date</th><th>Séance</th><th>Classes</th><th>Contenu</th><th>Statut</th><th class="text-end">Actions</th></tr></thead>' +
-                    '<tbody>' + seances.map(function (seance) {
-                        const cibles = seance.classeIds || [];
-                        const chapitres = seance.chapitres || [];
-                        const lecons = seance.lecons || [];
-                        const exercices = seance.exercices || [];
-                        return '<tr>' +
-                            '<td class="text-nowrap small">' + formaterDate(seance.date) +
-                                '<div class="text-muted">' + (seance.duree || 60) + ' min</div></td>' +
-                            '<td class="fw-semibold">' + esc(seance.titre) +
-                                (seance.description ? '<div class="small text-muted fw-normal">' + esc(seance.description) + '</div>' : '') + '</td>' +
-                            '<td class="small">' + esc(cibles.length ? cibles.map(nomClasse).join(', ') : 'Toutes mes classes') + '</td>' +
-                            '<td class="small">' + chapitres.length + ' chapitre(s)<br>' + lecons.length + ' leçon(s)<br>' + exercices.length + ' exercice(s)</td>' +
-                            '<td>' + (seance.publie === false
-                                ? '<span class="badge bg-secondary">Brouillon</span>'
-                                : '<span class="badge bg-success">Publiée</span>') + '</td>' +
-                            '<td class="text-end text-nowrap">' +
-                                '<button class="btn btn-sm btn-outline-primary me-1" data-action="suivi" data-id="' + esc(seance.id) + '" title="Suivi des résultats"><i class="fas fa-chart-line"></i></button>' +
-                                '<button class="btn btn-sm btn-outline-secondary me-1" data-action="editer" data-id="' + esc(seance.id) + '" title="Modifier"><i class="fas fa-edit"></i></button>' +
-                                '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-id="' + esc(seance.id) + '" title="Supprimer"><i class="fas fa-trash"></i></button>' +
-                            '</td>' +
-                        '</tr>';
-                    }).join('') + '</tbody>' +
-                '</table></div>';
-        }
-
-        function chapitresOptions(selection) {
-            return window.LearnHubData.matieres.map(function (matiere) {
-                return '<optgroup label="' + esc(matiere.nom) + '">' + matiere.chapitres.map(function (chapitre) {
-                    const actif = selection.indexOf(chapitre.id) >= 0 ? ' selected' : '';
-                    return '<option value="' + esc(chapitre.id) + '"' + actif + '>' + esc(chapitre.titre) + '</option>';
-                }).join('') + '</optgroup>';
-            }).join('');
-        }
-
-        function ouvrirEditeur(seance) {
-            const exercices = window.LearnHubStore.exercices.miens();
-            const lecons = window.LearnHubStore.lecons.miens();
-            const selectionClasses = seance ? seance.classeIds || [] : [];
-            const selectionChapitres = seance ? seance.chapitres || [] : [];
-            const selectionLecons = seance ? seance.lecons || [] : [];
-            const selectionExercices = seance ? seance.exercices || [] : [];
-            editeur.classList.remove('d-none');
-            editeur.innerHTML =
-                '<form class="admin-panel border border-primary" id="form-seance">' +
-                    '<div class="d-flex justify-content-between align-items-center mb-3">' +
-                        '<h4 class="mb-0">' + (seance ? 'Modifier la séance' : 'Nouvelle séance') + '</h4>' +
-                        '<button type="button" class="btn btn-sm btn-outline-secondary" id="fermer-seance"><i class="fas fa-xmark"></i></button>' +
-                    '</div>' +
-                    '<div class="row g-3 mb-3">' +
-                        '<div class="col-md-6"><label class="form-label" for="seance-titre">Titre</label>' +
-                            '<input type="text" class="form-control" id="seance-titre" required placeholder="ex. Révisions Pythagore" value="' + esc(seance ? seance.titre : '') + '"></div>' +
-                        '<div class="col-md-3"><label class="form-label" for="seance-date">Date</label>' +
-                            '<input type="date" class="form-control" id="seance-date" required value="' + esc(seance && seance.date ? seance.date : '') + '"></div>' +
-                        '<div class="col-md-3"><label class="form-label" for="seance-duree">Durée (minutes)</label>' +
-                            '<input type="number" min="5" max="480" step="5" class="form-control" id="seance-duree" value="' + (seance && seance.duree ? seance.duree : 60) + '"></div>' +
-                    '</div>' +
-                    '<div class="mb-3"><label class="form-label" for="seance-description">Consignes (facultatives)</label>' +
-                        '<textarea class="form-control" id="seance-description" rows="2">' + esc(seance ? seance.description || '' : '') + '</textarea></div>' +
-                    '<div class="row g-3">' +
-                        '<div class="col-md-3"><label class="form-label d-block">Classes concernées</label>' +
-                            (classes.length
-                                ? '<div class="border rounded p-2" style="max-height:220px;overflow:auto">' + classes.map(function (classe) {
-                                    const coche = selectionClasses.indexOf(classe.id) >= 0 ? ' checked' : '';
-                                    return '<div class="form-check"><input class="form-check-input classe-seance" type="checkbox" value="' + esc(classe.id) + '" id="cl-' + esc(classe.id) + '"' + coche + '>' +
-                                        '<label class="form-check-label" for="cl-' + esc(classe.id) + '">' + esc(classe.nom) + '</label></div>';
-                                }).join('') + '</div>' +
-                                  '<div class="form-text">Aucune case cochée = toutes mes classes.</div>'
-                                : '<p class="text-muted small mb-0">Créez d\'abord une classe.</p>') +
-                        '</div>' +
-                        '<div class="col-md-3"><label class="form-label" for="seance-chapitres">Chapitres du site</label>' +
-                            '<select class="form-select" id="seance-chapitres" multiple size="8">' + chapitresOptions(selectionChapitres) + '</select>' +
-                            '<div class="form-text">Ctrl/Cmd + clic pour plusieurs chapitres.</div></div>' +
-                        '<div class="col-md-3"><label class="form-label d-block">Mes leçons</label>' +
-                            (lecons.length
-                                ? '<div class="border rounded p-2" style="max-height:220px;overflow:auto">' + lecons.map(function (lecon) {
-                                    const coche = selectionLecons.indexOf(lecon.id) >= 0 ? ' checked' : '';
-                                    return '<div class="form-check"><input class="form-check-input lecon-seance" type="checkbox" value="' + esc(lecon.id) + '" id="le-' + esc(lecon.id) + '"' + coche + '>' +
-                                        '<label class="form-check-label" for="le-' + esc(lecon.id) + '">' + esc(lecon.titre) + '</label></div>';
-                                }).join('') + '</div>'
-                                : '<p class="text-muted small mb-0">Aucune leçon : créez-en une depuis l\'onglet « Leçons ».</p>') +
-                        '</div>' +
-                        '<div class="col-md-3"><label class="form-label d-block">Exercices assignés</label>' +
-                            (exercices.length
-                                ? '<div class="border rounded p-2" style="max-height:220px;overflow:auto">' + exercices.map(function (exercice) {
-                                    const coche = selectionExercices.indexOf(exercice.id) >= 0 ? ' checked' : '';
-                                    return '<div class="form-check"><input class="form-check-input exercice-seance" type="checkbox" value="' + esc(exercice.id) + '" id="ex-' + esc(exercice.id) + '"' + coche + '>' +
-                                        '<label class="form-check-label" for="ex-' + esc(exercice.id) + '">' + esc(exercice.titre) +
-                                        ' <span class="text-muted small">(' + esc(LIBELLES_TYPES[exercice.type] || exercice.type) + ')</span></label></div>';
-                                }).join('') + '</div>'
-                                : '<p class="text-muted small mb-0">Aucun exercice dans votre espace : créez-en un depuis l\'onglet « Exercices ».</p>') +
-                        '</div>' +
-                    '</div>' +
-                    '<div class="form-check form-switch mt-3">' +
-                        '<input class="form-check-input" type="checkbox" id="seance-publiee" ' + (!seance || seance.publie !== false ? 'checked' : '') + '>' +
-                        '<label class="form-check-label" for="seance-publiee">Publier la séance (visible par les élèves)</label>' +
-                    '</div>' +
-                    '<div class="d-flex gap-2 mt-3">' +
-                        '<button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk me-1"></i>Enregistrer</button>' +
-                        '<button type="button" class="btn btn-outline-secondary" id="annuler-seance">Annuler</button>' +
-                    '</div>' +
-                '</form>';
-
-            const form = editeur.querySelector('#form-seance');
-            form.addEventListener('submit', function (event) {
-                event.preventDefault();
-                const titre = editeur.querySelector('#seance-titre').value.trim();
-                const date = editeur.querySelector('#seance-date').value;
-                if (titre.length < 3) {
-                    message(zoneMessage, 'Le titre de la séance doit contenir au moins 3 caractères.', 'danger');
-                    return;
-                }
-                if (!date) {
-                    message(zoneMessage, 'Indiquez la date de la séance.', 'danger');
-                    return;
-                }
-                const donnees = {
-                    titre: titre,
-                    date: date,
-                    duree: Number(editeur.querySelector('#seance-duree').value) || 60,
-                    description: editeur.querySelector('#seance-description').value.trim(),
-                    classeIds: Array.prototype.slice.call(editeur.querySelectorAll('.classe-seance:checked')).map(function (c) { return c.value; }),
-                    chapitres: Array.prototype.slice.call(editeur.querySelector('#seance-chapitres').selectedOptions).map(function (o) { return o.value; }),
-                    lecons: Array.prototype.slice.call(editeur.querySelectorAll('.lecon-seance:checked')).map(function (c) { return c.value; }),
-                    exercices: Array.prototype.slice.call(editeur.querySelectorAll('.exercice-seance:checked')).map(function (c) { return c.value; }),
-                    publie: editeur.querySelector('#seance-publiee').checked
-                };
-                if (seance) donnees.id = seance.id;
-                const enregistre = window.LearnHubStore.seances.save(donnees);
-                if (!enregistre) {
-                    message(zoneMessage, 'Enregistrement impossible.', 'danger');
-                    return;
-                }
-                fermerEditeur();
-                rafraichir();
-                message(zoneMessage, seance ? 'Séance mise à jour.' : 'Séance créée.', 'success');
-            });
-            editeur.querySelector('#fermer-seance').addEventListener('click', fermerEditeur);
-            editeur.querySelector('#annuler-seance').addEventListener('click', fermerEditeur);
-            editeur.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        function fermerEditeur() {
-            editeur.classList.add('d-none');
-            editeur.innerHTML = '';
-        }
-
-        function afficherSuivi(seance) {
-            const exercices = seance.exercices || [];
-            const cibleIds = (seance.classeIds || []).length
-                ? seance.classeIds
-                : window.LearnHubStore.classes.miens().map(function (c) { return c.id; });
-            const eleves = elevesDesClasses(cibleIds);
-            const noms = exercices.map(function (id) {
-                const exercice = window.LearnHubStore.exercices.get(id);
-                return { id: id, titre: exercice ? exercice.titre : 'Exercice supprimé' };
-            });
-
-            zoneSuivi.innerHTML =
-                '<div class="admin-panel mt-3">' +
-                    '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
-                        '<h4 class="mb-0"><i class="fas fa-chart-line me-2"></i>Suivi — ' + esc(seance.titre) + '</h4>' +
-                        '<span class="text-muted small">' + formaterDate(seance.date) + ' · ' + (seance.duree || 60) + ' min</span>' +
-                    '</div>' +
-                    (!exercices.length
-                        ? '<p class="text-muted mb-0">Aucun exercice assigné à cette séance : ajoutez-en pour suivre les résultats.</p>'
-                        : (!eleves.length
-                            ? '<p class="text-muted mb-0">Aucun élève inscrit dans les classes concernées.</p>'
-                            : '<div class="table-responsive"><table class="table align-middle mb-0">' +
-                                '<thead><tr><th>Élève</th><th>Classe</th><th>Exercices réalisés</th><th>Moyenne</th><th>Dernière activité</th><th>Détail</th></tr></thead>' +
-                                '<tbody>' + eleves.map(function (eleve) {
-                                    const bilan = bilanEleve(eleve.username, exercices);
-                                    const classe = window.LearnHubStore.classes.get(eleve.classeId);
-                                    const detail = noms.map(function (item) {
-                                        const score = bilan.meilleurParExercice[item.id];
-                                        return '<span class="badge me-1 ' + (score === undefined ? 'bg-secondary' : score >= 80 ? 'bg-success' : score >= 50 ? 'bg-warning text-dark' : 'bg-danger') + '" title="' + esc(item.titre) + '">' +
-                                            esc(item.titre.length > 18 ? item.titre.slice(0, 17) + '…' : item.titre) + (score === undefined ? ' : —' : ' : ' + score + ' %') + '</span>';
-                                    }).join('');
-                                    return '<tr>' +
-                                        '<td class="fw-semibold">' + esc(eleve.username) + '</td>' +
-                                        '<td class="small">' + esc(classe ? classe.nom : '—') + '</td>' +
-                                        '<td>' + bilan.faits + '/' + exercices.length + '</td>' +
-                                        '<td>' + (bilan.moyenne === null ? '—' : bilan.moyenne + ' %') + '</td>' +
-                                        '<td class="small text-muted">' + (bilan.derniere ? formaterDateHeure(bilan.derniere) : '—') + '</td>' +
-                                        '<td>' + detail + '</td>' +
-                                    '</tr>';
-                                }).join('') + '</tbody></table></div>')) +
-                '</div>';
-            zoneSuivi.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        racine.querySelector('#nouvelle-seance').addEventListener('click', function () {
-            ouvrirEditeur(null);
-        });
-
-        liste.addEventListener('click', function (event) {
-            const bouton = event.target.closest('button[data-action]');
-            if (!bouton) return;
-            const seance = window.LearnHubStore.seances.get(bouton.dataset.id);
-            if (!seance) return;
-
-            if (bouton.dataset.action === 'editer') {
-                ouvrirEditeur(seance);
-            } else if (bouton.dataset.action === 'suivi') {
-                afficherSuivi(seance);
-            } else if (bouton.dataset.action === 'supprimer') {
-                if (!window.confirm('Supprimer la séance « ' + seance.titre + ' » ?')) return;
-                window.LearnHubStore.seances.remove(seance.id);
-                zoneSuivi.innerHTML = '';
-                rafraichir();
-                message(zoneMessage, 'Séance supprimée.', 'success');
-            }
-        });
-
-        rafraichir();
-    }
-
     /* ---------------------------------- Leçons ---------------------------------- */
 
     function renderLecons(racine) {
@@ -1650,7 +1373,7 @@ window.LearnHubAdmin = (function () {
                 '<h2 class="mb-0"><i class="fas fa-book-open me-2"></i>Mes leçons</h2>' +
                 '<button class="btn btn-primary btn-sm" id="nouvelle-lecon"><i class="fas fa-plus me-1"></i>Nouvelle leçon</button>' +
             '</div>' +
-            '<p class="text-muted small">Rédigez vos propres leçons : elles restent dans votre espace et peuvent être assignées dans vos séances.</p>' +
+            '<p class="text-muted small">Rédigez vos leçons : elles sont converties en livre PDF (avec couverture) et déposées dans l\'espace de vos élèves.</p>' +
             '<div id="editeur-lecon" class="d-none"></div>' +
             '<div class="admin-panel"><div id="liste-lecons"></div></div>';
 
@@ -1666,18 +1389,19 @@ window.LearnHubAdmin = (function () {
         function rafraichir() {
             const lecons = window.LearnHubStore.lecons.miens();
             if (!lecons.length) {
-                liste.innerHTML = '<p class="text-muted mb-0">Votre espace ne contient encore aucune leçon. Créez-en une pour la proposer dans vos séances.</p>';
+                liste.innerHTML = '<p class="text-muted mb-0">Votre espace ne contient encore aucune leçon. Créez-en une : elle sera publiée en livre PDF pour vos élèves.</p>';
                 return;
             }
-            const seances = window.LearnHubStore.seances.miens();
             liste.innerHTML =
                 '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
-                    '<thead><tr><th>Titre</th><th>Matière</th><th>Classes</th><th>Niveau</th><th>Durée</th><th>Séances</th><th class="text-end">Actions</th></tr></thead>' +
+                    '<thead><tr><th>Titre</th><th>Matière</th><th>Classes</th><th>Niveau</th><th>Durée</th><th>Livre PDF</th><th class="text-end">Actions</th></tr></thead>' +
                     '<tbody>' + lecons.map(function (lecon) {
                         const niveau = lecon.niveau ? window.LearnHubData.getNiveau(lecon.niveau) : null;
-                        const usage = seances.filter(function (s) {
-                            return (s.lecons || []).indexOf(lecon.id) >= 0;
-                        }).length;
+                        const livre = lecon.livreUrl
+                            ? '<a class="badge bg-success text-decoration-none" href="' + esc(lecon.livreUrl) + '" target="_blank" rel="noopener" title="Ouvrir le PDF">' +
+                                '<i class="fas fa-file-pdf me-1"></i>Prêt</a>' +
+                                (lecon.livreTaille ? '<div class="small text-muted">' + esc(lecon.livreTaille) + '</div>' : '')
+                            : '<span class="badge bg-secondary bg-opacity-25 text-dark">À générer</span>';
                         const cibles = lecon.classeIds || [];
                         return '<tr>' +
                             '<td class="fw-semibold">' + esc(lecon.titre) +
@@ -1690,9 +1414,10 @@ window.LearnHubAdmin = (function () {
                                 : '<span class="text-muted">Toutes</span>') + '</td>' +
                             '<td class="small">' + esc(niveau ? niveau.nom : 'Tous niveaux') + '</td>' +
                             '<td class="small">' + (lecon.duree || 30) + ' min</td>' +
-                            '<td>' + usage + '</td>' +
+                            '<td>' + livre + '</td>' +
                             '<td class="text-end text-nowrap">' +
                                 '<button class="btn btn-sm btn-outline-primary me-1" data-action="editer" data-id="' + esc(lecon.id) + '" title="Modifier"><i class="fas fa-edit"></i></button>' +
+                                (lecon.livreUrl ? '<a class="btn btn-sm btn-outline-secondary me-1" href="' + esc(lecon.livreUrl) + '" target="_blank" rel="noopener" title="Ouvrir le livre"><i class="fas fa-book-open"></i></a>' : '') +
                                 '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-id="' + esc(lecon.id) + '" title="Supprimer"><i class="fas fa-trash"></i></button>' +
                             '</td>' +
                         '</tr>';
@@ -1703,6 +1428,7 @@ window.LearnHubAdmin = (function () {
         function ouvrirEditeur(lecon) {
             editeur.classList.remove('d-none');
             const classesEspace = window.LearnHubStore.classes.miens();
+            let couvertureRetiree = false;
             editeur.innerHTML =
                 '<form class="admin-panel border border-primary" id="form-lecon">' +
                     '<div class="d-flex justify-content-between align-items-center mb-3">' +
@@ -1748,6 +1474,34 @@ window.LearnHubAdmin = (function () {
                                 ? 'Aucune sélection = leçon visible par toutes vos classes. Sélectionnez une ou plusieurs classes (Ctrl + clic) pour la réserver.'
                                 : 'Créez d\'abord une classe dans l\'onglet « Classes » pour cibler cette leçon.') +
                         '</div>' +
+                    '</div>' +
+                    '<div class="row g-3 mb-3">' +
+                        '<div class="col-md-6">' +
+                            '<label class="form-label" for="lecon-couverture"><i class="fas fa-image me-1"></i>Couverture du livre</label>' +
+                            '<input type="file" class="form-control" id="lecon-couverture" accept="image/png,image/jpeg,image/webp">' +
+                            '<div class="form-text">Image verticale conseillée (portrait). Sans image, une couverture est dessinée automatiquement.</div>' +
+                        '</div>' +
+                        '<div class="col-md-6 d-flex align-items-center">' +
+                            '<div class="couverture-apercu" id="lecon-couverture-apercu">' +
+                                (lecon && lecon.couvertureUrl
+                                    ? '<img src="' + esc(lecon.couvertureUrl) + '" alt="Couverture actuelle">' +
+                                      '<button type="button" class="btn btn-sm btn-outline-danger" id="lecon-couverture-retirer" title="Retirer la couverture"><i class="fas fa-trash"></i></button>'
+                                    : '<span class="text-muted small">Aucune couverture personnalisée</span>') +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="alert alert-light border d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
+                        '<div class="small">' +
+                            '<i class="fas fa-book me-1"></i><strong>Livre PDF de l\'élève</strong>' +
+                            (lecon && lecon.livreUrl
+                                ? '<div class="text-muted">Déjà généré' + (lecon.livreTaille ? ' · ' + esc(lecon.livreTaille) : '') +
+                                    (lecon.livreMaj ? ' · ' + formaterDate(lecon.livreMaj) : '') + '</div>'
+                                : '<div class="text-muted">Pas encore généré : il le sera à l\'enregistrement de la leçon.</div>') +
+                        '</div>' +
+                        (lecon && lecon.livreUrl
+                            ? '<a class="btn btn-sm btn-outline-primary" href="' + esc(lecon.livreUrl) + '" target="_blank" rel="noopener">' +
+                                '<i class="fas fa-up-right-from-square me-1"></i>Vérifier le PDF</a>'
+                            : '') +
                     '</div>' +
                     '<div class="row g-3 mb-3">' +
                         '<div class="col-md-6">' +
@@ -1814,6 +1568,30 @@ window.LearnHubAdmin = (function () {
             zoneContenu.innerHTML = lecon
                 ? (lecon.contenuHtml ? window.LearnHubStore.nettoyerHtml(lecon.contenuHtml) : texteSimpleVersHtml(lecon.contenu))
                 : '<p><br></p>';
+
+            const apercuCouverture = editeur.querySelector('#lecon-couverture-apercu');
+            const champCouverture = editeur.querySelector('#lecon-couverture');
+            champCouverture.addEventListener('change', function () {
+                const fichier = champCouverture.files && champCouverture.files[0];
+                if (!fichier) return;
+                couvertureRetiree = false;
+                if (apercuCouverture) {
+                    apercuCouverture.innerHTML = '<img src="' + esc(URL.createObjectURL(fichier)) + '" alt="Aperçu de la couverture">' +
+                        '<button type="button" class="btn btn-sm btn-outline-danger" id="lecon-couverture-retirer" title="Retirer la couverture">' +
+                        '<i class="fas fa-trash"></i></button>';
+                    brancherRetraitCouverture();
+                }
+            });
+            function brancherRetraitCouverture() {
+                const bouton = editeur.querySelector('#lecon-couverture-retirer');
+                if (!bouton) return;
+                bouton.addEventListener('click', function () {
+                    couvertureRetiree = true;
+                    champCouverture.value = '';
+                    apercuCouverture.innerHTML = '<span class="text-muted small">Couverture retirée : elle sera regénérée automatiquement.</span>';
+                });
+            }
+            brancherRetraitCouverture();
 
             zoneContenu.addEventListener('paste', async function (event) {
                 const presse = event.clipboardData;
@@ -1917,6 +1695,27 @@ window.LearnHubAdmin = (function () {
                     supportTaille = '';
                 }
 
+                // Couverture du livre : nouvelle image, conservation ou retrait.
+                const champCouverture = editeur.querySelector('#lecon-couverture');
+                const fichierCouverture = champCouverture && champCouverture.files ? champCouverture.files[0] : null;
+                let couvertureUrl = couvertureRetiree ? '' : (lecon && lecon.couvertureUrl ? lecon.couvertureUrl : '');
+                if (fichierCouverture) {
+                    if (fichierCouverture.size > LIMITE_FICHIER_DISTANT) {
+                        message(zoneMessage, 'L\'image de couverture dépasse 25 Mo.', 'danger');
+                        return;
+                    }
+                    if (!window.LearnHubBackend || !window.LearnHubBackend.estActif()) {
+                        message(zoneMessage, 'Connectez-vous pour téléverser une couverture.', 'danger');
+                        return;
+                    }
+                    const envoiCouverture = await window.LearnHubBackend.televerserFichier(fichierCouverture, 'couvertures');
+                    if (!envoiCouverture.ok) {
+                        message(zoneMessage, 'Couverture : ' + envoiCouverture.error, 'danger');
+                        return;
+                    }
+                    couvertureUrl = envoiCouverture.url;
+                }
+
                 const donnees = {
                     titre: titre,
                     matiere: editeur.querySelector('#lecon-matiere').value,
@@ -1931,6 +1730,7 @@ window.LearnHubAdmin = (function () {
                     supportUrl: supportUrl,
                     supportNom: supportNom,
                     supportTaille: supportTaille,
+                    couvertureUrl: couvertureUrl,
                     contenu: texteContenu,
                     contenuHtml: contenuHtml
                 };
@@ -1943,6 +1743,21 @@ window.LearnHubAdmin = (function () {
                 fermerEditeur();
                 rafraichir();
                 message(zoneMessage, lecon ? 'Leçon mise à jour.' : 'Leçon créée.', 'success');
+
+                // Le livre PDF part dans l'espace des élèves : génération immédiate.
+                if (window.LearnHubBackend && window.LearnHubBackend.estActif()) {
+                    message(zoneMessage, 'Leçon enregistrée. Génération du livre PDF…', 'info');
+                    const livre = await window.LearnHubBackend.genererLivre(enregistre.id);
+                    if (livre.ok) {
+                        rafraichir();
+                        message(zoneMessage,
+                            'Leçon enregistrée et livre PDF publié dans l\'espace des élèves' +
+                            (livre.taille ? ' (' + livre.taille + ').' : '.'), 'success');
+                    } else {
+                        message(zoneMessage,
+                            'Leçon enregistrée, mais le livre PDF n\'a pas pu être généré : ' + livre.error, 'warning');
+                    }
+                }
             });
             editeur.querySelector('#fermer-lecon').addEventListener('click', fermerEditeur);
             editeur.querySelector('#annuler-lecon').addEventListener('click', fermerEditeur);
@@ -1967,7 +1782,7 @@ window.LearnHubAdmin = (function () {
             if (bouton.dataset.action === 'editer') {
                 ouvrirEditeur(lecon);
             } else if (bouton.dataset.action === 'supprimer') {
-                if (!window.confirm('Supprimer la leçon « ' + lecon.titre + ' » ? Elle sera retirée des séances concernées.')) return;
+                if (!window.confirm('Supprimer la leçon « ' + lecon.titre + ' » ? Le livre PDF disparaîtra de l\'espace des élèves.')) return;
                 window.LearnHubStore.lecons.remove(lecon.id);
                 rafraichir();
                 message(zoneMessage, 'Leçon supprimée.', 'success');
@@ -2348,7 +2163,6 @@ window.LearnHubAdmin = (function () {
         dashboard: renderDashboard,
         classes: renderClasses,
         lecons: renderLecons,
-        seances: renderSeances,
         exercices: renderExercices,
         ressources: renderRessources,
         bibliotheque: renderBibliotheque,

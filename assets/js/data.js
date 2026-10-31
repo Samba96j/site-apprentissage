@@ -48,7 +48,7 @@ window.LearnHubData = (function () {
             {
                 icone: 'fa-chart-line',
                 titre: 'Des progrès visibles',
-                texte: 'Scores, moyennes, séances suivies : l\'élève sait où il en est, l\'enseignant voit qui aider, et les familles comprennent les efforts fournis.'
+                texte: 'Scores, moyennes, livres lus : l\'élève sait où il en est, l\'enseignant voit qui aider, et les familles comprennent les efforts fournis.'
             }
         ]
     };
@@ -1453,7 +1453,7 @@ window.LearnHubData = (function () {
         },
         {
             titre: 'Un espace pour chaque enseignant',
-            texte: 'Créez vos classes, publiez vos leçons et vos séances, suivez les résultats de vos élèves.',
+            texte: 'Créez vos classes, publiez vos leçons en livres PDF et suivez les résultats de vos élèves.',
             icone: 'fa-chalkboard-user',
             embleme: 'fa-users-rectangle',
             variante: 'bordeaux',
