@@ -545,6 +545,7 @@
     }
 
     function vueAccueil() {
+        const fondateur = data.fondateur || data.developpeur;
         const chapitres = data.getChapitres();
         const exercices = store.exercices.actifs();
         const diapositives = Array.isArray(data.diapositives) && data.diapositives.length
@@ -620,6 +621,43 @@
                         '</div>' +
                     '</div>' +
                 '</section>' +
+                '<section class="py-5 fondateur-section">' +
+                    '<div class="container">' +
+                        '<div class="row g-5 align-items-center">' +
+                            '<div class="col-lg-5 text-center">' +
+                                '<figure class="fondateur-portrait" data-reveal="left">' +
+                                    '<span class="fondateur-halo" aria-hidden="true"></span>' +
+                                    '<img src="' + esc(fondateur.photo) + '" alt="Portrait de ' + esc(fondateur.nom) + ', ' + esc(fondateur.fonction) + '" width="420" height="557" loading="lazy">' +
+                                    '<figcaption class="fondateur-legende">' +
+                                        '<strong>' + esc(fondateur.nom) + '</strong>' +
+                                        '<span>' + esc(fondateur.fonction || fondateur.titre) + '</span>' +
+                                        (fondateur.titre ? '<small>' + esc(fondateur.titre) + '</small>' : '') +
+                                    '</figcaption>' +
+                                '</figure>' +
+                            '</div>' +
+                            '<div class="col-lg-7">' +
+                                '<p class="fondateur-surtitre" data-reveal><i class="fas fa-quote-left me-2"></i>Le mot du fondateur</p>' +
+                                '<h2 class="fondateur-citation" data-reveal>« ' + esc(fondateur.citation) + ' »</h2>' +
+                                '<p class="fondateur-intro" data-reveal>' + esc(fondateur.introduction) + '</p>' +
+                                '<div class="row g-3 mt-4">' +
+                                    fondateur.messages.map(function (item, index) {
+                                        return '<div class="col-md-6" data-reveal style="--delai:' + (index * 90) + 'ms">' +
+                                            '<div class="fondateur-message h-100">' +
+                                                '<span class="fondateur-message-icone"><i class="fas ' + esc(item.icone) + '"></i></span>' +
+                                                '<h3 class="h6 mb-1">' + esc(item.titre) + '</h3>' +
+                                                '<p class="small text-muted mb-0">' + esc(item.texte) + '</p>' +
+                                            '</div>' +
+                                        '</div>';
+                                    }).join('') +
+                                '</div>' +
+                                '<div class="d-flex flex-wrap gap-2 mt-4" data-reveal>' +
+                                    '<a class="btn btn-primary" href="#/contact"><i class="fas fa-paper-plane me-1"></i>Écrire à l\'administrateur</a>' +
+                                    '<a class="btn btn-outline-primary" href="#/connexion?mode=inscription"><i class="fas fa-user-plus me-1"></i>Rejoindre LearnHub</a>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</section>' +
                 '<section class="cta-section py-5 text-white">' +
                     '<div class="container text-center">' +
                         '<h2 class="mb-3">Prêt à commencer votre parcours ?</h2>' +
@@ -629,8 +667,32 @@
                 '</section>',
             after: function (racine) {
                 demarrerCarrousel(racine);
+                demarrerRevelations(racine);
             }
         };
+    }
+
+    /** Apparition progressive des blocs portant `data-reveal`. */
+    function demarrerRevelations(racine) {
+        const cibles = racine.querySelectorAll('[data-reveal]');
+        if (!cibles.length) return;
+        const reduire = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        if (reduire || typeof IntersectionObserver === 'undefined') {
+            Array.prototype.forEach.call(cibles, function (element) {
+                element.classList.add('est-visible');
+            });
+            return;
+        }
+        const observateur = new IntersectionObserver(function (entrees) {
+            entrees.forEach(function (entree) {
+                if (!entree.isIntersecting) return;
+                entree.target.classList.add('est-visible');
+                observateur.unobserve(entree.target);
+            });
+        }, { threshold: 0.15 });
+        Array.prototype.forEach.call(cibles, function (element) {
+            observateur.observe(element);
+        });
     }
 
     function methode(icone, titre, texte) {

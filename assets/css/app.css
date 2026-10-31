@@ -313,3 +313,183 @@
         justify-content: center;
     }
 }
+/* --------------------------- Le mot du fondateur --------------------------- */
+
+.fondateur-section {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 12% 20%, rgba(138, 92, 246, 0.12) 0%, rgba(255, 255, 255, 0) 60%),
+        radial-gradient(circle at 88% 80%, rgba(236, 72, 153, 0.10) 0%, rgba(255, 255, 255, 0) 60%),
+        #fbf9ff;
+}
+
+.fondateur-portrait {
+    position: relative;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+    max-width: 380px;
+}
+
+.fondateur-portrait img {
+    position: relative;
+    z-index: 2;
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 1.5rem;
+    object-fit: cover;
+    box-shadow: 0 24px 50px rgba(49, 27, 79, 0.28);
+    transition: transform 0.5s ease, box-shadow 0.5s ease;
+}
+
+.fondateur-portrait:hover img {
+    transform: translateY(-4px) scale(1.012);
+    box-shadow: 0 30px 60px rgba(49, 27, 79, 0.34);
+}
+
+.fondateur-portrait::before {
+    content: "";
+    position: absolute;
+    inset: -14px;
+    z-index: 1;
+    border-radius: 2rem;
+    background: linear-gradient(140deg, #8A5CF6 0%, #EC4899 45%, #FFC94A 100%);
+    opacity: 0.28;
+    filter: blur(2px);
+}
+
+.fondateur-halo {
+    position: absolute;
+    inset: -30px;
+    z-index: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(138, 92, 246, 0.30) 0%, rgba(138, 92, 246, 0) 70%);
+    animation: fondateur-respire 7s ease-in-out infinite;
+}
+
+@keyframes fondateur-respire {
+    0%, 100% { transform: scale(0.94); opacity: 0.55; }
+    50% { transform: scale(1.06); opacity: 0.9; }
+}
+
+.fondateur-legende {
+    position: relative;
+    z-index: 3;
+    margin: -2.2rem auto 0;
+    width: max-content;
+    max-width: 90%;
+    padding: 0.6rem 1.1rem;
+    border-radius: 0.9rem;
+    background: #ffffff;
+    box-shadow: 0 12px 26px rgba(49, 27, 79, 0.18);
+    text-align: center;
+}
+
+.fondateur-legende strong {
+    display: block;
+    font-size: 1rem;
+    color: #311B4F;
+}
+
+.fondateur-legende span {
+    display: block;
+    font-size: 0.78rem;
+    color: #6b7280;
+}
+
+.fondateur-surtitre {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    margin-bottom: 0.9rem;
+    border-radius: 999px;
+    background: rgba(106, 27, 154, 0.08);
+    color: #6A1B9A;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.fondateur-citation {
+    font-size: clamp(1.15rem, 2.4vw, 1.6rem);
+    line-height: 1.4;
+    color: #311B4F;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.fondateur-intro {
+    color: #4b5563;
+    margin-bottom: 0;
+}
+
+.fondateur-message {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    background: #ffffff;
+    border: 1px solid rgba(49, 27, 79, 0.08);
+    box-shadow: 0 6px 18px rgba(49, 27, 79, 0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.fondateur-message:hover {
+    transform: translateY(-3px);
+    border-color: rgba(106, 27, 154, 0.28);
+    box-shadow: 0 14px 30px rgba(49, 27, 79, 0.12);
+}
+
+.fondateur-message-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 0.7rem;
+    color: #ffffff;
+    background: linear-gradient(135deg, #6A1B9A, #8A5CF6);
+    font-size: 0.9rem;
+}
+
+/* Apparition au défilement */
+[data-reveal] {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    transition-delay: var(--delai, 0ms);
+}
+
+[data-reveal="left"] {
+    transform: translateX(-24px);
+}
+
+[data-reveal].est-visible {
+    opacity: 1;
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-reveal],
+    [data-reveal="left"] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+    .fondateur-halo,
+    .fondateur-portrait img,
+    .fondateur-message {
+        animation: none;
+        transition: none;
+    }
+}
+.fondateur-legende small {
+    display: block;
+    margin-top: 0.1rem;
+    font-size: 0.7rem;
+    color: #9ca3af;
+}

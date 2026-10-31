@@ -16,6 +16,43 @@ window.LearnHubData = (function () {
         role: 'Conception et développement de la plateforme LearnHub'
     };
 
+    /**
+     * Mot du fondateur, affiché sur la page d'accueil.
+     * Tout le contenu éditorial est ici : modifier ce bloc suffit.
+     */
+    const fondateur = {
+        nom: 'M.BA',
+        titre: 'Ingénieur en génie logiciel',
+        fonction: 'Fondateur et administrateur de LearnHub',
+        photo: 'assets/images/fondateur.jpg',
+        introduction: 'LearnHub est né d\'un constat simple : trop d\'élèves abandonnent faute d\'un accompagnement de proximité. ' +
+            'J\'ai construit cette plateforme pour que chaque apprenant, du collège au supérieur, trouve des cours clairs, ' +
+            'des exercices qui corrigent et un enseignant qui suit ses progrès — où qu\'il soit.',
+        citation: 'Une plateforme ne remplace pas un enseignant : elle lui rend du temps pour ce qui compte, l\'accompagnement humain.',
+        messages: [
+            {
+                icone: 'fa-people-group',
+                titre: 'L\'accès avant tout',
+                texte: 'Gratuit, sans publicité, lisible sur un simple téléphone : l\'éducation ne doit dépendre ni du pouvoir d\'achat, ni de la qualité de la connexion.'
+            },
+            {
+                icone: 'fa-chalkboard-user',
+                titre: 'L\'enseignant au centre',
+                texte: 'Chaque enseignant garde son espace, ses classes et ses contenus. La technologie doit libérer du temps pédagogique, jamais le remplacer.'
+            },
+            {
+                icone: 'fa-shield-halved',
+                titre: 'Une IA qui aide à comprendre',
+                texte: 'IAFA FAMA prépare une base de travail, jamais une réponse à recopier. Chaque fiche rappelle qu\'il faut vérifier, comparer et reformuler.'
+            },
+            {
+                icone: 'fa-chart-line',
+                titre: 'Des progrès visibles',
+                texte: 'Scores, moyennes, séances suivies : l\'élève sait où il en est, l\'enseignant voit qui aider, et les familles comprennent les efforts fournis.'
+            }
+        ]
+    };
+
     const matieres = [
         {
             slug: 'maths',
@@ -1438,6 +1475,7 @@ window.LearnHubData = (function () {
 
     return {
         developpeur: developpeur,
+        fondateur: fondateur,
         matieres: matieres,
         niveaux: niveaux,
         cours: cours,
