@@ -1290,9 +1290,30 @@ window.LearnHubAdmin = (function () {
 
     /* ---------------------------------- Leçons ---------------------------------- */
 
+    /** Bandeau d'alerte quand Supabase a refusé une écriture (colonne manquante, etc.). */
+    function alerteSynchronisation() {
+        const backend = window.LearnHubBackend;
+        if (!backend || typeof backend.erreur !== 'function') return '';
+        const erreur = backend.erreur();
+        if (!erreur) return '';
+        const texte = (erreur && erreur.message) || String(erreur);
+        const colonneAbsente = /does not exist|n'existe pas|undefined column/i.test(texte);
+        return '<div class="alert alert-danger">' +
+            '<strong class="d-block mb-1"><i class="fas fa-triangle-exclamation me-1"></i>Supabase a refusé la dernière écriture</strong>' +
+            '<div class="small mb-1">' + esc(texte) + '</div>' +
+            (colonneAbsente
+                ? '<div class="small mb-2">Une colonne manque dans la base : exécutez <code>supabase/migration-lecons-document.sql</code> ' +
+                  'dans le SQL Editor, puis cliquez sur <strong>Republier mes cours</strong> ci-dessous.</div>'
+                : '<div class="small mb-2">Vérifiez votre connexion puis réessayez l\'enregistrement.</div>') +
+            '<button type="button" class="btn btn-sm btn-danger me-2" data-action="republier">Republier mes cours</button>' +
+            '<button type="button" class="btn btn-sm btn-outline-danger" data-action="masquer-alerte">Masquer</button>' +
+        '</div>';
+    }
+
     function renderLecons(racine) {
         racine.innerHTML =
             '<div id="admin-message" class="d-none"></div>' +
+            '<div id="admin-alerte">' + alerteSynchronisation() + '</div>' +
             '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
                 '<h2 class="mb-0"><i class="fas fa-book-open me-2"></i>Mes leçons</h2>' +
                 '<button class="btn btn-primary btn-sm" id="nouvelle-lecon"><i class="fas fa-file-arrow-up me-1"></i>Ajouter un cours</button>' +
@@ -1302,8 +1323,35 @@ window.LearnHubAdmin = (function () {
             '<div class="admin-panel"><div id="liste-lecons"></div></div>';
 
         const zoneMessage = racine.querySelector('#admin-message');
+        const zoneAlerte = racine.querySelector('#admin-alerte');
         const editeur = racine.querySelector('#editeur-lecon');
         const liste = racine.querySelector('#liste-lecons');
+
+        if (zoneAlerte) {
+            zoneAlerte.addEventListener('click', function (event) {
+                const bouton = event.target.closest('button[data-action]');
+                if (!bouton) return;
+                if (bouton.dataset.action === 'masquer-alerte') {
+                    zoneAlerte.innerHTML = '';
+                    return;
+                }
+                if (bouton.dataset.action === 'republier') {
+                    const backend = window.LearnHubBackend;
+                    if (!backend || !backend.estActif()) return;
+                    const cle = window.LearnHubStore.keys.lecons;
+                    const lecons = window.LearnHubStore.lecons.miens();
+                    bouton.disabled = true;
+                    bouton.innerHTML = '<i class="fas fa-circle-notch fa-spin me-1"></i>Envoi…';
+                    backend.synchroniser(cle, [], lecons);
+                    window.setTimeout(function () {
+                        zoneAlerte.innerHTML = alerteSynchronisation();
+                        if (!zoneAlerte.innerHTML) {
+                            message(zoneMessage, lecons.length + ' cours renvoyé(s) vers Supabase : vos élèves les voient maintenant.', 'success');
+                        }
+                    }, 2000);
+                }
+            });
+        }
 
         function nomClasse(id) {
             const classe = window.LearnHubStore.classes.get(id);

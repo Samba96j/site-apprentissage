@@ -23,9 +23,7 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 - [migration-ia.sql](migration-ia.sql) — table `ia_contenus` de l'assistant IA (études d'œuvres et questions), privée par élève ;
 - [migration-ia-quota.sql](migration-ia-quota.sql) — table `ia_quotas` et fonctions `ia_consommer()` / `ia_liberer()` : quota quotidien tenu côté base, impossible à remettre à zéro depuis le navigateur ;
 - [migration-classes-avatars.sql](migration-classes-avatars.sql) — colonne `classes.matiere`, colonne `profiles.avatar_url` et bucket de stockage public `avatars` (écriture limitée au dossier de chaque compte) ;
-- [migration-lecons-classes.sql](migration-lecons-classes.sql) — colonne `lessons.classe_ids` : ciblage d'une leçon sur une ou plusieurs classes ;
-- [migration-lecons-support.sql](migration-lecons-support.sql) — colonnes `support_url`, `support_nom`, `support_taille` : support de cours joint à une leçon (fichier stocké dans le bucket `documents`, préfixe `supports/`) ;
-- [migration-lecons-document.sql](migration-lecons-document.sql) — colonne `couverture_url` : couverture facultative de la carte d'un cours (et retrait des colonnes de l'ancienne génération de PDF) ;
+- [migration-lecons-document.sql](migration-lecons-document.sql) — **obligatoire pour les cours** : colonnes `classe_ids`, `support_url`, `support_nom`, `support_taille`, `couverture_url` et plafond de 50 Mo sur le bucket `documents`. Elle regroupe les anciennes migrations `lecons-classes` et `lecons-support`. Sans elle, l'enregistrement d'un cours échoue et l'élève ne voit rien ;
 - [migration-suppression-seances.sql](migration-suppression-seances.sql) — supprime la table `seances` (fonctionnalité remplacée par les documents de cours).
 
 ## 3. Authentification
@@ -196,8 +194,8 @@ cours + couverture) dans `#/lecons` et ouvre le document exactement comme un liv
 de la bibliothèque : nouvel onglet, lecture, zoom, téléchargement.
 
 1. Exécuter [migration-lecons-document.sql](migration-lecons-document.sql) dans le
-   SQL Editor : elle ajoute `lessons.couverture_url` (facultative) et supprime les
-   colonnes de l'ancienne génération automatique de PDF.
+   SQL Editor : elle ajoute `classe_ids`, `support_url`/`support_nom`/`support_taille`,
+   `couverture_url`, et fixe le plafond du bucket à 50 Mo.
 2. Rien d'autre à déployer : l'import réutilise le bucket `documents` et les
    politiques de `schema.sql` (écriture réservée aux enseignants, lecture publique).
 
