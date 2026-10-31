@@ -923,7 +923,18 @@ window.LearnHubBackend = (function () {
         const chemin = (prefixe || 'fichiers') + '/' + profil.id + '/' + Date.now().toString(36) + '-' +
             Math.random().toString(36).slice(2, 8) + '.' + extension;
         const envoi = await client.storage.from('documents').upload(chemin, fichier, { upsert: true });
-        if (envoi.error) return { ok: false, error: envoi.error.message };
+        if (envoi.error) {
+            const brut = envoi.error.message || '';
+            if (/exceeded the maximum allowed size|payload too large|too large|413/i.test(brut)) {
+                return {
+                    ok: false,
+                    tropVolumineux: true,
+                    error: 'Le stockage refuse ce fichier (' + formatteTaille(fichier.size) + '). ' +
+                        'Compressez le document, ou déposez-le sur Cloudflare R2 / Drive et collez son adresse.'
+                };
+            }
+            return { ok: false, error: brut };
+        }
 
         const publique = client.storage.from('documents').getPublicUrl(chemin);
         const url = publique && publique.data ? publique.data.publicUrl : '';

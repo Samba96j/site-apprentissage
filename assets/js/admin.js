@@ -9,8 +9,15 @@ window.LearnHubAdmin = (function () {
 
     const LIBELLES_TYPES = { quiz: 'Quiz', matching: 'Associations', fillblank: 'Textes à trous' };
     const LIMITE_FICHIER = 1.5 * 1024 * 1024;
-    /** Limite d'envoi vers Supabase Storage (bucket `documents`). */
-    const LIMITE_FICHIER_DISTANT = 25 * 1024 * 1024;
+    /** Limite d'un envoi direct vers Supabase Storage (bucket `documents`). */
+    const LIMITE_FICHIER_DISTANT = 50 * 1024 * 1024;
+
+    /** « 3,4 Mo » — utilisé dans les messages de contrôle de taille. */
+    function tailleLisible(octets) {
+        const valeur = Number(octets) || 0;
+        if (valeur >= 1024 * 1024) return (valeur / (1024 * 1024)).toFixed(1).replace('.', ',') + ' Mo';
+        return Math.max(1, Math.round(valeur / 1024)) + ' Ko';
+    }
 
     function esc(value) {
         return String(value == null ? '' : value)
@@ -667,8 +674,8 @@ window.LearnHubAdmin = (function () {
                     const limite = backendActif ? LIMITE_FICHIER_DISTANT : LIMITE_FICHIER;
                     if (fichier.size > limite) {
                         message(zoneMessage, backendActif
-                            ? 'Fichier trop volumineux (25 Mo maximum).'
-                            : 'Fichier trop volumineux (1,5 Mo maximum pour un stockage local).', 'danger');
+                            ? 'Fichier trop volumineux : ' + tailleLisible(fichier.size) + ' (50 Mo maximum en import direct).'
+                            : 'Fichier trop volumineux : ' + tailleLisible(fichier.size) + ' (1,5 Mo maximum pour un stockage local).', 'danger');
                         return;
                     }
 
@@ -1390,7 +1397,7 @@ window.LearnHubAdmin = (function () {
                         '<div class="col-md-6">' +
                             '<label class="form-label" for="lecon-document"><i class="fas fa-file-pdf me-1"></i>Document du cours (PDF, Word, PowerPoint…)</label>' +
                             '<input type="file" class="form-control" id="lecon-document" accept=".pdf,.doc,.docx,.ppt,.pptx,.odt,.odp,.txt,.epub">' +
-                            '<div class="form-text">C\'est le document que vos élèves ouvriront. 25 Mo maximum.</div>' +
+                            '<div class="form-text">C\'est le document que vos élèves ouvriront. 50 Mo maximum ; au-delà, collez son adresse en ligne.</div>' +
                         '</div>' +
                         '<div class="col-md-6">' +
                             '<label class="form-label" for="lecon-document-url">… ou adresse d\'un document en ligne</label>' +
@@ -1471,7 +1478,9 @@ window.LearnHubAdmin = (function () {
 
                 if (fichier) {
                     if (fichier.size > LIMITE_FICHIER_DISTANT) {
-                        message(zoneMessage, 'Le document dépasse 25 Mo.', 'danger');
+                        message(zoneMessage,
+                            'Le document fait ' + tailleLisible(fichier.size) + ' : l\'import direct est limité à 50 Mo. ' +
+                            'Compressez le PDF, ou déposez-le sur Cloudflare R2 / Drive et collez son adresse ci-dessus.', 'danger');
                         return;
                     }
                     if (!window.LearnHubBackend || !window.LearnHubBackend.estActif()) {
@@ -1503,7 +1512,7 @@ window.LearnHubAdmin = (function () {
                 const fichierCouverture = champCouverture.files && champCouverture.files[0];
                 if (fichierCouverture) {
                     if (fichierCouverture.size > LIMITE_FICHIER_DISTANT) {
-                        message(zoneMessage, 'L\'image de couverture dépasse 25 Mo.', 'danger');
+                        message(zoneMessage, 'L\'image de couverture fait ' + tailleLisible(fichierCouverture.size) + ' : 50 Mo maximum.', 'danger');
                         return;
                     }
                     const envoiCouverture = await window.LearnHubBackend.televerserFichier(fichierCouverture, 'couvertures');

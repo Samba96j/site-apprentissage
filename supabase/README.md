@@ -201,10 +201,13 @@ de la bibliothèque : nouvel onglet, lecture, zoom, téléchargement.
 2. Rien d'autre à déployer : l'import réutilise le bucket `documents` et les
    politiques de `schema.sql` (écriture réservée aux enseignants, lecture publique).
 
-**Volumétrie** : 25 Mo par document, ce qui couvre la quasi-totalité des cours PDF.
-Le bucket gratuit de Supabase offre 1 Go ; pour des ouvrages plus volumineux ou plus
-nombreux, passez par l'import Cloudflare R2 de `scripts/` puis renseignez l'adresse
-publique du fichier dans le champ « … ou adresse d'un document en ligne ».
+**Volumétrie** : 50 Mo par document, ce qui couvre la quasi-totalité des cours PDF.
+La migration fixe `storage.buckets.file_size_limit` à 50 Mo pour le bucket
+`documents` ; vérifiez aussi Dashboard → **Storage → Settings → Global file upload
+limit** (au moins 50 Mo). Le bucket gratuit de Supabase offre 1 Go : pour des
+ouvrages plus volumineux ou plus nombreux, passez par l'import Cloudflare R2 de
+`scripts/` puis renseignez l'adresse publique du fichier dans le champ
+« … ou adresse d'un document en ligne » — aucun téléversement n'est alors effectué.
 
 **Couverture** : image facultative (portrait conseillé). Sans image, la carte de
 l'élève affiche une couverture dessinée avec le nom du cours, la matière et le niveau.
