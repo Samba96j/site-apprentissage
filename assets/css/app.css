@@ -493,3 +493,60 @@
     font-size: 0.7rem;
     color: #9ca3af;
 }
+/* ------------------------------- Pagination --------------------------------- */
+
+.biblio-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(49, 27, 79, 0.08);
+}
+
+.biblio-pagination .pagination {
+    gap: 0.25rem;
+}
+
+.biblio-pagination .page-link {
+    min-width: 2.25rem;
+    text-align: center;
+    border-radius: 0.6rem;
+    border: 1px solid rgba(49, 27, 79, 0.12);
+    color: #4b2a76;
+    background: #ffffff;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.biblio-pagination .page-link:hover {
+    background: rgba(106, 27, 154, 0.08);
+    border-color: rgba(106, 27, 154, 0.28);
+    color: #311B4F;
+}
+
+.biblio-pagination .page-item.active .page-link {
+    background: #6A1B9A;
+    border-color: #6A1B9A;
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgba(106, 27, 154, 0.28);
+}
+
+.biblio-pagination .page-item.disabled .page-link {
+    color: #b8b3c4;
+    background: #f7f5fb;
+    border-color: rgba(49, 27, 79, 0.06);
+}
+
+.biblio-pagination .page-item.disabled .page-link .visually-hidden,
+.biblio-pagination .page-item .page-link .visually-hidden {
+    position: absolute;
+}
+
+@media (max-width: 575.98px) {
+    .biblio-pagination {
+        justify-content: center;
+        text-align: center;
+    }
+}

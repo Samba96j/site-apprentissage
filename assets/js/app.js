@@ -1090,6 +1090,8 @@
                 const filtreNiveau = racine.querySelector('#biblio-niveau');
                 const filtreType = racine.querySelector('#biblio-type');
                 let documents = [];
+                let page = 1;
+                const TAILLE_PAGE = 9;
 
                 function nomMatiere(slug) {
                     const m = data.getMatiere(slug);
@@ -1197,8 +1199,19 @@
                             '<a class="alert-link" href="#/connexion?next=bibliotheque">Se connecter</a>' +
                           '</div>'
                         : '';
+                    const pages = Math.max(1, Math.ceil(resultats.length / TAILLE_PAGE));
+                    if (page > pages) page = pages;
+                    const debut = (page - 1) * TAILLE_PAGE;
+                    const visibles = resultats.slice(debut, debut + TAILLE_PAGE);
                     liste.innerHTML = '<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">' +
-                        resultats.map(carte).join('') + '</div>' + note;
+                        visibles.map(carte).join('') + '</div>' +
+                        window.LearnHubUI.pagination({
+                            page: page,
+                            taille: TAILLE_PAGE,
+                            total: resultats.length,
+                            libelle: 'document(s)'
+                        }) +
+                        note;
                 }
 
                 const b = window.LearnHubBackend;
@@ -1219,8 +1232,17 @@
                 });
 
                 [recherche, filtreMatiere, filtreNiveau, filtreType].forEach(function (element) {
-                    element.addEventListener('input', rafraichir);
-                    element.addEventListener('change', rafraichir);
+                    element.addEventListener('input', function () { page = 1; rafraichir(); });
+                    element.addEventListener('change', function () { page = 1; rafraichir(); });
+                });
+
+                liste.addEventListener('click', function (event) {
+                    const cible = window.LearnHubUI.pageCliquee(event);
+                    if (!cible) return;
+                    page = cible;
+                    rafraichir();
+                    const haut = liste.getBoundingClientRect().top + window.scrollY - 90;
+                    window.scrollTo({ top: haut, behavior: 'smooth' });
                 });
             }
         };

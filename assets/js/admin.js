@@ -1811,6 +1811,8 @@ window.LearnHubAdmin = (function () {
         const formulaire = racine.querySelector('#formulaire-document');
         const zoneLot = racine.querySelector('#lot-document-zone');
         const liste = racine.querySelector('#liste-documents');
+        let page = 1;
+        const TAILLE_PAGE = 15;
 
         if (!actif) {
             liste.innerHTML = '<p class="text-muted mb-0">La bibliothèque nécessite le backend Supabase.</p>';
@@ -1829,10 +1831,15 @@ window.LearnHubAdmin = (function () {
                     liste.innerHTML = '<p class="text-muted mb-0">Aucun document. Cliquez sur « Ajouter un document » pour commencer.</p>';
                     return;
                 }
+                const total = documents.length;
+                const pages = Math.max(1, Math.ceil(total / TAILLE_PAGE));
+                if (page > pages) page = pages;
+                const debut = (page - 1) * TAILLE_PAGE;
+                const visibles = documents.slice(debut, debut + TAILLE_PAGE);
                 liste.innerHTML =
                     '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
                         '<thead><tr><th>Titre</th><th>Matière</th><th>Niveau</th><th>Format</th><th>Taille</th><th>Visibilité</th><th class="text-end">Actions</th></tr></thead>' +
-                        '<tbody>' + documents.map(function (doc) {
+                        '<tbody>' + visibles.map(function (doc) {
                             const matiere = window.LearnHubData.getMatiere(doc.matiere);
                             const niveau = window.LearnHubData.niveaux.find(function (n) { return n.slug === doc.niveau; });
                             const visibilite = doc.visibilite || 'public';
@@ -1855,8 +1862,14 @@ window.LearnHubAdmin = (function () {
                             '</tr>';
                         }).join('') + '</tbody>' +
                     '</table></div>' +
+                    window.LearnHubUI.pagination({
+                        page: page,
+                        taille: TAILLE_PAGE,
+                        total: total,
+                        libelle: 'document(s)'
+                    }) +
                     '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>' +
-                        documents.length + ' document(s) · fichiers hébergés dans Supabase Storage (bucket public « documents »).</p>';
+                        total + ' document(s) · fichiers hébergés dans Supabase Storage (bucket public « documents »).</p>';
             });
         }
 
@@ -2094,6 +2107,12 @@ window.LearnHubAdmin = (function () {
         });
 
         liste.addEventListener('click', async function (event) {
+            const pageDemandee = window.LearnHubUI.pageCliquee(event);
+            if (pageDemandee) {
+                page = pageDemandee;
+                rafraichir();
+                return;
+            }
             const bouton = event.target.closest('button[data-action="supprimer-document"]');
             if (!bouton) return;
             if (!window.confirm('Retirer ce document de la bibliothèque ?')) return;
