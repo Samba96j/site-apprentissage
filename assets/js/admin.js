@@ -621,7 +621,8 @@ window.LearnHubAdmin = (function () {
                                     return '<option value="' + type + '">' + type + '</option>';
                                 }).join('') +
                             '</select></div>' +
-                        '<div class="col-md-6"><label class="form-label">Lien (URL ou ancre interne)</label><input type="text" class="form-control" id="res-url" placeholder="#/cours/une-si-longue-lettre"></div>' +
+                        '<div class="col-md-6"><label class="form-label">Lien (URL ou ancre interne)</label><input type="text" class="form-control" id="res-url" placeholder="https://www.youtube.com/watch?v=…">' +
+                            '<div class="form-text">Un lien YouTube (youtu.be, watch?v=, shorts) se regarde directement dans la page Ressources, sans quitter le site.</div></div>' +
                         '<div class="col-md-6"><label class="form-label">… ou fichier PDF (max ' + limiteMo + ' Mo)</label>' +
                             '<input type="file" class="form-control" id="res-fichier" accept="application/pdf">' +
                             '<div class="form-text">' + (backendActif

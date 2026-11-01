@@ -1380,6 +1380,14 @@
         return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
 
+    /* youtu.be/ID, youtube.com/watch?v=ID, /embed/ID, /shorts/ID, /live/ID */
+    const MOTIF_YOUTUBE = /(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i;
+
+    function idYoutube(url) {
+        const trouve = MOTIF_YOUTUBE.exec(String(url || ''));
+        return trouve ? trouve[1] : '';
+    }
+
     /** Ressources pédagogiques partagées par l'enseignant de l'espace de l'élève. */
     function vueRessources() {
         const user = auth.current();
@@ -1391,10 +1399,40 @@
         function carteRessource(ressource) {
             const url = String(ressource.url || '');
             const externe = /^https?:/i.test(url);
-            const icone = ICONES_RESSOURCE[ressource.type] || 'fa-file';
+            const video = idYoutube(url);
+            const icone = video ? 'fa-circle-play' : (ICONES_RESSOURCE[ressource.type] || 'fa-file');
             const date = dateRessource(ressource.date);
+
+            // Vidéo YouTube : vignette cliquable, remplacée par le lecteur intégré.
+            const vignette = video
+                ? '<div class="ratio ratio-16x9 lecteur-video mb-3">' +
+                    '<button type="button" class="lecteur-video-vignette" data-video="' + esc(video) + '"' +
+                        ' aria-label="Lire la vidéo ' + esc(ressource.titre) + '">' +
+                        '<img src="https://i.ytimg.com/vi/' + esc(video) + '/hqdefault.jpg" alt="" loading="lazy">' +
+                        '<span class="lecteur-video-play"><i class="fas fa-play"></i></span>' +
+                    '</button>' +
+                  '</div>'
+                : '';
+
+            const actions = video
+                ? '<div class="mt-auto d-flex gap-2 carte-ressource-actions">' +
+                    '<button class="btn btn-primary btn-sm" type="button" data-video="' + esc(video) + '">' +
+                        '<i class="fas fa-circle-play me-1"></i>Regarder ici</button>' +
+                    '<a class="btn btn-outline-secondary btn-sm" href="' + esc(url) + '" target="_blank" rel="noopener"' +
+                        ' title="Ouvrir sur YouTube"><i class="fab fa-youtube"></i></a>' +
+                  '</div>'
+                : '<div class="mt-auto d-flex gap-2">' +
+                    '<a class="btn btn-primary btn-sm" href="' + esc(url) + '"' +
+                        (externe ? ' target="_blank" rel="noopener"' : '') + '>' +
+                        '<i class="fas fa-eye me-1"></i>Ouvrir</a>' +
+                    (externe
+                        ? '<a class="btn btn-outline-secondary btn-sm" href="' + esc(url) + '" target="_blank" rel="noopener" download="' + esc(ressource.titre) + '" title="Télécharger">' +
+                            '<i class="fas fa-download"></i></a>'
+                        : '') +
+                  '</div>';
+
             return '<div class="col-md-6 col-xl-4">' +
-                '<div class="content h-100 d-flex flex-column">' +
+                '<div class="content h-100 d-flex flex-column carte-ressource">' +
                     '<div class="d-flex align-items-start gap-2 mb-2">' +
                         '<i class="fas ' + icone + ' fa-2x text-primary"></i>' +
                         '<div class="flex-grow-1">' +
@@ -1402,19 +1440,12 @@
                             '<p class="text-muted small mb-0">' + esc(ressource.type || 'Ressource') + '</p>' +
                         '</div>' +
                     '</div>' +
+                    vignette +
                     '<div class="d-flex flex-wrap gap-1 mb-3">' +
                         (ressource.taille ? '<span class="badge text-bg-light border">' + esc(ressource.taille) + '</span>' : '') +
                         (date ? '<span class="badge text-bg-light border"><i class="fas fa-calendar-day me-1"></i>' + esc(date) + '</span>' : '') +
                     '</div>' +
-                    '<div class="mt-auto d-flex gap-2">' +
-                        '<a class="btn btn-primary btn-sm" href="' + esc(url) + '"' +
-                            (externe ? ' target="_blank" rel="noopener"' : '') + '>' +
-                            '<i class="fas fa-eye me-1"></i>Ouvrir</a>' +
-                        (externe
-                            ? '<a class="btn btn-outline-secondary btn-sm" href="' + esc(url) + '" target="_blank" rel="noopener" download="' + esc(ressource.titre) + '" title="Télécharger">' +
-                                '<i class="fas fa-download"></i></a>'
-                            : '') +
-                    '</div>' +
+                    actions +
                 '</div>' +
             '</div>';
         }
@@ -1445,10 +1476,33 @@
             html: '<div class="container py-4">' +
                 '<div class="mb-4">' +
                     '<h1 class="h3 mb-1"><i class="fas fa-folder-open me-2"></i>Ressources</h1>' +
-                    '<p class="text-muted mb-0">Fiches, corrigés, cours et liens partagés par votre enseignant.</p>' +
+                    '<p class="text-muted mb-0">Fiches, corrigés, cours, vidéos et liens partagés par votre enseignant.</p>' +
                 '</div>' +
-                contenu +
-            '</div>'
+                    '<div id="ressources-contenu">' + contenu + '</div>' +
+            '</div>',
+            after: function (racine) {
+                // La vignette YouTube est remplacée par le lecteur : la vidéo se
+                // regarde dans la page, sans quitter l'espace élève.
+                    // Écouteur posé sur la zone de la vue, recréée à chaque rendu.
+                    const zoneVue = racine.querySelector('#ressources-contenu');
+                    if (!zoneVue) return;
+                    zoneVue.addEventListener('click', function (event) {
+                    const declencheur = event.target.closest ? event.target.closest('[data-video]') : null;
+                    if (!declencheur) return;
+                    const carte = declencheur.closest('.carte-ressource');
+                    const zone = carte ? carte.querySelector('.lecteur-video') : null;
+                    if (!zone || zone.querySelector('iframe')) return;
+                    event.preventDefault();
+                    const video = String(declencheur.dataset.video || '');
+                    if (!/^[A-Za-z0-9_-]{6,}$/.test(video)) return;
+                    zone.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + video +
+                        '?autoplay=1&rel=0" title="Lecteur vidéo" loading="lazy"' +
+                        ' allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"' +
+                        ' referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
+                    const bouton = carte.querySelector('.carte-ressource-actions button[data-video]');
+                    if (bouton) bouton.remove();
+                });
+            }
         };
     }
 
