@@ -145,7 +145,7 @@
     background-color: rgba(106, 27, 154, 0.05);
 }
 
-/* ------------------------- Bannière étoilée (IAFA FAMA) ------------------------- */
+/* ------------------------- Bannière étoilée (YA FAMA AI) ------------------------- */
 
 .ia-hero {
     position: relative;
@@ -716,4 +716,204 @@
     .livre-presentation-couverture {
         max-width: 210px;
     }
+}
+
+/* ------------------------------- Lecteur de livre ------------------------------- */
+.lecteur {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 76px);
+    background: linear-gradient(160deg, #1d1230 0%, #311b4f 45%, #1d1230 100%);
+}
+
+.lecteur-barre {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.55rem 1rem;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+}
+
+.lecteur-titre {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+}
+
+.lecteur-outils {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.lecteur-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.32rem 0.6rem;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 8px;
+    color: #fff;
+    background: transparent;
+    font-size: 0.85rem;
+    text-decoration: none;
+    line-height: 1;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.lecteur-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+
+.lecteur-page {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+    min-width: 92px;
+    text-align: center;
+}
+
+.lecteur-scene {
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    overflow: auto;
+}
+
+.lecteur-livre {
+    position: relative;
+    width: 100%;
+    max-width: 1150px;
+    margin: 0 auto;
+}
+
+.lecteur-page,
+.lecteur-canevas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.lecteur-canevas {
+    background: #fff;
+}
+
+.lecteur-etat {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: #e9dff5;
+    background: rgba(29, 18, 48, 0.55);
+    text-align: center;
+    padding: 1rem;
+}
+
+.lecteur-etat .btn {
+    margin-top: 0.25rem;
+}
+
+.lecteur-aide {
+    padding: 0.55rem 1rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.65);
+    background: rgba(0, 0, 0, 0.25);
+}
+
+/* --------------------------- Rubrique « Ma classe » --------------------------- */
+.classe-carte {
+    border: 1px solid #eee;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 4px 16px rgba(49, 27, 79, 0.06);
+}
+
+.classe-entete {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, rgba(106, 27, 154, 0.07), rgba(255, 255, 255, 0));
+}
+
+.classe-icone {
+    flex: 0 0 58px;
+    height: 58px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    box-shadow: 0 6px 16px rgba(106, 27, 154, 0.28);
+}
+
+.classe-infos {
+    min-width: 0;
+}
+
+.mes-cours {
+    padding: 0 1.25rem 1.25rem;
+}
+
+.mes-cours-liste {
+    display: flex;
+    gap: 0.9rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    scrollbar-width: thin;
+}
+
+.mes-cours-item {
+    flex: 0 0 132px;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.mes-cours-item:hover .mes-cours-nom {
+    color: var(--primary);
+}
+
+.mes-cours-cover {
+    width: 132px;
+}
+
+.mes-cours-cover .livre-couverture-titre { font-size: 0.78rem; }
+.mes-cours-cover .livre-couverture-marque { font-size: 0.56rem; letter-spacing: 0.1em; }
+.mes-cours-cover .livre-couverture-meta { font-size: 0.62rem; }
+.mes-cours-cover .livre-couverture-pied { font-size: 0.6rem; padding-top: 0.25rem; margin-top: 0.2rem; }
+.mes-cours-cover .livre-couverture-matiere { font-size: 0.54rem; padding: 0.08rem 0.35rem; }
+
+.mes-cours-nom {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.25;
+    transition: color 0.2s;
+}
+
+.classe-join {
+    padding: 2rem 1rem;
+    border: 1px dashed #d5c8e2;
+    border-radius: 16px;
+    background: #fbf9fd;
 }

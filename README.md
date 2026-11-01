@@ -26,7 +26,7 @@ Site web éducatif statique qui regroupe des cours, des fiches de révision et d
 - **Une seule matière par classe.** Une classe peut être rattachée à une matière : ses élèves ne voient alors que les exercices et les leçons de cette matière (les filtres par matière disparaissent, remplacés par un rappel).
 - **Photo de profil.** Chaque compte peut choisir une photo (recadrée en carré 384 px, stockée dans le bucket Supabase `avatars`) ou rester sur un avatar d'initiales coloré, déduit du nom. L'avatar apparaît dans l'en-tête et sur « Ma progression ».
 - **Export des comptes d'une classe.** Depuis `#/admin/classes`, le bouton CSV exporte les identifiants de connexion des élèves (identifiant, e-mail, classe, matière, tentatives, moyenne, date d'inscription).
-- **IAFA FAMA (assistant IA).** Page `#/ia` : l'élève choisit une œuvre (ou pose une question) et reçoit une fiche structurée rédigée par une IA (Gemini gratuit par défaut, Edge Function Supabase). Chaque fiche est enregistrée dans son espace personnel et peut être relue ou supprimée. L'entrée « IAFA FAMA » (badge **IA**) remplace « Étude d'œuvre » dans le menu principal ; la fiche rédigée du programme reste accessible depuis le pied de page et depuis la page IA. Les onglets Leçons, Bibliothèque et Exercices sont regroupés dans le menu déroulant **Apprendre**. Le nom et la description de l'assistant sont définis une seule fois (`NOM_IA`, `DESCRIPTION_IA`) dans [app.js](assets/js/app.js).
+- **YA FAMA AI (assistant IA).** Page `#/ia` : l'élève choisit une œuvre (ou pose une question) et reçoit une fiche structurée rédigée par une IA (Gemini gratuit par défaut, Edge Function Supabase). Chaque fiche est enregistrée dans son espace personnel et peut être relue ou supprimée. L'entrée « YA FAMA AI » (badge **IA**) remplace « Étude d'œuvre » dans le menu principal ; la fiche rédigée du programme reste accessible depuis le pied de page et depuis la page IA. Les onglets Leçons, Bibliothèque et Exercices sont regroupés dans le menu déroulant **Apprendre**. Le nom et la description de l'assistant sont définis une seule fois (`NOM_IA`, `DESCRIPTION_IA`) dans [app.js](assets/js/app.js).
 - **Navigation corrigée.** Aucun lien mort : le pied de page, les menus et les fil d'Ariane pointent tous vers une vue existante. Les anciennes adresses (`exo.html`, `theme.html`, `eleve/**`) redirigent automatiquement.
 
 ## Comptes et identifiants
@@ -92,7 +92,7 @@ Les contenus publics livrés avec le site restent visibles pour les visiteurs et
 | `#/lecon/<id>` | Détail d'un cours : couverture et accès au document |
 | `#/recherche?q=polygamie` | Recherche |
 | `#/connexion` · `#/profil` | Authentification, classe et progression |
-| `#/ia` | IAFA FAMA : étude d'œuvre ou recherche/question |
+| `#/ia` | YA FAMA AI : étude d'œuvre ou recherche/question |
 | `#/contact` | Présentation du développeur et formulaire de contact |
 | `#/admin/classes` · `#/admin/lecons` | Classes et cours (documents) de l'enseignant |
 | `#/admin/exercices` | Back-office (réservé aux administrateurs) |
@@ -139,7 +139,7 @@ GitHub Pages ne peut pas exécuter de code serveur, mais le site appelle une **A
 
 Les données locales existantes ne peuvent pas être transférées automatiquement : les mots de passe locaux sont hachés dans le navigateur. Chaque personne recrée son compte Supabase ; les contenus et résultats pourront être importés par un écran dédié (à venir).
 
-## IAFA FAMA (assistant IA : études d'œuvres et recherche)
+## YA FAMA AI (assistant IA : études d'œuvres et recherche)
 
 La page `#/ia` (menu du compte, pied de page, espace élève) propose deux modes :
 

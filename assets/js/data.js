@@ -43,7 +43,7 @@ window.LearnHubData = (function () {
             {
                 icone: 'fa-shield-halved',
                 titre: 'Une IA qui aide à comprendre',
-                texte: 'IAFA FAMA prépare une base de travail, jamais une réponse à recopier. Chaque fiche rappelle qu\'il faut vérifier, comparer et reformuler.'
+                texte: 'YA FAMA AI prépare une base de travail, jamais une réponse à recopier. Chaque fiche rappelle qu\'il faut vérifier, comparer et reformuler.'
             },
             {
                 icone: 'fa-chart-line',
@@ -1462,14 +1462,14 @@ window.LearnHubData = (function () {
             cta: { libelle: 'Créer mon espace', href: '#/connexion?mode=inscription' }
         },
         {
-            titre: 'IAFA FAMA, votre assistant de lecture',
+            titre: 'YA FAMA AI, votre assistant de lecture',
             texte: 'Choisissez une œuvre : résumé, personnages, thèmes, citations et questions arrivent en quelques secondes.',
             icone: 'fa-wand-magic-sparkles',
             embleme: 'fa-star',
             variante: 'violet',
             image: 'assets/images/carrousel/slide-6.jpg',
             credit: 'Illustration : LearnHub',
-            cta: { libelle: 'Essayer IAFA FAMA', href: '#/ia' }
+            cta: { libelle: 'Essayer YA FAMA AI', href: '#/ia' }
         }
     ];
 

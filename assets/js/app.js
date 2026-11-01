@@ -12,9 +12,9 @@
     const auth = window.LearnHubAuth;
 
     /* Identité de l'assistant IA : un seul endroit à modifier pour renommer. */
-    const NOM_IA = 'IAFA FAMA';
+    const NOM_IA = 'YA FAMA AI';
     const DESCRIPTION_IA = 'Assistant pédagogique IA : étudiez une œuvre ou posez une question, LearnHub met le résultat en forme.';
-    const BADGE_IA = '<span class="badge bg-light text-dark ms-1 align-middle" title="Intelligence artificielle">IA</span>';
+    const BADGE_IA = '';
 
     /* --------------------------------- Utilitaires --------------------------------- */
 
@@ -194,15 +194,15 @@
         '</nav>';
     }
 
-    const TEXTE_PARTAGE = '📚 LearnHub : cours, exercices interactifs et bibliothèque gratuits — avec IAFA FAMA ✨, ' +
+    const TEXTE_PARTAGE = '📚 LearnHub : cours, exercices interactifs et bibliothèque gratuits — avec YA FAMA AI ✨, ' +
         'l\'assistant IA qui prépare une fiche complète sur n\'importe quelle œuvre en quelques secondes. Sans publicité.';
-    const SUJET_PARTAGE = 'IAFA FAMA t\'attend sur LearnHub ✨';
+    const SUJET_PARTAGE = 'YA FAMA AI t\'attend sur LearnHub ✨';
     const CORPS_PARTAGE = [
         'Salut,',
         '',
         'Je te partage LearnHub : cours, exercices interactifs et bibliothèque numérique du collège au supérieur, gratuit et sans publicité.',
         '',
-        'La nouveauté : IAFA FAMA ✨, un assistant IA qui prépare une fiche complète sur n\'importe quelle œuvre — résumé, contexte, personnages, thèmes, procédés, citations et questions d\'entraînement — en quelques secondes.',
+        'La nouveauté : YA FAMA AI ✨, un assistant IA qui prépare une fiche complète sur n\'importe quelle œuvre — résumé, contexte, personnages, thèmes, procédés, citations et questions d\'entraînement — en quelques secondes.',
         '',
         'À découvrir ici :'
     ].join('\n');
@@ -297,7 +297,7 @@
                 return;
             }
             if (bouton.dataset.partage === 'natif' && navigator.share) {
-                navigator.share({ title: 'LearnHub — cours, exercices et IAFA FAMA', text: TEXTE_PARTAGE, url: urlPartage() }).catch(function () {});
+                navigator.share({ title: 'LearnHub — cours, exercices et YA FAMA AI', text: TEXTE_PARTAGE, url: urlPartage() }).catch(function () {});
             }
         });
     }
@@ -335,7 +335,7 @@
                             '<li><a href="#/lecons">Leçons</a></li>' +
                             '<li><a href="#/bibliotheque">Bibliothèque</a></li>' +
                             '<li><a href="#/exercices">Exercices</a></li>' +
-                            '<li><a href="#/ia">' + NOM_IA + ' (IA)</a></li>' +
+                            '<li><a href="#/ia">' + NOM_IA + '</a></li>' +
                             '<li><a href="#/recherche">Recherche</a></li>' +
                             '<li><a href="#/profil">Ma progression</a></li>' +
                             '<li><a href="#/contact">Contact</a></li>' +
@@ -381,7 +381,7 @@
             '<ul class="dropdown-menu dropdown-menu-end">' +
                 '<li><a class="dropdown-item" href="#/profil"><i class="fas fa-chart-line me-2"></i>Ma progression</a></li>' +
                 '<li><a class="dropdown-item" href="#/lecons"><i class="fas fa-book-open me-2"></i>Mes leçons</a></li>' +
-                '<li><a class="dropdown-item" href="#/ia"><i class="fas fa-wand-magic-sparkles me-2"></i>' + NOM_IA + ' (IA)</a></li>' +
+                '<li><a class="dropdown-item" href="#/ia"><i class="fas fa-wand-magic-sparkles me-2"></i>' + NOM_IA + '</a></li>' +
                 (user.role === 'admin' ? '<li><a class="dropdown-item" href="#/admin"><i class="fas fa-user-cog me-2"></i>Administration</a></li>' : '') +
                 (user.role === 'superadmin' ? '<li><a class="dropdown-item" href="#/superadmin"><i class="fas fa-shield-halved me-2"></i>Super-administration</a></li>' : '') +
                 '<li><hr class="dropdown-divider"></li>' +
@@ -974,8 +974,11 @@
                         '</div>' +
                         '<div class="mt-auto d-flex flex-wrap gap-2 pt-3">' +
                             (lecon.supportUrl
-                                ? '<a class="btn btn-primary btn-sm" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
-                                    '<i class="fas fa-book-open me-1"></i>Ouvrir le document</a>' +
+                                ? (estDocumentPdf(lecon)
+                                    ? '<a class="btn btn-primary btn-sm" href="#/lecon/' + encodeURIComponent(lecon.id) + '/lire">' +
+                                        '<i class="fas fa-book-open me-1"></i>Lire le livre</a>'
+                                    : '<a class="btn btn-primary btn-sm" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
+                                        '<i class="fas fa-book-open me-1"></i>Ouvrir le document</a>') +
                                   '<a class="btn btn-outline-secondary btn-sm" href="' + esc(lecon.supportUrl) + '" download="' + esc(lecon.supportNom || lecon.titre) + '" title="Télécharger">' +
                                     '<i class="fas fa-download"></i></a>'
                                 : '<span class="badge bg-secondary bg-opacity-25 text-dark align-self-center">Document bientôt disponible</span>') +
@@ -1057,21 +1060,57 @@
         '</div>';
     }
 
-    /** Boutons d'ouverture d'un document, identiques à ceux de la bibliothèque. */
+    /** Le document est-il un PDF (donc lisible dans le livre) ? */
+    function estDocumentPdf(lecon) {
+        const url = String(lecon.supportUrl || '').split('?')[0];
+        const nom = String(lecon.supportNom || '');
+        return /\.pdf$/i.test(url) || /\.pdf$/i.test(nom);
+    }
+
+    /** Boutons d'ouverture d'un document : livre pour les PDF, onglet sinon. */
     function actionsDocument(lecon, taille) {
         if (!lecon.supportUrl) {
             return '<span class="badge bg-secondary bg-opacity-25 text-dark">' +
                 '<i class="fas fa-hourglass-half me-1"></i>Document bientôt disponible</span>';
         }
-        return '<a class="btn btn-primary' + (taille ? ' btn-' + taille : '') + '" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
-                '<i class="fas fa-book-open me-1"></i>Ouvrir le document</a>' +
-            '<a class="btn btn-outline-secondary' + (taille ? ' btn-' + taille : '') + '" href="' + esc(lecon.supportUrl) + '" download="' + esc(lecon.supportNom || lecon.titre) + '">' +
+        const suffixe = taille ? ' btn-' + taille : '';
+        const estPdf = estDocumentPdf(lecon);
+        const boutonLire = estPdf
+            ? '<a class="btn btn-primary' + suffixe + '" href="#/lecon/' + encodeURIComponent(lecon.id) + '/lire">' +
+                '<i class="fas fa-book-open me-1"></i>Lire le livre</a>'
+            : '';
+        return boutonLire +
+            '<a class="btn ' + (estPdf ? 'btn-outline-primary' : 'btn-primary') + suffixe + '" href="' + esc(lecon.supportUrl) + '" target="_blank" rel="noopener">' +
+                '<i class="fas fa-up-right-from-square me-1"></i>' + (estPdf ? 'Ouvrir dans un onglet' : 'Ouvrir le document') + '</a>' +
+            '<a class="btn btn-outline-secondary' + suffixe + '" href="' + esc(lecon.supportUrl) + '" download="' + esc(lecon.supportNom || lecon.titre) + '">' +
                 '<i class="fas fa-download me-1"></i>Télécharger</a>';
     }
 
-    function vueLecon(id) {
+    /** Carte compacte d'un cours, pour la rubrique « Ma classe ». */
+    function carteCoursMini(lecon) {
+        return '<a class="mes-cours-item" href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
+            '<div class="mes-cours-cover">' + couvertureLivre(lecon) + '</div>' +
+            '<div class="mes-cours-nom">' + esc(lecon.titre) + '</div>' +
+        '</a>';
+    }
+
+    function vueLecon(id, mode) {
         const lecon = store.lecons.get(id);
         if (!lecon) return vueIntrouvable('Ce cours n\'existe pas ou n\'est pas accessible depuis votre espace.');
+
+        if (mode === 'lire') {
+            return {
+                titre: 'Lire — ' + lecon.titre,
+                html: '<div class="lecteur-conteneur"></div>',
+                after: function (racine) {
+                    const cible = racine.querySelector('.lecteur-conteneur');
+                    if (cible && window.LearnHubLecteur) {
+                        window.LearnHubLecteur.render(cible, lecon);
+                    }
+                }
+            };
+        }
+
         const matiere = data.getMatiere(lecon.matiere);
         const niveau = lecon.niveau ? data.getNiveau(lecon.niveau) : null;
 
@@ -1104,7 +1143,9 @@
                             '</div>' +
                             '<p class="text-muted small mb-0">' +
                                 (lecon.supportUrl
-                                    ? 'Le document s\'ouvre dans un nouvel onglet : vous pouvez le lire, zoomer et revenir à tout moment.'
+                                    ? (estDocumentPdf(lecon)
+                                        ? 'Cliquez sur « Lire le livre » : les pages se tournent de gauche à droite, comme un vrai livre.'
+                                        : 'Le document s\'ouvre dans un nouvel onglet : vous pouvez le lire et le télécharger.')
                                     : 'Votre enseignant n\'a pas encore joint le document de ce cours.') +
                             '</p>' +
                         '</div>' +
@@ -1879,6 +1920,8 @@
         const badges = auth.badges(user.username);
         const tentatives = auth.attempts(user.username).slice().sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
         const classe = auth.maClasse();
+        const matiereClasse = classe && classe.matiere ? data.getMatiere(classe.matiere) : null;
+        const niveauClasse = classe && classe.niveau ? data.getNiveau(classe.niveau) : null;
         const leconsClasse = classe
             ? store.lecons.all().filter(function (lecon) {
                 const cibles = lecon.classeIds || [];
@@ -1915,20 +1958,49 @@
                 '</div>' +
                 (user.role === 'eleve'
                     ? '<div class="content mb-4">' +
-                        '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">' +
+                        '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
                             '<h2 class="h5 mb-0"><i class="fas fa-users-rectangle me-2"></i>Ma classe</h2>' +
                             (classe ? '<button class="btn btn-outline-secondary btn-sm" id="quitter-classe"><i class="fas fa-right-from-bracket me-1"></i>Quitter la classe</button>' : '') +
                         '</div>' +
                         (classe
-                            ? '<p class="mb-1"><strong>' + esc(classe.nom) + '</strong></p>' +
-                              '<p class="text-muted small mb-0">' + leconsClasse.length + ' livre(s) de cours pour votre classe. ' +
-                                '<a href="#/lecons">Ouvrir mes livres</a></p>'
-                            : '<p class="text-muted small">Vous n\'êtes rattaché à aucune classe. Saisissez le code fourni par votre enseignant pour accéder à ses livres de cours et exercices.</p>' +
-                              '<form class="row g-2 align-items-end" id="form-classe">' +
-                                '<div class="col-sm-6"><label class="form-label" for="code-classe">Code de la classe</label>' +
-                                    '<input class="form-control" id="code-classe" maxlength="10" placeholder="ex. AB12CD" autocomplete="off"></div>' +
-                                '<div class="col-sm-6"><button class="btn btn-primary" type="submit"><i class="fas fa-right-to-bracket me-1"></i>Rejoindre la classe</button></div>' +
-                              '</form>') +
+                            ? '<div class="classe-carte">' +
+                                '<div class="classe-entete">' +
+                                    '<div class="classe-icone"><i class="fas fa-chalkboard-user"></i></div>' +
+                                    '<div class="classe-infos">' +
+                                        '<h3 class="h5 mb-1">' + esc(classe.nom) + '</h3>' +
+                                        '<div class="d-flex flex-wrap gap-2 mb-2">' +
+                                            (matiereClasse ? '<span class="badge bg-primary bg-opacity-10 text-primary"><i class="fas ' + esc(matiereClasse.icone) + ' me-1"></i>' + esc(matiereClasse.nom) + '</span>' : '') +
+                                            (niveauClasse ? '<span class="badge bg-secondary bg-opacity-10 text-dark">' + esc(niveauClasse.nom) + '</span>' : '') +
+                                            (classe.code ? '<span class="badge bg-light text-dark border"><i class="fas fa-key me-1"></i>' + esc(classe.code) + '</span>' : '') +
+                                        '</div>' +
+                                        '<p class="text-muted small mb-0">' +
+                                            (leconsClasse.length
+                                                ? leconsClasse.length + ' cours dans votre espace — ouvrez-en un pour apprendre.'
+                                                : 'Votre enseignant n\'a pas encore publié de cours. Revenez bientôt.') +
+                                        '</p>' +
+                                    '</div>' +
+                                '</div>' +
+                                (leconsClasse.length
+                                    ? '<div class="mes-cours">' +
+                                        '<h4 class="h6 mb-2"><i class="fas fa-book-open me-1"></i>Mes cours</h4>' +
+                                        '<div class="mes-cours-liste">' +
+                                            leconsClasse.slice().sort(function (a, b) {
+                                                return String(a.titre).localeCompare(String(b.titre));
+                                            }).map(carteCoursMini).join('') +
+                                        '</div>' +
+                                      '</div>'
+                                    : '') +
+                              '</div>'
+                            : '<div class="classe-join text-center">' +
+                                '<i class="fas fa-door-open fa-3x text-primary mb-3"></i>' +
+                                '<h3 class="h5">Vous n\'êtes rattaché à aucune classe</h3>' +
+                                '<p class="text-muted small mb-3">Saisissez le code fourni par votre enseignant pour accéder à ses cours et exercices.</p>' +
+                                '<form class="row g-2 align-items-end justify-content-center" id="form-classe">' +
+                                    '<div class="col-sm-6 col-md-4"><label class="form-label" for="code-classe">Code de la classe</label>' +
+                                        '<input class="form-control text-uppercase" id="code-classe" maxlength="10" placeholder="ex. AB12CD" autocomplete="off"></div>' +
+                                    '<div class="col-sm-auto"><button class="btn btn-primary" type="submit"><i class="fas fa-right-to-bracket me-1"></i>Rejoindre la classe</button></div>' +
+                                '</form>' +
+                              '</div>') +
                       '</div>'
                     : '') +
                 '<div class="row g-3 mb-4">' +
@@ -2059,7 +2131,7 @@
         '</div>';
     }
 
-    /* ------------------------------ IAFA FAMA (IA) ------------------------------ */
+    /* ------------------------------ YA FAMA AI (IA) ------------------------------ */
 
     function sectionsTexteIA(titre, icone, valeur) {
         if (!valeur) return '';
@@ -2199,7 +2271,7 @@
         const user = auth.current();
         if (!user) {
             return {
-                titre: NOM_IA + ' — IA',
+                titre: NOM_IA,
                 html: '<div class="container py-4">' +
                     heroIA(DESCRIPTION_IA) +
                     '<div class="content text-center">' +
@@ -2220,7 +2292,7 @@
         }).join('');
 
         return {
-            titre: NOM_IA + ' — IA',
+            titre: NOM_IA,
             html: '<div class="container py-4">' +
                 heroIA(DESCRIPTION_IA) +
                 '<div class="d-flex flex-wrap justify-content-end align-items-center gap-2 mb-3">' +
@@ -2996,7 +3068,7 @@
             case 'chapitre': return vueChapitre(segments[1]);
             case 'cours': return vueCours(segments[1], segments[2]);
             case 'lecons': return vueLecons();
-            case 'lecon': return vueLecon(segments[1]);
+            case 'lecon': return vueLecon(segments[1], segments[2]);
             case 'bibliotheque': return vueBibliotheque(parametres);
             case 'contact': return vueContact();
             case 'exercices': return vueExercices(parametres);
