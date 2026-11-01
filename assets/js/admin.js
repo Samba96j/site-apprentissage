@@ -599,6 +599,10 @@ window.LearnHubAdmin = (function () {
                     (window.LearnHubBackend && window.LearnHubBackend.estActif()
                         ? 'Les fichiers importés sont hébergés dans Supabase Storage : ils restent accessibles sur tous vos appareils.'
                         : 'Les documents importés sont conservés dans le navigateur (localStorage) : ils ne sont pas partagés entre appareils.') +
+                '</p>' +
+                '<p class="text-muted small mt-1 mb-0"><i class="fas fa-eye me-1"></i>' +
+                    'Les élèves de votre espace voient ces ressources sur la page ' +
+                    '<a href="#/ressources" target="_blank">Ressources</a>.' +
                 '</p>';
         }
 

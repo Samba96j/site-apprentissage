@@ -177,6 +177,7 @@
                             '<a class="nav-link dropdown-toggle" href="#/lecons" role="button" data-bs-toggle="dropdown" data-nav="apprendre">Apprendre</a>' +
                             '<ul class="dropdown-menu">' +
                                 '<li><a class="dropdown-item" href="#/lecons"><i class="fas fa-book-open me-2"></i>Leçons</a></li>' +
+                                '<li><a class="dropdown-item" href="#/ressources"><i class="fas fa-folder-open me-2"></i>Ressources</a></li>' +
                                 '<li><a class="dropdown-item" href="#/bibliotheque"><i class="fas fa-book me-2"></i>Bibliothèque</a></li>' +
                                 '<li><a class="dropdown-item" href="#/exercices"><i class="fas fa-gamepad me-2"></i>Exercices</a></li>' +
                             '</ul>' +
@@ -333,6 +334,7 @@
                         '<ul class="list-unstyled">' +
                             '<li><a href="#/cours/une-si-longue-lettre">Étude d\'œuvre</a></li>' +
                             '<li><a href="#/lecons">Leçons</a></li>' +
+                            '<li><a href="#/ressources">Ressources</a></li>' +
                             '<li><a href="#/bibliotheque">Bibliothèque</a></li>' +
                             '<li><a href="#/exercices">Exercices</a></li>' +
                             '<li><a href="#/ia">' + NOM_IA + '</a></li>' +
@@ -390,7 +392,7 @@
         '</div>';
     }
 
-    const SECTIONS_APPRENDRE = ['lecons', 'lecon', 'bibliotheque', 'exercices'];
+    const SECTIONS_APPRENDRE = ['lecons', 'lecon', 'ressources', 'bibliotheque', 'exercices'];
 
     function majEntete(segments) {
         const zoneAuth = document.getElementById('zone-auth');
@@ -1358,6 +1360,95 @@
                     window.scrollTo({ top: haut, behavior: 'smooth' });
                 });
             }
+        };
+    }
+
+    /* -------------------------------- Ressources -------------------------------- */
+
+    const ICONES_RESSOURCE = {
+        'Fiche de lecture': 'fa-file-lines',
+        'Corrigé': 'fa-circle-check',
+        'Cours': 'fa-chalkboard-user',
+        'Exercice': 'fa-pen-to-square',
+        'Vidéo': 'fa-video',
+        'Lien externe': 'fa-up-right-from-square'
+    };
+
+    function dateRessource(iso) {
+        const date = new Date(iso);
+        if (isNaN(date.getTime())) return '';
+        return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    /** Ressources pédagogiques partagées par l'enseignant de l'espace de l'élève. */
+    function vueRessources() {
+        const user = auth.current();
+        const espace = auth.espaceActif();
+        const ressources = store.ressources.all().slice().sort(function (a, b) {
+            return String(b.date || '').localeCompare(String(a.date || ''));
+        });
+
+        function carteRessource(ressource) {
+            const url = String(ressource.url || '');
+            const externe = /^https?:/i.test(url);
+            const icone = ICONES_RESSOURCE[ressource.type] || 'fa-file';
+            const date = dateRessource(ressource.date);
+            return '<div class="col-md-6 col-xl-4">' +
+                '<div class="content h-100 d-flex flex-column">' +
+                    '<div class="d-flex align-items-start gap-2 mb-2">' +
+                        '<i class="fas ' + icone + ' fa-2x text-primary"></i>' +
+                        '<div class="flex-grow-1">' +
+                            '<h2 class="h6 mb-1">' + esc(ressource.titre) + '</h2>' +
+                            '<p class="text-muted small mb-0">' + esc(ressource.type || 'Ressource') + '</p>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="d-flex flex-wrap gap-1 mb-3">' +
+                        (ressource.taille ? '<span class="badge text-bg-light border">' + esc(ressource.taille) + '</span>' : '') +
+                        (date ? '<span class="badge text-bg-light border"><i class="fas fa-calendar-day me-1"></i>' + esc(date) + '</span>' : '') +
+                    '</div>' +
+                    '<div class="mt-auto d-flex gap-2">' +
+                        '<a class="btn btn-primary btn-sm" href="' + esc(url) + '"' +
+                            (externe ? ' target="_blank" rel="noopener"' : '') + '>' +
+                            '<i class="fas fa-eye me-1"></i>Ouvrir</a>' +
+                        (externe
+                            ? '<a class="btn btn-outline-secondary btn-sm" href="' + esc(url) + '" target="_blank" rel="noopener" download="' + esc(ressource.titre) + '" title="Télécharger">' +
+                                '<i class="fas fa-download"></i></a>'
+                            : '') +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+
+        let contenu;
+        if (!user) {
+            contenu = '<div class="content text-center py-5">' +
+                '<i class="fas fa-lock fa-3x text-primary mb-3"></i>' +
+                '<h2 class="h5">Ressources réservées aux élèves</h2>' +
+                '<p class="text-muted">Connectez-vous avec votre compte élève pour voir les documents et liens partagés par votre enseignant.</p>' +
+                '<a class="btn btn-primary" href="#/connexion?next=ressources">Se connecter</a>' +
+                '<p class="small text-muted mt-3 mb-0">Pas encore de compte ? ' +
+                    '<a href="#/connexion?mode=inscription">Créez-en un gratuitement</a>.</p>' +
+              '</div>';
+        } else if (!ressources.length) {
+            contenu = '<div class="content text-muted">' +
+                '<i class="fas fa-folder-open me-2"></i>' +
+                (espace
+                    ? 'Aucune ressource partagée pour le moment. Votre enseignant peut en ajouter depuis l\'onglet « Ressources » de son espace.'
+                    : 'Rejoignez une classe depuis <a href="#/profil">Ma progression</a> pour accéder aux ressources de votre enseignant.') +
+              '</div>';
+        } else {
+            contenu = '<div class="row g-3">' + ressources.map(carteRessource).join('') + '</div>';
+        }
+
+        return {
+            titre: 'Ressources',
+            html: '<div class="container py-4">' +
+                '<div class="mb-4">' +
+                    '<h1 class="h3 mb-1"><i class="fas fa-folder-open me-2"></i>Ressources</h1>' +
+                    '<p class="text-muted mb-0">Fiches, corrigés, cours et liens partagés par votre enseignant.</p>' +
+                '</div>' +
+                contenu +
+            '</div>'
         };
     }
 
@@ -2996,6 +3087,7 @@
     function vueAdmin(section) {
         const user = auth.current();
         if (!auth.isAdmin()) {
+            const sectionDemandee = section || 'dashboard';
             return {
                 titre: 'Administration',
                 html: '<div class="container py-4"><div class="content">' +
@@ -3006,6 +3098,9 @@
                         ? '<a class="btn btn-primary" href="#/superadmin">Ouvrir la super-administration</a>'
                         : '<a class="btn btn-primary" href="#/connexion?next=admin">Se connecter</a>') +
                     (user ? ' <a class="btn btn-outline-secondary" href="#/profil">Mon espace élève</a>' : '') +
+                    (sectionDemandee === 'ressources'
+                        ? ' <a class="btn btn-outline-primary" href="#/ressources">Voir les ressources de ma classe</a>'
+                        : '') +
                 '</div></div>'
             };
         }
@@ -3069,6 +3164,7 @@
             case 'cours': return vueCours(segments[1], segments[2]);
             case 'lecons': return vueLecons();
             case 'lecon': return vueLecon(segments[1], segments[2]);
+            case 'ressources': return vueRessources();
             case 'bibliotheque': return vueBibliotheque(parametres);
             case 'contact': return vueContact();
             case 'exercices': return vueExercices(parametres);
