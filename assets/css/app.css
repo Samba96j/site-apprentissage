@@ -1,6 +1,15 @@
 /* Styles propres à l'application monopage : en-tête, cartes de statistiques,
    badges, notifications. La base visuelle reste dans styles.css. */
+/* --- Correction de la barre de navigation fixe --- */
+body {
+    padding-top: 56px; 
+}
 
+@media (min-width: 992px) {
+    body {
+        padding-top: 72px; /* Ajustez si nécessaire selon la hauteur exacte de votre navbar */
+    }
+}
 .bg-edu {
     background: linear-gradient(135deg, var(--primary), var(--dark));
 }

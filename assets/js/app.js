@@ -156,7 +156,8 @@
     }
 
     function htmlEntete() {
-        return '<nav class="navbar navbar-expand-lg navbar-dark bg-edu sticky-top">' +
+        // MODIFICATION ICI : remplacement de 'sticky-top' par 'fixed-top'
+        return '<nav class="navbar navbar-expand-lg navbar-dark bg-edu fixed-top shadow-sm">' +
             '<div class="container">' +
                 '<a class="navbar-brand" href="#/"><i class="fas fa-graduation-cap me-2"></i>LearnHub</a>' +
                 '<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Ouvrir le menu">' +
@@ -450,11 +451,6 @@
         '</div>';
     }
 
-    /**
-     * Fait vivre le carrousel : moteur Bootstrap quand il est disponible,
-     * moteur de secours sinon (CDN bloqué, réseau lent…). Le bouton pause
-     * reste le même dans les deux cas.
-     */
     let arreterCarrousel = null;
 
     function demarrerCarrousel(racine) {
@@ -483,7 +479,6 @@
             bouton.setAttribute('title', enPause ? 'Lancer le diaporama' : 'Mettre le diaporama en pause');
         }
 
-        /* --- Moteur Bootstrap : il gère les flèches, les indicateurs et le clavier --- */
         if (moteurBootstrap) {
             const instance = window.bootstrap.Carousel.getOrCreateInstance(carrousel, {
                 interval: intervalle,
@@ -504,7 +499,6 @@
             return;
         }
 
-        /* --- Moteur de secours (sans Bootstrap) --- */
         function afficher(index) {
             courant = (index + items.length) % items.length;
             items.forEach(function (item, i) { item.classList.toggle('active', i === courant); });
@@ -672,7 +666,6 @@
         };
     }
 
-    /** Apparition progressive des blocs portant `data-reveal`. */
     function demarrerRevelations(racine) {
         const cibles = racine.querySelectorAll('[data-reveal]');
         if (!cibles.length) return;
@@ -946,8 +939,6 @@
             return String(a.titre).localeCompare(String(b.titre));
         });
 
-        // Un cours explicitement destiné à la classe de l'élève reste visible
-        // même si sa matière diffère de celle de la classe.
         function cibleMaClasse(lecon) {
             return !!maClasse && (lecon.classeIds || []).indexOf(maClasse.id) >= 0;
         }
@@ -1032,7 +1023,6 @@
         };
     }
 
-    /** Couverture d'un cours : image du professeur, sinon couverture dessinée en CSS. */
     function couvertureLivre(lecon, options) {
         const reglages = options || {};
         const matiere = data.getMatiere(lecon.matiere);
@@ -1063,14 +1053,12 @@
         '</div>';
     }
 
-    /** Le document est-il un PDF (donc lisible dans le livre) ? */
     function estDocumentPdf(lecon) {
         const url = String(lecon.supportUrl || '').split('?')[0];
         const nom = String(lecon.supportNom || '');
         return /\.pdf$/i.test(url) || /\.pdf$/i.test(nom);
     }
 
-    /** Boutons d'ouverture d'un document : livre pour les PDF, onglet sinon. */
     function actionsDocument(lecon, taille) {
         if (!lecon.supportUrl) {
             return '<span class="badge bg-secondary bg-opacity-25 text-dark">' +
@@ -1089,7 +1077,6 @@
                 '<i class="fas fa-download me-1"></i>Télécharger</a>';
     }
 
-    /** Carte compacte d'un cours, pour la rubrique « Ma classe ». */
     function carteCoursMini(lecon) {
         return '<a class="mes-cours-item" href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
             '<div class="mes-cours-cover">' + couvertureLivre(lecon) + '</div>' +
@@ -1163,8 +1150,6 @@
         };
     }
 
-    /* -------------------------------- Bibliothèque -------------------------------- */
-
     const LIBELLES_DOC = { pdf: 'PDF', word: 'Word / Texte', texte: 'Texte', autre: 'Document' };
     const ICONES_DOC = { pdf: 'fa-file-pdf', word: 'fa-file-word', texte: 'fa-file-lines', autre: 'fa-file' };
 
@@ -1213,7 +1198,6 @@
                     const m = data.getMatiere(slug);
                     if (m) return m.nom;
                     if (!slug) return 'Général';
-                    // Matière libre saisie lors d'un import : on l'affiche lisiblement.
                     const texte = String(slug).replace(/[-_]+/g, ' ');
                     return texte.charAt(0).toUpperCase() + texte.slice(1);
                 }
@@ -1364,8 +1348,6 @@
         };
     }
 
-    /* -------------------------------- Ressources -------------------------------- */
-
     const ICONES_RESSOURCE = {
         'Fiche de lecture': 'fa-file-lines',
         'Corrigé': 'fa-circle-check',
@@ -1381,7 +1363,6 @@
         return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
 
-    /* youtu.be/ID, youtube.com/watch?v=ID, /embed/ID, /shorts/ID, /live/ID */
     const MOTIF_YOUTUBE = /(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i;
 
     function idYoutube(url) {
@@ -1389,7 +1370,6 @@
         return trouve ? trouve[1] : '';
     }
 
-    /** Ressources pédagogiques partagées par l'enseignant de l'espace de l'élève. */
     function vueRessources() {
         const user = auth.current();
         const espace = auth.espaceActif();
@@ -1404,7 +1384,6 @@
             const icone = video ? 'fa-circle-play' : (ICONES_RESSOURCE[ressource.type] || 'fa-file');
             const date = dateRessource(ressource.date);
 
-            // Vidéo YouTube : vignette cliquable, remplacée par le lecteur intégré.
             const vignette = video
                 ? '<div class="ratio ratio-16x9 lecteur-video mb-3">' +
                     '<button type="button" class="lecteur-video-vignette" data-video="' + esc(video) + '"' +
@@ -1482,9 +1461,6 @@
                     '<div id="ressources-contenu">' + contenu + '</div>' +
             '</div>',
             after: function (racine) {
-                // La vignette YouTube est remplacée par le lecteur : la vidéo se
-                // regarde dans la page, sans quitter l'espace élève.
-                    // Écouteur posé sur la zone de la vue, recréée à chaque rendu.
                     const zoneVue = racine.querySelector('#ressources-contenu');
                     if (!zoneVue) return;
                     zoneVue.addEventListener('click', function (event) {
@@ -1627,11 +1603,8 @@
         };
     }
 
-    /* --------------------------------- Devoirs --------------------------------- */
-
     const JOUR_MS = 24 * 60 * 60 * 1000;
 
-    /** Devoirs visibles : le store applique déjà l'espace de l'élève et le ciblage par classe. */
     function devoirsVisibles(user) {
         if (!user) return [];
         return store.exercices.devoirs().slice().sort(function (a, b) {
@@ -1639,7 +1612,6 @@
         });
     }
 
-    /** État d'un devoir pour un élève : rendu, en retard ou à faire. */
     function etatDevoir(exercice, username) {
         const tentatives = username
             ? auth.attempts(username).filter(function (t) { return t.exerciceId === exercice.id; })
@@ -1657,7 +1629,6 @@
         return { fait: false, retard: jours < 0, jours: jours };
     }
 
-    /** Échéance « AAAA-MM-JJ » lue sans décalage de fuseau. */
     function dateEcheance(valeur) {
         const trouve = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(valeur || ''));
         if (!trouve) return dateRessource(valeur);
@@ -1680,7 +1651,6 @@
         return '<span class="devoir-pastille devoir-pastille-a-faire"><i class="fas fa-hourglass-half me-1"></i>À faire</span>';
     }
 
-    /** Devoirs publiés pour l'élève et pas encore rendus (source de la cloche). */
     function devoirsEnAttente(user) {
         if (!user || user.role !== 'eleve') return [];
         return devoirsVisibles(user).filter(function (exercice) {
@@ -1722,8 +1692,6 @@
         const matiereClasse = auth.matiereClasse();
         const matiereNom = matiereClasse ? (data.getMatiere(matiereClasse) || {}).nom : null;
         const maClasse = auth.maClasse();
-        // Un devoir donné à la classe de l'élève reste accessible même si sa
-        // matière diffère de celle de la classe.
         const tous = store.exercices.actifs().filter(function (ex) {
             return !matiereClasse || ex.matiere === matiereClasse ||
                 (ex.devoir === true && !!maClasse && (ex.classeIds || []).indexOf(maClasse.id) >= 0);
@@ -2420,8 +2388,6 @@
         '</div>';
     }
 
-    /* ------------------------------ YA FAMA AI (IA) ------------------------------ */
-
     function sectionsTexteIA(titre, icone, valeur) {
         if (!valeur) return '';
         return '<div class="mb-4">' +
@@ -2523,7 +2489,6 @@
     }
 
     function etoilesDeco(nombre) {
-        // Générateur déterministe : les positions restent stables entre deux rendus.
         let graine = 20261029;
         function suivant() {
             graine = (graine * 16807) % 2147483647;
@@ -2829,8 +2794,6 @@
             }
         };
     }
-
-    /* ------------------------------ Super-administration ------------------------------ */
 
     const LIBELLES_ROLES = { eleve: 'Élève', admin: 'Administrateur', superadmin: 'Super-admin' };
     const ORDRE_ROLES = { superadmin: 0, admin: 1, eleve: 2 };
