@@ -10,7 +10,7 @@
 create table if not exists public.ia_contenus (
     id text primary key,
     user_id uuid not null references public.profiles(id) on delete cascade,
-    type text not null check (type in ('etude', 'question')),
+    type text not null check (type in ('etude', 'question', 'quiz', 'fiche')),
     requete text not null,
     auteur text,
     niveau text,

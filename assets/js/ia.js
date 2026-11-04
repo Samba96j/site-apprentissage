@@ -95,7 +95,13 @@ window.LearnHubIA = (function () {
     }
 
     function libelleType(type) {
-        return type === 'question' ? 'Recherche' : 'Étude d\'œuvre';
+        const libelles = {
+            etude: 'Étude d’œuvre',
+            question: 'Recherche',
+            quiz: 'Quiz interactif',
+            fiche: 'Fiche de révision'
+        };
+        return libelles[type] || 'Étude d’œuvre';
     }
 
     /**
@@ -106,6 +112,8 @@ window.LearnHubIA = (function () {
         const oeuvre = (parametres && parametres.oeuvre) || 'Œuvre choisie';
         const auteur = (parametres && parametres.auteur) || 'Auteur à préciser';
         const question = (parametres && parametres.question) || 'Votre question';
+        const sujetQuiz = (parametres && parametres.sujetQuiz) || 'Sujet choisi';
+        const sujetFiche = (parametres && parametres.sujetFiche) || 'Sujet choisi';
 
         if (mode === 'question') {
             return {
@@ -124,6 +132,38 @@ window.LearnHubIA = (function () {
                     'Quel exemple personnel illustre cette notion ?',
                     'Quelle partie reste à approfondir ?'
                 ]
+            };
+        }
+
+        if (mode === 'quiz') {
+            const nombre = Math.min(10, Math.max(3, Number(parametres && parametres.nombreQuestions) || 5));
+            return {
+                titre: 'Quiz : ' + sujetQuiz,
+                questions: Array.from({ length: nombre }, function (_, index) {
+                    return {
+                        question: 'Question de démonstration ' + (index + 1) + ' sur « ' + sujetQuiz + ' ».',
+                        choix: ['Réponse A', 'Réponse B', 'Réponse C'],
+                        bonneReponse: 0,
+                        explication: 'Dans un quiz réel, cette explication justifiera la bonne réponse.'
+                    };
+                })
+            };
+        }
+
+        if (mode === 'fiche') {
+            return {
+                titre: 'Fiche de révision : ' + sujetFiche,
+                ideeGenerale: 'Cette fiche de démonstration résumera les points essentiels de « ' + sujetFiche + ' ».',
+                essentiels: [
+                    'Repérez les idées principales du sujet.',
+                    'Retenez les notions et le vocabulaire importants.',
+                    'Vérifiez les informations avec votre cours.'
+                ],
+                notions: [
+                    { titre: 'Notion clé', definition: 'La définition sera adaptée au sujet de la fiche.' }
+                ],
+                methode: ['Relisez la fiche, puis reformulez les notions avec vos propres mots.'],
+                autoEvaluation: ['Quelles sont les idées essentielles à retenir ?']
             };
         }
 

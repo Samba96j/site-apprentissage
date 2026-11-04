@@ -840,7 +840,7 @@ window.LearnHubBackend = (function () {
         const ligne = {
             id: id,
             user_id: profil.id,
-            type: entree.type === 'question' ? 'question' : 'etude',
+            type: ['etude', 'question', 'quiz', 'fiche'].indexOf(entree.type) >= 0 ? entree.type : 'etude',
             requete: String(entree.requete || '').slice(0, 500),
             auteur: entree.auteur ? String(entree.auteur).slice(0, 160) : null,
             niveau: entree.niveau ? String(entree.niveau).slice(0, 20) : null,

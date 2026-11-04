@@ -14,7 +14,7 @@
     /* Identité de l'assistant IA : un seul endroit à modifier pour renommer. */
     const NOM_IA = 'YA FAMA AI';
     const DESCRIPTION_IA = 'Assistant pédagogique IA : étudiez une œuvre ou posez une question, LearnHub met le résultat en forme.';
-    const BADGE_IA = '';
+    const BADGE_IA = '<span class="bg-primary text-white rounded-pill px-3 py-2 small fw-bold">IA</span>';
 
     /* --------------------------------- Utilitaires --------------------------------- */
 
@@ -2488,6 +2488,49 @@
         '</article>';
     }
 
+    function htmlQuizIA(contenu) {
+        const c = contenu || {};
+        const questions = Array.isArray(c.questions) ? c.questions : [];
+        return '<article>' +
+            '<h2 class="h3 mb-4">' + esc(c.titre || 'Quiz interactif') + '</h2>' +
+            (questions.length
+                ? '<div class="vstack gap-4">' + questions.map(function (question, index) {
+                    const choix = Array.isArray(question.choix) ? question.choix : [];
+                    return '<fieldset class="border rounded-3 p-3" data-quiz-question="' + index + '">' +
+                        '<legend class="h6">' + (index + 1) + '. ' + esc(question.question || '') + '</legend>' +
+                        choix.map(function (option, optionIndex) {
+                            return '<label class="d-block py-1"><input class="form-check-input me-2" type="radio" name="ia-quiz-' +
+                                index + '" value="' + optionIndex + '"> ' + esc(option) + '</label>';
+                        }).join('') +
+                        '<p class="small mt-2 mb-0 d-none" data-quiz-explication>' +
+                            esc(question.explication || '') + '</p>' +
+                    '</fieldset>';
+                }).join('') + '</div>' +
+                '<button class="btn btn-primary mt-3" type="button" data-quiz-action="verifier">Vérifier mes réponses</button>' +
+                '<p class="fw-semibold mt-3 mb-0" data-quiz-score aria-live="polite"></p>'
+                : '<div class="alert alert-warning">Aucune question exploitable n’a été générée. Réessayez.</div>') +
+        '</article>';
+    }
+
+    function htmlFicheRevisionIA(contenu) {
+        const c = contenu || {};
+        const notions = Array.isArray(c.notions) ? c.notions : [];
+        return '<article>' +
+            '<h2 class="h3 mb-4">' + esc(c.titre || 'Fiche de révision') + '</h2>' +
+            sectionsTexteIA('Idée générale', 'fa-lightbulb', c.ideeGenerale) +
+            sectionsListeIA('L’essentiel à retenir', 'fa-bookmark', c.essentiels) +
+            (notions.length
+                ? '<div class="mb-4"><h3 class="h5 text-primary mb-2"><i class="fas fa-list-check me-2"></i>Notions clés</h3>' +
+                    '<dl class="row">' + notions.map(function (notion) {
+                        return '<dt class="col-md-3">' + esc(notion.titre || '') + '</dt>' +
+                            '<dd class="col-md-9">' + esc(notion.definition || '') + '</dd>';
+                    }).join('') + '</dl></div>'
+                : '') +
+            sectionsListeIA('Méthode', 'fa-list-ol', c.methode) +
+            sectionsListeIA('Pour s’auto-évaluer', 'fa-circle-question', c.autoEvaluation) +
+        '</article>';
+    }
+
     function etoilesDeco(nombre) {
         let graine = 20261029;
         function suivant() {
@@ -2514,7 +2557,7 @@
                 '<div class="ia-hero-etoiles" aria-hidden="true">' +
                     '<i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>' +
                 '</div>' +
-                '<span class="ia-hero-badge">Intelligence artificielle</span>' +
+                '<span class="ia-hero-badge bg-primary text-white rounded-pill px-3 py-2 small fw-bold">IA</span>' +
                 '<h1 class="ia-hero-titre">' + esc(NOM_IA) + '</h1>' +
                 '<p class="ia-hero-soustitre">' + esc(sousTitre) + '</p>' +
             '</div>' +
@@ -2536,7 +2579,9 @@
             };
         }
 
-        const modeInitial = parametres && parametres.get('mode') === 'question' ? 'question' : 'etude';
+        const modesIA = ['etude', 'question', 'quiz', 'fiche'];
+        const modeDemande = parametres && parametres.get('mode');
+        const modeInitial = modesIA.indexOf(modeDemande) >= 0 ? modeDemande : 'etude';
         const optionsNiveaux = data.niveaux.map(function (niveau) {
             return '<option value="' + esc(niveau.slug) + '">' + esc(niveau.nom) + '</option>';
         }).join('');
@@ -2557,6 +2602,8 @@
                 '<ul class="nav nav-tabs mb-3" id="ia-onglets">' +
                     '<li class="nav-item"><button class="nav-link ' + (modeInitial === 'etude' ? 'active' : '') + '" type="button" data-mode="etude"><i class="fas fa-book-open me-1"></i>Étude d\'œuvre</button></li>' +
                     '<li class="nav-item"><button class="nav-link ' + (modeInitial === 'question' ? 'active' : '') + '" type="button" data-mode="question"><i class="fas fa-magnifying-glass me-1"></i>Recherche / question</button></li>' +
+                    '<li class="nav-item"><button class="nav-link ' + (modeInitial === 'quiz' ? 'active' : '') + '" type="button" data-mode="quiz"><i class="fas fa-circle-question me-1"></i>Quiz interactif</button></li>' +
+                    '<li class="nav-item"><button class="nav-link ' + (modeInitial === 'fiche' ? 'active' : '') + '" type="button" data-mode="fiche"><i class="fas fa-file-lines me-1"></i>Fiche de révision</button></li>' +
                 '</ul>' +
                 '<div class="content mb-4">' +
                     '<form id="form-etude" class="' + (modeInitial === 'etude' ? '' : 'd-none') + '">' +
@@ -2599,6 +2646,46 @@
                             '</div>' +
                         '</div>' +
                     '</form>' +
+                    '<form id="form-quiz" class="' + (modeInitial === 'quiz' ? '' : 'd-none') + '">' +
+                        '<div class="row g-3">' +
+                            '<div class="col-md-6">' +
+                                '<label class="form-label" for="ia-sujet-quiz">Sujet du quiz</label>' +
+                                '<input class="form-control" id="ia-sujet-quiz" maxlength="300" required placeholder="ex. Le registre lyrique">' +
+                            '</div>' +
+                            '<div class="col-md-3">' +
+                                '<label class="form-label" for="ia-niveau-quiz">Niveau</label>' +
+                                '<select class="form-select" id="ia-niveau-quiz">' + optionsNiveaux + '</select>' +
+                            '</div>' +
+                            '<div class="col-md-3">' +
+                                '<label class="form-label" for="ia-nombre-quiz">Nombre de questions</label>' +
+                                '<select class="form-select" id="ia-nombre-quiz">' +
+                                    '<option value="3">3 questions</option><option value="5" selected>5 questions</option>' +
+                                    '<option value="8">8 questions</option><option value="10">10 questions</option>' +
+                                '</select>' +
+                            '</div>' +
+                            '<div class="col-12"><button class="btn btn-primary" type="submit"><i class="fas fa-wand-magic-sparkles me-1"></i>Créer le quiz</button></div>' +
+                        '</div>' +
+                    '</form>' +
+                    '<form id="form-fiche" class="' + (modeInitial === 'fiche' ? '' : 'd-none') + '">' +
+                        '<div class="row g-3">' +
+                            '<div class="col-md-6">' +
+                                '<label class="form-label" for="ia-sujet-fiche">Sujet à réviser</label>' +
+                                '<input class="form-control" id="ia-sujet-fiche" maxlength="300" required placeholder="ex. La poésie engagée">' +
+                            '</div>' +
+                            '<div class="col-md-3">' +
+                                '<label class="form-label" for="ia-type-fiche">Type de fiche</label>' +
+                                '<select class="form-select" id="ia-type-fiche">' +
+                                    '<option value="synthèse">Synthèse</option><option value="notions clés">Notions clés</option>' +
+                                    '<option value="méthode">Méthode</option>' +
+                                '</select>' +
+                            '</div>' +
+                            '<div class="col-md-3">' +
+                                '<label class="form-label" for="ia-niveau-fiche">Niveau</label>' +
+                                '<select class="form-select" id="ia-niveau-fiche">' + optionsNiveaux + '</select>' +
+                            '</div>' +
+                            '<div class="col-12"><button class="btn btn-primary" type="submit"><i class="fas fa-wand-magic-sparkles me-1"></i>Créer ma fiche</button></div>' +
+                        '</div>' +
+                    '</form>' +
                 '</div>' +
                 '<div id="ia-resultat"></div>' +
                 '<div class="content mt-4" id="ia-historique"></div>' +
@@ -2607,17 +2694,22 @@
                 const onglets = racine.querySelectorAll('#ia-onglets [data-mode]');
                 const formEtude = racine.querySelector('#form-etude');
                 const formQuestion = racine.querySelector('#form-question');
+                const formQuiz = racine.querySelector('#form-quiz');
+                const formFiche = racine.querySelector('#form-fiche');
+                const formulaires = { etude: formEtude, question: formQuestion, quiz: formQuiz, fiche: formFiche };
                 const zone = racine.querySelector('#ia-resultat');
                 const historique = racine.querySelector('#ia-historique');
                 const selectOeuvre = racine.querySelector('#ia-oeuvre');
                 const oeuvreLibre = racine.querySelector('#ia-oeuvre-autre');
+                let quizCourant = null;
 
                 function activerMode(mode) {
                     onglets.forEach(function (bouton) {
                         bouton.classList.toggle('active', bouton.dataset.mode === mode);
                     });
-                    formEtude.classList.toggle('d-none', mode !== 'etude');
-                    formQuestion.classList.toggle('d-none', mode !== 'question');
+                    Object.keys(formulaires).forEach(function (cle) {
+                        formulaires[cle].classList.toggle('d-none', cle !== mode);
+                    });
                 }
 
                 onglets.forEach(function (bouton) {
@@ -2630,13 +2722,43 @@
                     zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
 
+                zone.addEventListener('click', function (event) {
+                    const bouton = event.target.closest('[data-quiz-action="verifier"]');
+                    if (!bouton || !quizCourant) return;
+                    let score = 0;
+                    quizCourant.questions.forEach(function (question, index) {
+                        const groupe = zone.querySelector('[data-quiz-question="' + index + '"]');
+                        const selection = groupe.querySelector('input[name="ia-quiz-' + index + '"]:checked');
+                        const juste = selection && Number(selection.value) === question.bonneReponse;
+                        if (juste) score += 1;
+                        groupe.classList.add(juste ? 'border-success' : 'border-danger');
+                        const explication = groupe.querySelector('[data-quiz-explication]');
+                        explication.classList.remove('d-none');
+                        const retour = document.createElement('span');
+                        retour.className = 'd-block small fw-semibold mt-2 ' + (juste ? 'text-success' : 'text-danger');
+                        retour.textContent = juste ? 'Bonne réponse.' :
+                            'Réponse attendue : ' + (question.choix[question.bonneReponse] || '');
+                        explication.before(retour);
+                    });
+                    const resultat = zone.querySelector('[data-quiz-score]');
+                    resultat.textContent = 'Votre score : ' + score + ' / ' + quizCourant.questions.length;
+                    bouton.disabled = true;
+                });
+
                 function afficherErreur(texte) {
                     zone.innerHTML = '<div class="alert alert-danger mb-0">' +
                         '<i class="fas fa-triangle-exclamation me-1"></i>' + esc(texte) + '</div>';
                 }
 
                 function rendre(item) {
-                    const corps = item.type === 'question' ? htmlReponseIA(item.contenu) : htmlEtudeIA(item.contenu);
+                    const corps = item.type === 'question'
+                        ? htmlReponseIA(item.contenu)
+                        : item.type === 'quiz'
+                            ? htmlQuizIA(item.contenu)
+                            : item.type === 'fiche'
+                                ? htmlFicheRevisionIA(item.contenu)
+                                : htmlEtudeIA(item.contenu);
+                    quizCourant = item.type === 'quiz' ? item.contenu : null;
                     zone.innerHTML = '<div class="content">' +
                         (item.demo
                             ? '<div class="alert alert-info small"><i class="fas fa-circle-info me-1"></i>' +
@@ -2677,7 +2799,13 @@
                 async function lancer(mode, parametres) {
                     const boutons = racine.querySelectorAll('form button[type="submit"]');
                     boutons.forEach(function (bouton) { bouton.disabled = true; });
-                    afficherChargement(mode === 'etude' ? 'L\'IA rédige la fiche…' : 'L\'IA prépare la réponse…');
+                    const chargements = {
+                        etude: 'L\'IA rédige la fiche d’œuvre…',
+                        question: 'L\'IA prépare la réponse…',
+                        quiz: 'L\'IA prépare le quiz…',
+                        fiche: 'L\'IA rédige la fiche de révision…'
+                    };
+                    afficherChargement(chargements[mode]);
 
                     let resultat = await window.LearnHubIA.generer(parametres);
                     let demo = false;
@@ -2694,7 +2822,7 @@
 
                     const item = {
                         type: mode,
-                        requete: mode === 'etude' ? parametres.oeuvre : parametres.question,
+                        requete: parametres.oeuvre || parametres.question || parametres.sujetQuiz || parametres.sujetFiche,
                         auteur: parametres.auteur || '',
                         niveau: parametres.niveau || '',
                         modele: resultat.modele || '',
@@ -2764,6 +2892,36 @@
                         mode: 'question',
                         question: question,
                         niveau: racine.querySelector('#ia-niveau-question').value
+                    });
+                });
+
+                formQuiz.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    const sujetQuiz = racine.querySelector('#ia-sujet-quiz').value.trim();
+                    if (sujetQuiz.length < 2) {
+                        afficherErreur('Indiquez le sujet du quiz.');
+                        return;
+                    }
+                    lancer('quiz', {
+                        mode: 'quiz',
+                        sujetQuiz: sujetQuiz,
+                        nombreQuestions: Number(racine.querySelector('#ia-nombre-quiz').value),
+                        niveau: racine.querySelector('#ia-niveau-quiz').value
+                    });
+                });
+
+                formFiche.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    const sujetFiche = racine.querySelector('#ia-sujet-fiche').value.trim();
+                    if (sujetFiche.length < 2) {
+                        afficherErreur('Indiquez le sujet de la fiche de révision.');
+                        return;
+                    }
+                    lancer('fiche', {
+                        mode: 'fiche',
+                        sujetFiche: sujetFiche,
+                        typeFiche: racine.querySelector('#ia-type-fiche').value,
+                        niveau: racine.querySelector('#ia-niveau-fiche').value
                     });
                 });
 

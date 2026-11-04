@@ -1,13 +1,16 @@
 /**
  * LearnHub — Edge Function « ia ».
  *
- * Reçoit une demande d'étude d'œuvre ou de question, interroge un fournisseur
- * compatible OpenAI (Gemini par défaut) et renvoie un contenu JSON structuré.
+ * Reçoit une demande d'étude, de question, de quiz ou de fiche de révision,
+ * interroge un fournisseur compatible OpenAI (Gemini par défaut) et renvoie
+ * un contenu JSON structuré.
  * La clé du fournisseur reste dans les secrets Supabase, jamais dans le site.
  *
  * Déploiement :
  *   supabase secrets set AI_PROVIDER=gemini GEMINI_API_KEY=…
  *   supabase functions deploy ia
+ *   Exécuter supabase/migration-ia-modes.sql dans Supabase SQL Editor pour
+ *   autoriser l'enregistrement des quiz et fiches de révision.
  *
  * Variables optionnelles : AI_MODEL, AI_BASE_URL, AI_API_KEY,
  * IA_LIMITE_JOUR (études/jour), IA_LIMITE_QUESTIONS, IA_LIMITE_GLOBALE.
@@ -15,7 +18,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-type Mode = 'etude' | 'question';
+type Mode = 'etude' | 'question' | 'quiz' | 'fiche';
 
 interface Demande {
   mode: Mode;
@@ -23,6 +26,10 @@ interface Demande {
   auteur?: string;
   niveau?: string;
   question?: string;
+  sujetQuiz?: string;
+  typeFiche?: string;
+  sujetFiche?: string;
+  nombreQuestions?: number;
 }
 
 interface Fournisseur {
@@ -39,7 +46,7 @@ const CORS = {
 };
 
 /** Sert à vérifier depuis l'extérieur quelle version du code est déployée. */
-const VERSION = '2026-10-29.2';
+const VERSION = '2026-11-04.1';
 
 const FOURNISSEURS: Record<string, { url: string; modele: string; variable: string }> = {
   gemini: {
@@ -195,6 +202,42 @@ function normaliserQuestion(brut: Record<string, unknown>, question: string): Re
   };
 }
 
+function normaliserQuiz(brut: Record<string, unknown>, sujet: string): Record<string, unknown> {
+  const questions: Record<string, unknown>[] = [];
+  if (Array.isArray(brut.questions)) {
+    brut.questions.slice(0, 10).forEach((item) => {
+      if (!item || typeof item !== 'object') return;
+      const question = item as Record<string, unknown>;
+      const choix = listeTextes(question.choix, 5);
+      const bonneReponse = Number(question.bonneReponse);
+      const enonce = texte(question.question, 500);
+      if (!enonce || choix.length < 2 || !Number.isInteger(bonneReponse) ||
+          bonneReponse < 0 || bonneReponse >= choix.length) return;
+      questions.push({
+        question: enonce,
+        choix,
+        bonneReponse,
+        explication: texte(question.explication, 1200)
+      });
+    });
+  }
+  return {
+    titre: texte(brut.titre, 200) || `Quiz : ${sujet}`,
+    questions
+  };
+}
+
+function normaliserFiche(brut: Record<string, unknown>, sujet: string): Record<string, unknown> {
+  return {
+    titre: texte(brut.titre, 200) || sujet,
+    ideeGenerale: texte(brut.ideeGenerale, 2500),
+    essentiels: listeTextes(brut.essentiels, 10),
+    notions: listeObjets(brut.notions, ['titre', 'definition'], 10),
+    methode: listeTextes(brut.methode, 8),
+    autoEvaluation: listeTextes(brut.autoEvaluation, 8)
+  };
+}
+
 /* --------------------------------- Prompts -------------------------------- */
 
 const SYSTEME = [
@@ -232,6 +275,31 @@ function promptQuestion(question: string, niveau: string): string {
     '  "aRetenir": [string], "questions": [string]',
     '}',
     '"questions" contient trois questions courtes pour vérifier la compréhension.'
+  ].join('\n');
+}
+
+function promptQuiz(sujet: string, niveau: string, nombreQuestions: number): string {
+  return [
+    `Crée un quiz interactif sur « ${sujet} », adapté au niveau ${niveau}, avec ${nombreQuestions} questions.`,
+    'Chaque question doit avoir 3 ou 4 choix, une seule bonne réponse et une explication pédagogique.',
+    'Réponds exactement avec ce schéma JSON :',
+    '{',
+    '  "titre": string,',
+    '  "questions": [{"question": string, "choix": [string], "bonneReponse": number, "explication": string}]',
+    '}',
+    '"bonneReponse" est l’index (commençant à 0) de la bonne réponse dans "choix".'
+  ].join('\n');
+}
+
+function promptFiche(sujet: string, typeFiche: string, niveau: string): string {
+  return [
+    `Prépare une fiche de révision ${typeFiche ? `de type « ${typeFiche} » ` : ''}sur « ${sujet} », niveau ${niveau}.`,
+    'Sois synthétique, fiable et utile pour mémoriser. Réponds exactement avec ce schéma JSON :',
+    '{',
+    '  "titre": string, "ideeGenerale": string, "essentiels": [string],',
+    '  "notions": [{"titre": string, "definition": string}],',
+    '  "methode": [string], "autoEvaluation": [string]',
+    '}'
   ].join('\n');
 }
 
@@ -374,17 +442,28 @@ Deno.serve(async (requete: Request) => {
     return reponse({ ok: false, error: 'Requête illisible.' }, 400);
   }
 
-  const mode: Mode = demande.mode === 'question' ? 'question' : 'etude';
+  const modes: Mode[] = ['etude', 'question', 'quiz', 'fiche'];
+  const mode: Mode = modes.includes(demande.mode) ? demande.mode : 'etude';
   const niveau = texte(demande.niveau, 20) || 'lycee';
   const oeuvre = texte(demande.oeuvre, 200);
   const auteur = texte(demande.auteur, 160);
   const question = texte(demande.question, 500);
+  const sujetQuiz = texte(demande.sujetQuiz, 300);
+  const sujetFiche = texte(demande.sujetFiche, 300);
+  const typeFiche = texte(demande.typeFiche, 80);
+  const nombreQuestions = Math.min(10, Math.max(3, Math.floor(Number(demande.nombreQuestions) || 5)));
 
   if (mode === 'etude' && oeuvre.length < 2) {
     return reponse({ ok: false, code: 'invalide', error: 'Indiquez le titre de l\'œuvre.' }, 400);
   }
   if (mode === 'question' && question.length < 3) {
     return reponse({ ok: false, code: 'invalide', error: 'Posez une question plus précise.' }, 400);
+  }
+  if (mode === 'quiz' && sujetQuiz.length < 2) {
+    return reponse({ ok: false, code: 'invalide', error: 'Indiquez le sujet du quiz.' }, 400);
+  }
+  if (mode === 'fiche' && sujetFiche.length < 2) {
+    return reponse({ ok: false, code: 'invalide', error: 'Indiquez le sujet de la fiche de révision.' }, 400);
   }
 
   const fournisseur = fournisseurActif();
@@ -401,9 +480,10 @@ Deno.serve(async (requete: Request) => {
   const limiteGlobale = Number(Deno.env.get('IA_LIMITE_GLOBALE') || 300) || 300;
 
   // Compteur tenu par la base : impossible à remettre à zéro depuis le client.
+  const typeQuota = mode === 'etude' ? 'etude' : 'question';
   let reservation: string | null = null;
   const { data: quota, error: erreurQuota } = await supabase.rpc('ia_consommer', {
-    p_type: mode,
+    p_type: typeQuota,
     p_limite_etudes: limiteEtudes,
     p_limite_questions: limiteQuestions,
     p_limite_globale: limiteGlobale
@@ -420,19 +500,23 @@ Deno.serve(async (requete: Request) => {
         error: 'Le service a atteint son plafond quotidien. Réessayez demain.'
       }, 429);
     }
-    const quoi = mode === 'etude' ? 'fiches d\'étude' : 'recherches';
+    const quoi = mode === 'etude' ? 'fiches d\'étude' : 'générations IA hors étude';
     return reponse({
       ok: false,
       code: 'quota',
       error: `Limite de ${quota.limite} ${quoi} par jour atteinte. Réessayez demain.`
     }, 429);
   } else {
-    reservation = mode;
+    reservation = typeQuota;
   }
 
   const invite = mode === 'etude'
     ? promptEtude(oeuvre, auteur, niveau)
-    : promptQuestion(question, niveau);
+    : mode === 'question'
+      ? promptQuestion(question, niveau)
+      : mode === 'quiz'
+        ? promptQuiz(sujetQuiz, niveau, nombreQuestions)
+        : promptFiche(sujetFiche, typeFiche, niveau);
 
   const modeles = fournisseur.nom === 'gemini'
     ? Array.from(new Set([fournisseur.modele, 'gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.8-flash']))
@@ -448,7 +532,14 @@ Deno.serve(async (requete: Request) => {
     const objet = extraireJson(resultatModele.contenu);
     const contenu = mode === 'etude'
       ? normaliserEtude(objet, oeuvre, auteur)
-      : normaliserQuestion(objet, question);
+      : mode === 'question'
+        ? normaliserQuestion(objet, question)
+        : mode === 'quiz'
+          ? normaliserQuiz(objet, sujetQuiz)
+          : normaliserFiche(objet, sujetFiche);
+    if (mode === 'quiz' && (!Array.isArray(contenu.questions) || !contenu.questions.length)) {
+      throw new ErreurFournisseur('reponse_invalide', 'Le quiz généré ne contient pas de questions exploitables. Réessayez.');
+    }
 
     return reponse({
       ok: true,

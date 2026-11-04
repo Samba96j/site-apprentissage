@@ -7,7 +7,7 @@
 -- alimentée par le navigateur. Un appel direct à la fonction, sans
 -- enregistrement, ne consommait donc rien. Le compteur ci-dessous est tenu
 -- côté base, par la fonction elle-même : impossible à remettre à zéro depuis
--- le client, et valable pour les deux modes (étude et question).
+-- le client. Les quiz et fiches partagent le quota des recherches.
 -- ============================================================================
 
 create table if not exists public.ia_quotas (
