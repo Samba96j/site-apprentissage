@@ -572,6 +572,11 @@ window.LearnHubAdmin = (function () {
         const formulaire = racine.querySelector('#formulaire-ressource');
         const liste = racine.querySelector('#liste-ressources');
 
+        function nomClasse(id) {
+            const classe = window.LearnHubStore.classes.get(id);
+            return classe ? classe.nom : 'Classe supprimée';
+        }
+
         function rafraichir() {
             const ressources = window.LearnHubStore.ressources.miens();
             if (!ressources.length) {
@@ -580,16 +585,23 @@ window.LearnHubAdmin = (function () {
             }
             liste.innerHTML =
                 '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
-                    '<thead><tr><th>Titre</th><th>Type</th><th>Format</th><th>Date</th><th class="text-end">Actions</th></tr></thead>' +
+                    '<thead><tr><th>Titre</th><th>Type</th><th>Classes</th><th>Format</th><th>Date</th><th class="text-end">Actions</th></tr></thead>' +
                     '<tbody>' + ressources.map(function (res) {
+                        const cibles = res.classeIds || [];
                         return '<tr>' +
                             '<td class="fw-semibold">' + esc(res.titre) + '</td>' +
                             '<td>' + esc(res.type) + '</td>' +
+                            '<td class="small">' + (cibles.length
+                                ? cibles.map(function (id) {
+                                    return '<span class="badge bg-info bg-opacity-10 text-dark border me-1">' + esc(nomClasse(id)) + '</span>';
+                                }).join('')
+                                : '<span class="text-muted">Toutes</span>') + '</td>' +
                             '<td class="text-muted small">' + esc(res.taille || '—') + '</td>' +
                             '<td class="text-muted small">' + formaterDate(res.date) + '</td>' +
                             '<td class="text-end text-nowrap">' +
                                 '<a class="btn btn-sm btn-outline-primary me-1" href="' + esc(res.url) + '" target="_blank" rel="noopener" title="Ouvrir"><i class="fas fa-eye"></i></a>' +
                                 '<a class="btn btn-sm btn-outline-secondary me-1" href="' + esc(res.url) + '" download="' + esc(res.titre) + '" title="Télécharger"><i class="fas fa-download"></i></a>' +
+                                '<button class="btn btn-sm btn-outline-primary me-1" data-action="editer" data-id="' + esc(res.id) + '" title="Modifier"><i class="fas fa-edit"></i></button>' +
                                 '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-id="' + esc(res.id) + '" title="Supprimer"><i class="fas fa-trash"></i></button>' +
                             '</td>' +
                         '</tr>';
@@ -606,32 +618,48 @@ window.LearnHubAdmin = (function () {
                 '</p>';
         }
 
-        racine.querySelector('#nouvelle-ressource').addEventListener('click', function () {
+        function ouvrirFormulaire(ressource) {
             const backendActif = !!(window.LearnHubBackend && window.LearnHubBackend.estActif());
             const limiteMo = backendActif ? 25 : 1.5;
+            const classes = window.LearnHubStore.classes.miens();
+            const classeIds = ressource && Array.isArray(ressource.classeIds) ? ressource.classeIds : [];
             formulaire.classList.remove('d-none');
             formulaire.innerHTML =
                 '<div class="admin-panel border border-primary">' +
-                    '<h4 class="mb-3">Nouvelle ressource</h4>' +
-                    '<div class="row g-3">' +
-                        '<div class="col-md-6"><label class="form-label">Titre</label><input type="text" class="form-control" id="res-titre"></div>' +
-                        '<div class="col-md-6"><label class="form-label">Type</label>' +
-                            '<select class="form-select" id="res-type">' +
-                                ['Fiche de lecture', 'Corrigé', 'Cours', 'Exercice', 'Vidéo', 'Lien externe'].map(function (type) {
-                                    return '<option value="' + type + '">' + type + '</option>';
-                                }).join('') +
-                            '</select></div>' +
-                        '<div class="col-md-6"><label class="form-label">Lien (URL ou ancre interne)</label><input type="text" class="form-control" id="res-url" placeholder="https://www.youtube.com/watch?v=…">' +
-                            '<div class="form-text">Un lien YouTube (youtu.be, watch?v=, shorts) se regarde directement dans la page Ressources, sans quitter le site.</div></div>' +
-                        '<div class="col-md-6"><label class="form-label">… ou fichier PDF (max ' + limiteMo + ' Mo)</label>' +
-                            '<input type="file" class="form-control" id="res-fichier" accept="application/pdf">' +
+                '<h4 class="mb-3">' + (ressource ? 'Modifier la ressource' : 'Nouvelle ressource') + '</h4>' +
+                '<div class="row g-3">' +
+                    '<div class="col-md-6"><label class="form-label" for="res-titre">Titre</label><input type="text" class="form-control" id="res-titre" value="' + esc(ressource ? ressource.titre : '') + '"></div>' +
+                    '<div class="col-md-6"><label class="form-label">Type</label>' +
+                        '<select class="form-select" id="res-type">' +
+                            ['Fiche de lecture', 'Corrigé', 'Cours', 'Exercice', 'Vidéo', 'Lien externe'].map(function (type) {
+                                return '<option value="' + esc(type) + '"' + (ressource && ressource.type === type ? ' selected' : '') + '>' + esc(type) + '</option>';
+                            }).join('') +
+                        '</select></div>' +
+                    '<div class="col-md-6"><label class="form-label" for="res-url">Lien (URL ou ancre interne)</label><input type="text" class="form-control" id="res-url" placeholder="https://www.youtube.com/watch?v=…" value="' + esc(ressource ? ressource.url : '') + '">' +
+                        '<div class="form-text">Un lien YouTube (youtu.be, watch?v=, shorts) se regarde directement dans la page Ressources, sans quitter le site.</div></div>' +
+                    '<div class="col-md-6"><label class="form-label">… ou fichier PDF (max ' + limiteMo + ' Mo)</label>' +
+                        '<input type="file" class="form-control" id="res-fichier" accept="application/pdf">' +
                             '<div class="form-text">' + (backendActif
                                 ? 'Le fichier est hébergé dans Supabase Storage : il reste accessible sur tous les appareils.'
                                 : 'Stockage local (navigateur) : 1,5 Mo maximum. Connectez-vous à Supabase pour envoyer des fichiers plus lourds.') +
                             '</div></div>' +
+                        '<div class="col-12"><label class="form-label" for="res-classes"><i class="fas fa-users-rectangle me-1"></i>Classes concernées</label>' +
+                            '<select class="form-select" id="res-classes" multiple size="' + Math.min(5, Math.max(2, classes.length)) + '">' +
+                                classes.map(function (classe) {
+                                    const selection = classeIds.indexOf(classe.id) >= 0;
+                                    return '<option value="' + esc(classe.id) + '"' + (selection ? ' selected' : '') + '>' +
+                                        esc(classe.nom) + (classe.matiere ? ' — ' + esc(nomMatiere(classe.matiere)) : '') +
+                                    '</option>';
+                                }).join('') +
+                            '</select>' +
+                            '<div class="form-text">' +
+                                (classes.length
+                                    ? 'Aucune sélection = ressource visible par toutes vos classes. Sélectionnez une ou plusieurs classes (Ctrl + clic) pour la réserver.'
+                                    : 'Créez d’abord une classe dans l’onglet « Classes » pour pouvoir cibler cette ressource.') +
+                            '</div></div>' +
                     '</div>' +
                     '<div class="d-flex gap-2 mt-3">' +
-                        '<button class="btn btn-primary" id="enregistrer-ressource"><i class="fas fa-floppy-disk me-1"></i>Enregistrer</button>' +
+                        '<button class="btn btn-primary" id="enregistrer-ressource"><i class="fas fa-floppy-disk me-1"></i>' + (ressource ? 'Enregistrer' : 'Ajouter') + '</button>' +
                         '<button class="btn btn-outline-secondary" id="annuler-ressource">Annuler</button>' +
                     '</div>' +
                 '</div>';
@@ -647,6 +675,9 @@ window.LearnHubAdmin = (function () {
                 const type = formulaire.querySelector('#res-type').value;
                 const url = formulaire.querySelector('#res-url').value.trim();
                 const fichier = formulaire.querySelector('#res-fichier').files[0];
+                const classeSelectionnees = Array.prototype.slice.call(
+                    formulaire.querySelector('#res-classes').selectedOptions || []
+                ).map(function (option) { return option.value; });
 
                 if (titre.length < 3) {
                     message(zoneMessage, 'Le titre doit contenir au moins 3 caractères.', 'danger');
@@ -655,10 +686,12 @@ window.LearnHubAdmin = (function () {
 
                 function enregistrerLien(lien, taille) {
                     const ok = window.LearnHubStore.ressources.save({
+                        id: ressource ? ressource.id : undefined,
                         titre: titre,
                         type: type,
                         url: lien,
                         taille: taille,
+                        classeIds: classeSelectionnees,
                         date: new Date().toISOString()
                     });
                     if (!ok) {
@@ -668,7 +701,7 @@ window.LearnHubAdmin = (function () {
                     formulaire.classList.add('d-none');
                     formulaire.innerHTML = '';
                     rafraichir();
-                    message(zoneMessage, 'Ressource ajoutée.', 'success');
+                    message(zoneMessage, ressource ? 'Ressource modifiée.' : 'Ressource ajoutée.', 'success');
                 }
 
                 if (fichier) {
@@ -700,7 +733,7 @@ window.LearnHubAdmin = (function () {
 
                     const lecteur = new FileReader();
                     lecteur.onload = function () {
-                        enregistrerLien(lecteur.result, Math.round(fichier.size / 1024) + ' Ko');
+                        enregistrerLien(lecteur.result, tailleLisible(fichier.size));
                     };
                     lecteur.onerror = function () {
                         message(zoneMessage, 'Lecture du fichier impossible.', 'danger');
@@ -713,14 +746,26 @@ window.LearnHubAdmin = (function () {
                     message(zoneMessage, 'Indiquez un lien ou sélectionnez un fichier PDF.', 'danger');
                     return;
                 }
-                enregistrerLien(url, 'Lien');
+                enregistrerLien(url, ressource ? ressource.taille : 'Lien');
             });
+        }
+
+        racine.querySelector('#nouvelle-ressource').addEventListener('click', function () {
+            ouvrirFormulaire(null);
         });
 
         liste.addEventListener('click', function (event) {
-            const bouton = event.target.closest('button[data-action="supprimer"]');
+            const bouton = event.target.closest('button[data-action]');
             if (!bouton) return;
-            if (window.confirm('Supprimer cette ressource ?')) {
+            if (bouton.dataset.action === 'editer') {
+                const ressource = window.LearnHubStore.ressources.miens().find(function (item) {
+                    return item.id === bouton.dataset.id;
+                });
+                if (ressource) {
+                    ouvrirFormulaire(ressource);
+                    formulaire.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            } else if (bouton.dataset.action === 'supprimer' && window.confirm('Supprimer cette ressource ?')) {
                 window.LearnHubStore.ressources.remove(bouton.dataset.id);
                 rafraichir();
                 message(zoneMessage, 'Ressource supprimée.', 'success');

@@ -164,6 +164,7 @@ window.LearnHubBackend = (function () {
             type: row.type || '',
             url: row.url,
             taille: row.taille || '',
+            classeIds: row.classe_ids || [],
             date: row.created_at
         };
     }
@@ -222,7 +223,8 @@ window.LearnHubBackend = (function () {
                 titre: item.titre,
                 type: item.type || null,
                 url: item.url,
-                taille: item.taille || null
+                taille: item.taille || null,
+                classe_ids: item.classeIds || []
             };
         }
         if (cle === 'messages') {

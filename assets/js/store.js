@@ -307,7 +307,9 @@ window.LearnHubStore = (function () {
 
     const ressources = {
         all: function () {
-            return read(KEYS.ressources, []).filter(visible);
+            return read(KEYS.ressources, []).filter(function (ressource) {
+                return visible(ressource) && pourClasse(ressource);
+            });
         },
         miens: function () {
             const espace = espaceActif();

@@ -24,6 +24,7 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 - [migration-ia-quota.sql](migration-ia-quota.sql) — table `ia_quotas` et fonctions `ia_consommer()` / `ia_liberer()` : quota quotidien tenu côté base, impossible à remettre à zéro depuis le navigateur ;
 - [migration-classes-avatars.sql](migration-classes-avatars.sql) — colonne `classes.matiere`, colonne `profiles.avatar_url` et bucket de stockage public `avatars` (écriture limitée au dossier de chaque compte) ;
 - [migration-lecons-document.sql](migration-lecons-document.sql) — **obligatoire pour les cours** : colonnes `classe_ids`, `support_url`, `support_nom`, `support_taille`, `couverture_url` et plafond de 50 Mo sur le bucket `documents`. Elle regroupe les anciennes migrations `lecons-classes` et `lecons-support`. Sans elle, l'enregistrement d'un cours échoue et l'élève ne voit rien ;
+- [migration-ressources-classes.sql](migration-ressources-classes.sql) — **obligatoire pour le ciblage des ressources** : ajoute `resources.classe_ids` pour affecter les ressources à une ou plusieurs classes ;
 - [migration-suppression-seances.sql](migration-suppression-seances.sql) — supprime la table `seances` (fonctionnalité remplacée par les documents de cours).
 
 ## 3. Authentification

@@ -103,6 +103,7 @@ create table if not exists public.resources (
     type text,
     url text not null,
     taille text,
+    classe_ids text[] not null default '{}',
     created_at timestamptz not null default now()
 );
 
@@ -168,6 +169,7 @@ create index if not exists idx_classes_espace on public.classes (espace_id);
 create index if not exists idx_lessons_espace on public.lessons (espace_id);
 create index if not exists idx_exercises_espace on public.exercises (espace_id);
 create index if not exists idx_resources_espace on public.resources (espace_id);
+create index if not exists idx_resources_classe_ids on public.resources using gin (classe_ids);
 create index if not exists idx_attempts_user on public.attempts (user_id);
 create index if not exists idx_attempts_exercise on public.attempts (exercise_id);
 
