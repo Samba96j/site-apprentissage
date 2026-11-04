@@ -3127,16 +3127,18 @@
     }
 
     const SECTIONS_ADMIN = [
-        { slug: 'dashboard', titre: 'Tableau de bord', icone: 'fa-tachometer-alt' },
-        { slug: 'classes', titre: 'Classes', icone: 'fa-users-rectangle' },
-        { slug: 'lecons', titre: 'Leçons', icone: 'fa-book-open' },
-        { slug: 'exercices', titre: 'Exercices', icone: 'fa-tasks' },
-        { slug: 'ressources', titre: 'Ressources', icone: 'fa-file-pdf' },
-        { slug: 'bibliotheque', titre: 'Bibliothèque', icone: 'fa-book' },
-        { slug: 'utilisateurs', titre: 'Utilisateurs', icone: 'fa-users' },
-        { slug: 'statistiques', titre: 'Statistiques', icone: 'fa-chart-bar' },
-        { slug: 'parametres', titre: 'Paramètres', icone: 'fa-cogs' }
+        { slug: 'dashboard', titre: 'Tableau de bord', icone: 'fa-tachometer-alt', groupe: 'Pilotage' },
+        { slug: 'statistiques', titre: 'Statistiques', icone: 'fa-chart-bar', groupe: 'Pilotage' },
+        { slug: 'classes', titre: 'Classes', icone: 'fa-users-rectangle', groupe: 'Contenus' },
+        { slug: 'lecons', titre: 'Leçons', icone: 'fa-book-open', groupe: 'Contenus' },
+        { slug: 'exercices', titre: 'Exercices', icone: 'fa-tasks', groupe: 'Contenus' },
+        { slug: 'ressources', titre: 'Ressources', icone: 'fa-file-pdf', groupe: 'Contenus' },
+        { slug: 'bibliotheque', titre: 'Bibliothèque', icone: 'fa-book', groupe: 'Contenus' },
+        { slug: 'utilisateurs', titre: 'Utilisateurs', icone: 'fa-users', groupe: 'Gestion' },
+        { slug: 'parametres', titre: 'Paramètres', icone: 'fa-cogs', groupe: 'Gestion' }
     ];
+
+    const GROUPES_ADMIN = ['Pilotage', 'Contenus', 'Gestion'];
 
     function vueAdmin(section) {
         const user = auth.current();
@@ -3161,22 +3163,50 @@
 
         const sectionActive = SECTIONS_ADMIN.some(function (s) { return s.slug === section; }) ? section : 'dashboard';
         const titreSection = (SECTIONS_ADMIN.find(function (s) { return s.slug === sectionActive; }) || SECTIONS_ADMIN[0]).titre;
-        const menu = SECTIONS_ADMIN.map(function (s) {
-            return '<li class="nav-item"><a class="nav-link ' + (s.slug === sectionActive ? 'active' : '') + '" href="#/admin/' + s.slug + '">' +
-                '<i class="fas ' + esc(s.icone) + ' me-2"></i>' + esc(s.titre) + '</a></li>';
+
+        const menu = GROUPES_ADMIN.map(function (groupe) {
+            const liens = SECTIONS_ADMIN.filter(function (s) { return s.groupe === groupe; });
+            if (!liens.length) return '';
+            return '<div class="admin-nav-groupe">' +
+                '<p class="admin-nav-titre">' + esc(groupe) + '</p>' +
+                '<ul class="admin-nav-liste">' +
+                    liens.map(function (s) {
+                        const actif = s.slug === sectionActive;
+                        return '<li>' +
+                            '<a class="admin-nav-lien' + (actif ? ' active' : '') + '" href="#/admin/' + s.slug + '"' +
+                                (actif ? ' aria-current="page"' : '') + '>' +
+                                '<span class="admin-nav-icone"><i class="fas ' + esc(s.icone) + '"></i></span>' +
+                                '<span class="admin-nav-libelle">' + esc(s.titre) + '</span>' +
+                            '</a>' +
+                        '</li>';
+                    }).join('') +
+                '</ul>' +
+            '</div>';
         }).join('');
+
+        const nomCompte = user && user.username ? user.username : 'Administrateur';
+        const initiales = nomCompte.trim().slice(0, 2).toUpperCase();
+        const avatar = user && user.avatarUrl
+            ? '<img src="' + esc(user.avatarUrl) + '" alt="">'
+            : esc(initiales);
+        const role = auth.isSuperAdmin() ? 'Super-administrateur' : 'Administrateur';
 
         return {
             titre: 'Administration',
             html: '<div class="container py-4">' +
-                '<div class="row">' +
-                    '<aside class="col-lg-3 mb-4">' +
-                        '<div class="admin-nav sticky-top" style="top: 90px;">' +
-                            '<h2 class="h6 mb-3"><i class="fas fa-user-cog me-2"></i>Panel Admin</h2>' +
-                            '<ul class="nav flex-column">' + menu + '</ul>' +
-                            '<hr class="border-light opacity-25">' +
-                            '<a class="nav-link" href="#/"><i class="fas fa-arrow-left me-2"></i>Retour au site</a>' +
-                        '</div>' +
+                '<div class="row g-4">' +
+                    '<aside class="col-lg-3">' +
+                        '<nav class="admin-nav" aria-label="Navigation de l\'administration">' +
+                            '<div class="admin-nav-entete">' +
+                                '<span class="admin-nav-avatar">' + avatar + '</span>' +
+                                '<span class="admin-nav-identite">' +
+                                    '<span class="admin-nav-nom">' + esc(nomCompte) + '</span>' +
+                                    '<span class="admin-nav-role"><i class="fas fa-shield-halved me-1"></i>' + esc(role) + '</span>' +
+                                '</span>' +
+                            '</div>' +
+                            '<div class="admin-nav-groupes">' + menu + '</div>' +
+                            '<a class="admin-nav-retour" href="#/"><i class="fas fa-arrow-left"></i>Retour au site</a>' +
+                        '</nav>' +
                     '</aside>' +
                     '<div class="col-lg-9">' +
                         '<h1 class="visually-hidden">Administration — ' + esc(titreSection) + '</h1>' +
