@@ -375,7 +375,8 @@
             return '<a href="#/connexion" class="btn btn-outline-light btn-sm me-2">Connexion</a>' +
                 '<a href="#/connexion?mode=inscription" class="btn btn-primary btn-sm">Inscription</a>';
         }
-        return '<div class="dropdown">' +
+        return htmlClocheDevoirs(user) +
+            '<div class="dropdown">' +
             '<button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">' +
                 avatarHtml(user.username, user.avatarUrl, 26) +
                 '<span class="d-none d-sm-inline">' + esc(user.username) + '</span>' +
@@ -1626,17 +1627,157 @@
         };
     }
 
+    /* --------------------------------- Devoirs --------------------------------- */
+
+    const JOUR_MS = 24 * 60 * 60 * 1000;
+
+    /** Devoirs visibles : le store applique déjà l'espace de l'élève et le ciblage par classe. */
+    function devoirsVisibles(user) {
+        if (!user) return [];
+        return store.exercices.devoirs().slice().sort(function (a, b) {
+            return String(a.echeance || '9999-12-31').localeCompare(String(b.echeance || '9999-12-31'));
+        });
+    }
+
+    /** État d'un devoir pour un élève : rendu, en retard ou à faire. */
+    function etatDevoir(exercice, username) {
+        const tentatives = username
+            ? auth.attempts(username).filter(function (t) { return t.exerciceId === exercice.id; })
+            : [];
+        if (tentatives.length) {
+            const meilleur = tentatives.reduce(function (acc, t) {
+                return Math.max(acc, t.total > 0 ? Math.round((t.score / t.total) * 100) : 0);
+            }, 0);
+            return { fait: true, retard: false, pourcentage: meilleur, essais: tentatives.length };
+        }
+        if (!exercice.echeance) return { fait: false, retard: false, jours: null };
+        const limite = new Date(String(exercice.echeance) + 'T23:59:59');
+        if (isNaN(limite.getTime())) return { fait: false, retard: false, jours: null };
+        const jours = Math.ceil((limite.getTime() - Date.now()) / JOUR_MS);
+        return { fait: false, retard: jours < 0, jours: jours };
+    }
+
+    /** Échéance « AAAA-MM-JJ » lue sans décalage de fuseau. */
+    function dateEcheance(valeur) {
+        const trouve = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(valeur || ''));
+        if (!trouve) return dateRessource(valeur);
+        return trouve[3] + '/' + trouve[2] + '/' + trouve[1];
+    }
+
+    function libelleEcheance(exercice, etat) {
+        if (!exercice.echeance) return 'Sans date limite';
+        const date = dateEcheance(exercice.echeance);
+        if (etat.fait) return 'Rendu — échéance du ' + date;
+        if (etat.retard) return 'En retard depuis le ' + date;
+        if (etat.jours === 0) return 'À rendre aujourd\'hui';
+        if (etat.jours === 1) return 'À rendre demain';
+        return 'À rendre avant le ' + date;
+    }
+
+    function pastilleEtatDevoir(etat) {
+        if (etat.fait) return '<span class="devoir-pastille devoir-pastille-fait"><i class="fas fa-circle-check me-1"></i>Rendu</span>';
+        if (etat.retard) return '<span class="devoir-pastille devoir-pastille-retard"><i class="fas fa-triangle-exclamation me-1"></i>En retard</span>';
+        return '<span class="devoir-pastille devoir-pastille-a-faire"><i class="fas fa-hourglass-half me-1"></i>À faire</span>';
+    }
+
+    /** Devoirs publiés pour l'élève et pas encore rendus (source de la cloche). */
+    function devoirsEnAttente(user) {
+        if (!user || user.role !== 'eleve') return [];
+        return devoirsVisibles(user).filter(function (exercice) {
+            return !etatDevoir(exercice, user.username).fait;
+        });
+    }
+
+    function htmlClocheDevoirs(user) {
+        const devoirs = devoirsEnAttente(user);
+        if (!devoirs.length) return '';
+        const apercu = devoirs.slice(0, 4).map(function (exercice) {
+            const etat = etatDevoir(exercice, user.username);
+            const matiere = data.getMatiere(exercice.matiere);
+            return '<li><a class="dropdown-item devoir-notif" href="#/exercices?exo=' + encodeURIComponent(exercice.id) + '">' +
+                '<span class="devoir-notif-titre">' + esc(exercice.titre) + '</span>' +
+                '<span class="devoir-notif-detail">' + esc(matiere ? matiere.nom : exercice.matiere) +
+                    ' · ' + esc(libelleEcheance(exercice, etat)) + '</span>' +
+            '</a></li>';
+        }).join('');
+        return '<div class="dropdown me-2">' +
+            '<button class="btn btn-outline-light btn-sm position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false" ' +
+                'aria-label="' + devoirs.length + ' devoir(s) à faire" title="Devoirs à faire">' +
+                '<i class="fas fa-bell"></i>' +
+                '<span class="cloche-pastille">' + devoirs.length + '</span>' +
+            '</button>' +
+            '<ul class="dropdown-menu dropdown-menu-end devoirs-menu">' +
+                '<li><p class="dropdown-header mb-1">Devoirs à faire</p></li>' +
+                apercu +
+                (devoirs.length > 4 ? '<li><span class="dropdown-item-text small text-muted">' + (devoirs.length - 4) + ' autre(s) devoir(s)…</span></li>' : '') +
+                '<li><hr class="dropdown-divider"></li>' +
+                '<li><a class="dropdown-item text-center fw-semibold" href="#/exercices">Voir mes devoirs</a></li>' +
+            '</ul>' +
+        '</div>';
+    }
+
     function vueExercices(parametres) {
         const user = auth.current();
         const exoCible = parametres ? parametres.get('exo') : null;
         const matiereClasse = auth.matiereClasse();
         const matiereNom = matiereClasse ? (data.getMatiere(matiereClasse) || {}).nom : null;
+        const maClasse = auth.maClasse();
+        // Un devoir donné à la classe de l'élève reste accessible même si sa
+        // matière diffère de celle de la classe.
         const tous = store.exercices.actifs().filter(function (ex) {
-            return !matiereClasse || ex.matiere === matiereClasse;
+            return !matiereClasse || ex.matiere === matiereClasse ||
+                (ex.devoir === true && !!maClasse && (ex.classeIds || []).indexOf(maClasse.id) >= 0);
         });
         const actifs = exoCible
             ? tous.filter(function (ex) { return ex.id === exoCible; })
             : tous;
+        const mesDevoirs = user && user.role === 'eleve' ? devoirsVisibles(user) : [];
+
+        function carteDevoir(exercice) {
+            const etat = etatDevoir(exercice, user.username);
+            const matiere = data.getMatiere(exercice.matiere);
+            const classes = (exercice.classeIds || []).map(function (id) {
+                const classe = store.classes.get(id);
+                return classe ? classe.nom : '';
+            }).filter(Boolean);
+            return '<div class="col-md-6 col-xl-4">' +
+                '<article class="content h-100 d-flex flex-column devoir-carte' + (etat.retard ? ' devoir-carte-retard' : '') + '">' +
+                    '<div class="d-flex justify-content-between align-items-start gap-2 mb-2">' +
+                        '<span class="devoir-matiere"><i class="fas ' + esc(matiere ? matiere.icone : 'fa-book') + ' me-1"></i>' +
+                            esc(matiere ? matiere.nom : exercice.matiere) + '</span>' +
+                        pastilleEtatDevoir(etat) +
+                    '</div>' +
+                    '<h3 class="h6 mb-1">' + esc(exercice.titre) + '</h3>' +
+                    (classes.length ? '<p class="small text-muted mb-2">' + esc(classes.join(' · ')) + '</p>' : '') +
+                    (exercice.consigne ? '<p class="small mb-2">' + esc(exercice.consigne) + '</p>' : '') +
+                    '<div class="d-flex flex-wrap gap-1 mb-3">' +
+                        '<span class="badge text-bg-light border"><i class="fas fa-calendar-day me-1"></i>' +
+                            esc(libelleEcheance(exercice, etat)) + '</span>' +
+                        (etat.fait ? '<span class="badge text-bg-success">Meilleur score : ' + etat.pourcentage + ' %</span>' : '') +
+                    '</div>' +
+                    '<a class="btn ' + (etat.fait ? 'btn-outline-primary' : 'btn-primary') + ' btn-sm mt-auto align-self-start" href="#/exercices?exo=' + encodeURIComponent(exercice.id) + '">' +
+                        '<i class="fas fa-play me-1"></i>' + (etat.fait ? 'Refaire le devoir' : 'Faire le devoir') +
+                    '</a>' +
+                '</article>' +
+            '</div>';
+        }
+
+        const devoirsAFaire = mesDevoirs.filter(function (exercice) {
+            return !etatDevoir(exercice, user ? user.username : null).fait;
+        }).length;
+        const blocDevoirs = (!exoCible && mesDevoirs.length)
+            ? '<section class="devoirs-bloc mb-4" aria-labelledby="titre-devoirs">' +
+                '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">' +
+                    '<h2 class="h5 mb-0" id="titre-devoirs"><i class="fas fa-clipboard-check me-2 text-warning"></i>Mes devoirs</h2>' +
+                    (devoirsAFaire
+                        ? '<span class="badge bg-warning text-dark">' + devoirsAFaire + ' à faire</span>'
+                        : '<span class="badge bg-success">Tout est rendu</span>') +
+                '</div>' +
+                '<p class="text-muted small mb-3">Exercices donnés par votre enseignant à votre classe.</p>' +
+                '<div class="row g-3">' + mesDevoirs.map(carteDevoir).join('') + '</div>' +
+              '</section>'
+            : '';
+
         const pastilles = (exoCible || matiereClasse) ? '' : ['<button class="btn btn-sm btn-primary" data-matiere="" aria-pressed="true"><i class="fas fa-layer-group me-1"></i>Toutes <span class="badge bg-light text-dark ms-1">' + actifs.length + '</span></button>']
             .concat(data.matieres.map(function (matiere) {
                 const nombre = actifs.filter(function (ex) { return ex.matiere === matiere.slug; }).length;
@@ -1663,7 +1804,9 @@
                 '</div>' +
                 (exoCible
                     ? '<div class="alert alert-info py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">' +
-                        '<span><i class="fas fa-book-open me-1"></i>Exercice choisi depuis une leçon.</span>' +
+                        (mesDevoirs.some(function (exercice) { return exercice.id === exoCible; })
+                            ? '<span><i class="fas fa-clipboard-check me-1"></i>Devoir sélectionné : rendez-le avant la date limite.</span>'
+                            : '<span><i class="fas fa-book-open me-1"></i>Exercice choisi depuis une leçon.</span>') +
                         '<a class="alert-link" href="#/exercices">Voir tous les exercices</a></div>'
                     : '') +
                 (matiereClasse && !exoCible
@@ -1671,6 +1814,7 @@
                         'Votre classe travaille une seule matière : seuls les exercices de <strong>' +
                         esc(matiereNom || matiereClasse) + '</strong> sont proposés.</div>'
                     : '') +
+                blocDevoirs +
                 (pastilles ? '<div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filtrer les exercices par matière">' + pastilles + '</div>' : '') +
                 '<div class="content"><div id="zone-jeux"></div></div>' +
                 '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Les exercices affichés proviennent de la bibliothèque publique et de l\'espace de votre enseignant.</p>' +

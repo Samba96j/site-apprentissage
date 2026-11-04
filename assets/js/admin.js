@@ -34,6 +34,14 @@ window.LearnHubAdmin = (function () {
         return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
 
+    /** Échéance « AAAA-MM-JJ » affichée « JJ/MM/AAAA », sans décalage de fuseau. */
+    function formaterEcheance(valeur) {
+        if (!valeur) return '';
+        const trouve = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(valeur));
+        if (!trouve) return formaterDate(valeur);
+        return trouve[3] + '/' + trouve[2] + '/' + trouve[1];
+    }
+
     function formaterDateHeure(iso) {
         if (!iso) return '—';
         const date = new Date(iso);
@@ -118,6 +126,14 @@ window.LearnHubAdmin = (function () {
         return window.LearnHubAuth.users().filter(function (u) {
             return u.role === 'eleve' && ids.indexOf(u.classeId) >= 0;
         });
+    }
+
+    /** Élèves touchés par un devoir : les classes choisies, sinon toutes celles de l'espace. */
+    function elevesConcernes(classeIds) {
+        const cibles = (classeIds && classeIds.length)
+            ? classeIds
+            : window.LearnHubStore.classes.miens().map(function (classe) { return classe.id; });
+        return elevesDesClasses(cibles);
     }
 
     function bilanEleve(username, exerciceIds) {
@@ -227,10 +243,12 @@ window.LearnHubAdmin = (function () {
             '</div>' +
             '<p class="text-muted small"><i class="fas fa-circle-info me-1"></i>Les exercices affichés appartiennent à votre espace. Ceux d\'un autre administrateur vous sont invisibles.</p>' +
             '<div id="editeur-exercice" class="d-none"></div>' +
+            '<div id="devoir-exercice" class="d-none"></div>' +
             '<div class="admin-panel"><div id="liste-exercices"></div></div>';
 
         const zoneMessage = racine.querySelector('#admin-message');
         const editeur = racine.querySelector('#editeur-exercice');
+        const devoirZone = racine.querySelector('#devoir-exercice');
         const liste = racine.querySelector('#liste-exercices');
         const filtre = racine.querySelector('#filtre-exercices');
 
@@ -252,25 +270,141 @@ window.LearnHubAdmin = (function () {
 
             liste.innerHTML =
                 '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
-                    '<thead><tr><th>Titre</th><th>Matière</th><th>Type</th><th>Contenu</th><th>Statut</th><th class="text-end">Actions</th></tr></thead>' +
+                    '<thead><tr><th>Titre</th><th>Matière</th><th>Type</th><th>Contenu</th><th>Devoir</th><th>Statut</th><th class="text-end">Actions</th></tr></thead>' +
                     '<tbody>' + exercices.map(function (ex) {
                         const badge = ex.actif === false
                             ? '<span class="badge bg-secondary">Inactif</span>'
                             : '<span class="badge bg-success">Actif</span>';
+                        const cibles = ex.classeIds || [];
+                        const celluleDevoir = ex.devoir === true
+                            ? '<span class="badge bg-warning text-dark"><i class="fas fa-clipboard-check me-1"></i>Devoir</span>' +
+                                '<div class="small text-muted mt-1">' +
+                                    (cibles.length ? cibles.map(nomClasse).join(', ') : 'Toutes les classes') +
+                                '</div>' +
+                                (ex.echeance ? '<div class="small text-muted">Avant le ' + esc(formaterEcheance(ex.echeance)) + '</div>' : '') +
+                                '<div class="small text-muted">' + elevesConcernes(cibles).length + ' élève(s)</div>'
+                            : '<span class="text-muted">—</span>';
                         return '<tr>' +
                             '<td class="fw-semibold">' + esc(ex.titre) + '</td>' +
                             '<td><span class="badge bg-primary bg-opacity-10 text-primary">' + esc(nomMatiere(ex.matiere)) + '</span></td>' +
                             '<td>' + esc(LIBELLES_TYPES[ex.type] || ex.type) + '</td>' +
                             '<td class="text-muted small">' + detailsExercice(ex) + '</td>' +
+                            '<td class="small">' + celluleDevoir + '</td>' +
                             '<td>' + badge + '</td>' +
                             '<td class="text-end text-nowrap">' +
-                                '<button class="btn btn-sm btn-outline-primary me-1" data-action="editer" data-id="' + esc(ex.id) + '" title="Modifier"><i class="fas fa-edit"></i></button>' +
+                                '<button class="btn btn-sm ' + (ex.devoir === true ? 'btn-warning' : 'btn-outline-warning') + ' me-1" data-action="devoir" data-id="' + esc(ex.id) + '" title="' +
+                                    (ex.devoir === true ? 'Modifier le devoir' : 'Donner en devoir') + '"><i class="fas fa-clipboard-check"></i></button>' +
+                                '<button class="btn btn-sm btn-outline-primary me-1" data-action="editer" data-id="' + esc(ex.id) + '" title="Modifier le contenu"><i class="fas fa-edit"></i></button>' +
                                 '<button class="btn btn-sm btn-outline-secondary me-1" data-action="basculer" data-id="' + esc(ex.id) + '" title="Activer ou désactiver"><i class="fas fa-power-off"></i></button>' +
                                 '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-id="' + esc(ex.id) + '" title="Supprimer"><i class="fas fa-trash"></i></button>' +
                             '</td>' +
                         '</tr>';
                     }).join('') + '</tbody>' +
                 '</table></div>';
+        }
+
+        /** Publication d'un exercice en devoir : classes concernées, échéance, consigne. */
+        function ouvrirDevoir(exercice) {
+            const classes = window.LearnHubStore.classes.miens();
+            const cibles = exercice.classeIds || [];
+            devoirZone.classList.remove('d-none');
+            devoirZone.innerHTML =
+                '<div class="admin-panel border border-warning">' +
+                    '<div class="d-flex justify-content-between align-items-center mb-3">' +
+                        '<h4 class="mb-0"><i class="fas fa-clipboard-check me-2 text-warning"></i>' +
+                            (exercice.devoir === true ? 'Devoir publié' : 'Donner en devoir') + '</h4>' +
+                        '<button class="btn btn-sm btn-outline-secondary" id="fermer-devoir"><i class="fas fa-xmark"></i></button>' +
+                    '</div>' +
+                    '<p class="mb-3"><span class="fw-semibold">' + esc(exercice.titre) + '</span>' +
+                        ' <span class="badge bg-primary bg-opacity-10 text-primary">' + esc(nomMatiere(exercice.matiere)) + '</span>' +
+                        ' <span class="text-muted small">' + esc(LIBELLES_TYPES[exercice.type] || exercice.type) + '</span></p>' +
+                    '<div class="row g-3">' +
+                        '<div class="col-md-7"><label class="form-label" for="devoir-classes"><i class="fas fa-users-rectangle me-1"></i>Classes concernées</label>' +
+                            '<select class="form-select" id="devoir-classes" multiple size="' + Math.min(5, Math.max(2, classes.length)) + '">' +
+                                classes.map(function (classe) {
+                                    const selection = cibles.indexOf(classe.id) >= 0;
+                                    return '<option value="' + esc(classe.id) + '"' + (selection ? ' selected' : '') + '>' +
+                                        esc(classe.nom) + ' — ' + elevesDesClasses([classe.id]).length + ' élève(s)' +
+                                    '</option>';
+                                }).join('') +
+                            '</select>' +
+                            '<div class="form-text">' +
+                                (classes.length
+                                    ? 'Aucune sélection = devoir visible par toutes vos classes. Ctrl + clic pour en choisir plusieurs.'
+                                    : 'Créez d\'abord une classe dans l\'onglet « Classes » pour affecter un devoir.') +
+                            '</div></div>' +
+                        '<div class="col-md-5"><label class="form-label" for="devoir-echeance"><i class="fas fa-calendar-day me-1"></i>À rendre avant</label>' +
+                            '<input type="date" class="form-control" id="devoir-echeance" value="' + esc(exercice.echeance || '') + '">' +
+                            '<div class="form-text">Facultatif : sans date, le devoir reste ouvert.</div></div>' +
+                        '<div class="col-12"><label class="form-label" for="devoir-consigne"><i class="fas fa-comment-dots me-1"></i>Consigne envoyée aux élèves</label>' +
+                            '<textarea class="form-control" id="devoir-consigne" rows="2" placeholder="ex. À faire pour lundi : relisez la leçon avant de commencer.">' + esc(exercice.consigne || '') + '</textarea>' +
+                            '<div class="form-text">Le message apparaît avec le devoir et dans la cloche de notification des élèves.</div></div>' +
+                    '</div>' +
+                    '<div class="d-flex flex-wrap gap-2 mt-3">' +
+                        '<button class="btn btn-warning" id="enregistrer-devoir"><i class="fas fa-paper-plane me-1"></i>' +
+                            (exercice.devoir === true ? 'Mettre à jour le devoir' : 'Envoyer le devoir') + '</button>' +
+                        (exercice.devoir === true
+                            ? '<button class="btn btn-outline-danger" id="retirer-devoir"><i class="fas fa-clipboard-x me-1"></i>Retirer le devoir</button>'
+                            : '') +
+                        '<button class="btn btn-outline-secondary" id="annuler-devoir">Annuler</button>' +
+                    '</div>' +
+                    '<div id="devoir-message" class="d-none mt-3"></div>' +
+                '</div>';
+
+            const zoneDevoirMessage = devoirZone.querySelector('#devoir-message');
+
+            function fermer() {
+                devoirZone.classList.add('d-none');
+                devoirZone.innerHTML = '';
+            }
+
+            devoirZone.querySelector('#fermer-devoir').addEventListener('click', fermer);
+            devoirZone.querySelector('#annuler-devoir').addEventListener('click', fermer);
+
+            devoirZone.querySelector('#enregistrer-devoir').addEventListener('click', function () {
+                const classeIds = Array.prototype.slice.call(
+                    devoirZone.querySelector('#devoir-classes').selectedOptions || []
+                ).map(function (option) { return option.value; });
+                const echeance = devoirZone.querySelector('#devoir-echeance').value;
+                const consigne = devoirZone.querySelector('#devoir-consigne').value.trim();
+                const enregistre = window.LearnHubStore.exercices.save({
+                    id: exercice.id,
+                    devoir: true,
+                    classeIds: classeIds,
+                    echeance: echeance,
+                    consigne: consigne
+                });
+                if (!enregistre) {
+                    message(zoneDevoirMessage, 'Enregistrement impossible : stockage plein ou bloqué.', 'danger');
+                    return;
+                }
+                const eleves = elevesConcernes(classeIds);
+                fermer();
+                rafraichir();
+                message(
+                    zoneMessage,
+                    'Devoir « ' + exercice.titre + ' » envoyé à ' + eleves.length + ' élève(s)' +
+                        (echeance ? ' — à rendre avant le ' + formaterEcheance(echeance) + '.' : '.'),
+                    'success'
+                );
+            });
+
+            const retrait = devoirZone.querySelector('#retirer-devoir');
+            if (retrait) {
+                retrait.addEventListener('click', function () {
+                    if (!window.confirm('Retirer ce devoir ? Les élèves ne le verront plus dans leurs devoirs.')) return;
+                    window.LearnHubStore.exercices.save({
+                        id: exercice.id,
+                        devoir: false,
+                        classeIds: [],
+                        echeance: '',
+                        consigne: ''
+                    });
+                    fermer();
+                    rafraichir();
+                    message(zoneMessage, 'Devoir retiré : l\'exercice reste disponible comme entraînement.', 'success');
+                });
+            }
         }
 
         function questionCard(question) {
@@ -536,7 +670,14 @@ window.LearnHubAdmin = (function () {
             const exercice = window.LearnHubStore.exercices.get(bouton.dataset.id);
             if (!exercice) return;
 
-            if (bouton.dataset.action === 'editer') {
+            if (bouton.dataset.action === 'devoir') {
+                editeur.classList.add('d-none');
+                editeur.innerHTML = '';
+                ouvrirDevoir(exercice);
+                devoirZone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else if (bouton.dataset.action === 'editer') {
+                devoirZone.classList.add('d-none');
+                devoirZone.innerHTML = '';
                 ouvrirEditeur(exercice);
                 editeur.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else if (bouton.dataset.action === 'basculer') {

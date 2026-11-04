@@ -239,6 +239,10 @@ window.LearnHubStore = (function () {
         actifs: function () {
             return this.all().filter(function (ex) { return ex.actif !== false; });
         },
+        /** Devoirs publiés : le filtrage par classe est déjà appliqué par `all()`. */
+        devoirs: function () {
+            return this.actifs().filter(function (ex) { return ex.devoir === true; });
+        },
         byType: function (type) {
             return this.all().filter(function (ex) { return ex.type === type; });
         },
@@ -258,6 +262,20 @@ window.LearnHubStore = (function () {
                 espaceId: espace,
                 maj: new Date().toISOString()
             });
+            // Champs de devoir normalisés seulement s'ils sont transmis : l'éditeur
+            // de contenu enregistre sans eux et ne doit pas effacer le ciblage.
+            if (Object.prototype.hasOwnProperty.call(data, 'devoir')) {
+                enregistrement.devoir = data.devoir === true;
+            }
+            if (Object.prototype.hasOwnProperty.call(data, 'classeIds')) {
+                enregistrement.classeIds = Array.isArray(data.classeIds) ? data.classeIds.filter(Boolean) : [];
+            }
+            if (Object.prototype.hasOwnProperty.call(data, 'echeance')) {
+                enregistrement.echeance = data.echeance || '';
+            }
+            if (Object.prototype.hasOwnProperty.call(data, 'consigne')) {
+                enregistrement.consigne = String(data.consigne || '').trim();
+            }
             if (existant >= 0) {
                 liste[existant] = Object.assign({}, liste[existant], enregistrement);
             } else {

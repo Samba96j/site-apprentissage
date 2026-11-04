@@ -25,6 +25,7 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 - [migration-classes-avatars.sql](migration-classes-avatars.sql) — colonne `classes.matiere`, colonne `profiles.avatar_url` et bucket de stockage public `avatars` (écriture limitée au dossier de chaque compte) ;
 - [migration-lecons-document.sql](migration-lecons-document.sql) — **obligatoire pour les cours** : colonnes `classe_ids`, `support_url`, `support_nom`, `support_taille`, `couverture_url` et plafond de 50 Mo sur le bucket `documents`. Elle regroupe les anciennes migrations `lecons-classes` et `lecons-support`. Sans elle, l'enregistrement d'un cours échoue et l'élève ne voit rien ;
 - [migration-ressources-classes.sql](migration-ressources-classes.sql) — **obligatoire pour le ciblage des ressources** : ajoute `resources.classe_ids` pour affecter les ressources à une ou plusieurs classes ;
+- [migration-exercices-devoir.sql](migration-exercices-devoir.sql) — **obligatoire pour les devoirs** : ajoute `exercises.devoir`, `classe_ids`, `echeance` et `consigne`, qui permettent de donner un exercice à une classe et d'en informer les élèves ;
 - [migration-suppression-seances.sql](migration-suppression-seances.sql) — supprime la table `seances` (fonctionnalité remplacée par les documents de cours).
 
 ## 3. Authentification
@@ -59,7 +60,7 @@ Ces deux valeurs seront placées dans un fichier `assets/js/supabase-config.js` 
 | `profiles` | Compte : rôle `eleve`, `admin` ou `superadmin`, espace, classe |
 | `classes` | Classe d'un espace, rejointe avec un code |
 | `lessons` | Cours : document importé (`support_url`), couverture facultative, classes ciblées |
-| `exercises` | Quiz, associations, textes à trous (JSONB) |
+| `exercises` | Quiz, associations, textes à trous (JSONB) ; `devoir` + `classe_ids` + `echeance` pour les devoirs |
 | `resources` | Liens et documents |
 | `attempts` | Résultats des élèves |
 | `messages` | Formulaire de contact (insertion publique, lecture super-admin) |

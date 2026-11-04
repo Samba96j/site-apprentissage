@@ -92,6 +92,10 @@ create table if not exists public.exercises (
     questions jsonb not null default '[]'::jsonb,
     pairs jsonb not null default '[]'::jsonb,
     quotes jsonb not null default '[]'::jsonb,
+    devoir boolean not null default false,
+    classe_ids text[] not null default '{}',
+    echeance date,
+    consigne text,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
@@ -168,6 +172,7 @@ create index if not exists idx_profiles_classe on public.profiles (classe_id);
 create index if not exists idx_classes_espace on public.classes (espace_id);
 create index if not exists idx_lessons_espace on public.lessons (espace_id);
 create index if not exists idx_exercises_espace on public.exercises (espace_id);
+create index if not exists idx_exercises_classe_ids on public.exercises using gin (classe_ids);
 create index if not exists idx_resources_espace on public.resources (espace_id);
 create index if not exists idx_resources_classe_ids on public.resources using gin (classe_ids);
 create index if not exists idx_attempts_user on public.attempts (user_id);

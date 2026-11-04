@@ -151,6 +151,10 @@ window.LearnHubBackend = (function () {
             questions: row.questions || [],
             pairs: row.pairs || [],
             quotes: row.quotes || [],
+            devoir: row.devoir === true,
+            classeIds: row.classe_ids || [],
+            echeance: row.echeance || '',
+            consigne: row.consigne || '',
             cree: row.created_at,
             maj: row.updated_at
         };
@@ -213,7 +217,11 @@ window.LearnHubBackend = (function () {
                 temps: item.temps || null,
                 questions: item.questions || [],
                 pairs: item.pairs || [],
-                quotes: item.quotes || []
+                quotes: item.quotes || [],
+                devoir: item.devoir === true,
+                classe_ids: item.classeIds || [],
+                echeance: item.echeance || null,
+                consigne: item.consigne || null
             };
         }
         if (cle === 'ressources') {

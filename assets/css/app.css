@@ -964,3 +964,94 @@
     border: 0;
     border-radius: 10px;
 }
+
+/* ---------------------------------------------------------------------------
+   Devoirs : bloc « Mes devoirs » côté élève et cloche de notification.
+   --------------------------------------------------------------------------- */
+
+.devoirs-bloc {
+    padding: 1rem 1rem 1.25rem;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255, 179, 0, 0.12), rgba(106, 27, 154, 0.04));
+    border: 1px solid rgba(255, 179, 0, 0.28);
+}
+
+.devoir-carte {
+    border-left: 4px solid #ffb300;
+    border-radius: 12px;
+}
+
+.devoir-carte-retard {
+    border-left-color: #dc3545;
+}
+
+.devoir-matiere {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--primary);
+}
+
+.devoir-pastille {
+    flex: 0 0 auto;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.devoir-pastille-a-faire {
+    color: #8a6100;
+    background-color: rgba(255, 179, 0, 0.2);
+}
+
+.devoir-pastille-fait {
+    color: #146c43;
+    background-color: rgba(25, 135, 84, 0.14);
+}
+
+.devoir-pastille-retard {
+    color: #b02a37;
+    background-color: rgba(220, 53, 69, 0.14);
+}
+
+.cloche-pastille {
+    position: absolute;
+    top: -6px;
+    left: 100%;
+    min-width: 1.1rem;
+    height: 1.1rem;
+    padding: 0 0.28rem;
+    transform: translateX(-65%);
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background-color: #dc3545;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.devoirs-menu {
+    min-width: 280px;
+    max-width: 340px;
+}
+
+.devoir-notif {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    white-space: normal;
+}
+
+.devoir-notif-titre {
+    font-weight: 600;
+}
+
+.devoir-notif-detail {
+    font-size: 0.78rem;
+    color: #6c757d;
+}
