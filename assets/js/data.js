@@ -1071,6 +1071,74 @@ window.LearnHubData = (function () {
                     words: ['initialise', 'additionne', 'divise', 'multiplie', 'supprime', 'compare']
                 }
             ]
+        },
+
+        // Nouveaux exercices Informatique
+        {
+            id: 'informatique-quiz-html',
+            type: 'quiz',
+            matiere: 'informatique',
+            titre: 'HTML : balises et structure',
+            actif: true,
+            temps: 20,
+            questions: [
+                {
+                    question: 'Quelle balise permet d\'insérer une image dans une page web ?',
+                    options: ['<img>', '<picture>', '<photo>', '<src>'],
+                    answer: 0,
+                    explanation: 'La balise <img> est utilisée pour insérer des images dans une page HTML.'
+                },
+                {
+                    question: 'Quel attribut indique l\'adresse de l\'image dans la balise <img> ?',
+                    options: ['src', 'href', 'link', 'url'],
+                    answer: 0,
+                    explanation: 'L\'attribut src (source) indique le chemin ou l\'URL de l\'image.'
+                },
+                {
+                    question: 'Quelle balise sert à créer un lien hypertexte ?',
+                    options: ['<a>', '<link>', '<hyper>', '<url>'],
+                    answer: 0,
+                    explanation: 'La balise <a> (anchor) crée un lien hypertexte vers une autre page ou ressource.'
+                },
+                {
+                    question: 'Quel attribut spécifie la cible du lien dans <a> ?',
+                    options: ['href', 'src', 'alt', 'title'],
+                    answer: 0,
+                    explanation: 'L\'attribut href (hypertext reference) indique l\'URL de destination du lien.'
+                },
+                {
+                    question: 'Quelle balise sert à structurer le contenu en titres ?',
+                    options: ['<h1>', '<title>', '<header>', '<head>'],
+                    answer: 0,
+                    explanation: 'La balise <h1> définit le titre principal de niveau 1. On utilise h1 à h6 pour les titres.'
+                }
+            ]
+        },
+        {
+            id: 'informatique-matching-bdd',
+            type: 'matching',
+            matiere: 'informatique',
+            titre: 'Bases de données : associer concept et définition',
+            actif: true,
+            pairs: [
+                { item: 'SQL', match: 'Langage de requête structuré pour manipuler les bases de données' },
+                { item: 'Primary Key', match: 'Clé primaire unique qui identifie chaque ligne d\'une table' },
+                { item: 'Foreign Key', match: 'Clé étrangère qui lie deux tables entre elles' },
+                { item: 'Index', match: 'Structure qui améliore la vitesse des opérations de recherche sur une table' }
+            ]
+        },
+        {
+            id: 'informatique-fillblank-boucles',
+            type: 'fillblank',
+            matiere: 'informatique',
+            titre: 'Boucles en Python : compléter le code',
+            actif: true,
+            quotes: [
+                {
+                    text: "Pour utiliser une boucle <span class='blank' data-answer='for'>for</span> en Python, on écri:\n\"\"\"\nfor <span class='blank' data-answer='variable'></span> in range(5):\n    print(<span class='blank' data-answer='variable'></span>)\n\"\"\"",
+                    words: ['for', 'variable', 'range', 'print', 'boucle', 'itère']
+                }
+            ]
         }
     ];
 
