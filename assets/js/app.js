@@ -2507,6 +2507,7 @@
                     '</fieldset>';
                 }).join('') + '</div>' +
                 '<button class="btn btn-primary mt-3" type="button" data-quiz-action="verifier">Vérifier mes réponses</button>' +
+                '<button class="btn btn-outline-primary mt-3 ms-sm-2 d-none" type="button" data-quiz-action="recommencer">Recommencer</button>' +
                 '<p class="fw-semibold mt-3 mb-0" data-quiz-score aria-live="polite"></p>'
                 : '<div class="alert alert-warning">Aucune question exploitable n’a été générée. Réessayez.</div>') +
         '</article>';
@@ -2552,14 +2553,24 @@
 
     function heroIA(sousTitre) {
         return '<section class="ia-hero mb-4" aria-label="' + esc(NOM_IA) + '">' +
-            etoilesDeco(48) +
+            etoilesDeco(18) +
             '<div class="ia-hero-contenu">' +
-                '<div class="ia-hero-etoiles" aria-hidden="true">' +
-                    '<i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>' +
+                '<div class="ia-hero-marque"><span class="ia-hero-mark-icon"><i class="fas fa-wand-magic-sparkles"></i></span>' +
+                    '<span>TON ESPACE D’APPRENTISSAGE</span><span class="ia-hero-live"><i class="fas fa-circle"></i>Assistant IA</span>' +
                 '</div>' +
-                '<span class="ia-hero-badge bg-primary text-white rounded-pill px-3 py-2 small fw-bold">IA</span>' +
-                '<h1 class="ia-hero-titre">' + esc(NOM_IA) + '</h1>' +
-                '<p class="ia-hero-soustitre">' + esc(sousTitre) + '</p>' +
+                '<div class="ia-hero-layout"><div class="ia-hero-copy">' +
+                    '<p class="ia-hero-kicker">Apprendre devient plus simple</p>' +
+                    '<h1 class="ia-hero-titre">' + esc(NOM_IA) + '</h1>' +
+                    '<p class="ia-hero-soustitre">' + esc(sousTitre) + '</p>' +
+                '</div><div class="ia-hero-art" aria-hidden="true">' +
+                    '<span class="ia-hero-art-ring ia-hero-art-ring-outer"></span>' +
+                    '<span class="ia-hero-art-ring ia-hero-art-ring-inner"></span>' +
+                    '<span class="ia-hero-art-core"><i class="fas fa-book-open"></i></span>' +
+                    '<span class="ia-hero-art-spark ia-hero-art-spark-one"><i class="fas fa-star"></i></span>' +
+                    '<span class="ia-hero-art-spark ia-hero-art-spark-two"><i class="fas fa-sparkles"></i></span>' +
+                '</div></div>' +
+                '<div class="ia-hero-promise"><span><i class="fas fa-check me-2"></i>Explications adaptées à ton niveau</span>' +
+                    '<span><i class="fas fa-check me-2"></i>Contenus à retrouver dans ton historique</span></div>' +
             '</div>' +
         '</section>';
     }
@@ -2569,12 +2580,23 @@
         if (!user) {
             return {
                 titre: NOM_IA,
-                html: '<div class="container py-4">' +
-                    heroIA(DESCRIPTION_IA) +
-                    '<div class="content text-center">' +
-                        '<p class="text-muted">Connectez-vous pour générer et conserver vos fiches.</p>' +
-                        '<a class="btn btn-primary" href="#/connexion?next=ia">Se connecter</a>' +
-                    '</div>' +
+                html: '<div class="container py-4 ia-page ia-page-public">' +
+                    heroIA('Une question, une œuvre ou un cours : transforme ton sujet en explication claire, fiche de révision ou quiz.') +
+                    '<section class="ia-public-intro">' +
+                        '<div class="ia-public-copy">' +
+                            '<span class="ia-section-eyebrow">Prêt à progresser ?</span>' +
+                            '<h2>Ton prochain déclic commence ici.</h2>' +
+                            '<p>Choisis un sujet et YA FAMA AI t’aide à comprendre, mémoriser et t’entraîner. Connecte-toi pour lancer une génération et retrouver tes contenus.</p>' +
+                            '<a class="btn btn-primary ia-primary-action" href="#/connexion?next=ia"><i class="fas fa-arrow-right me-2"></i>Commencer gratuitement</a>' +
+                            '<p class="ia-public-note"><i class="fas fa-lock me-1"></i>Tes fiches restent liées à ton compte.</p>' +
+                        '</div>' +
+                        '<div class="ia-public-modes" aria-label="Les modes disponibles">' +
+                            '<div class="ia-public-mode"><span class="ia-mode-icon ia-mode-icon-book"><i class="fas fa-book-open"></i></span><div><strong>Étude d’œuvre</strong><small>Résumé, thèmes et personnages</small></div></div>' +
+                            '<div class="ia-public-mode"><span class="ia-mode-icon ia-mode-icon-search"><i class="fas fa-magnifying-glass"></i></span><div><strong>Recherche / question</strong><small>Une explication à ton niveau</small></div></div>' +
+                            '<div class="ia-public-mode"><span class="ia-mode-icon ia-mode-icon-quiz"><i class="fas fa-circle-question"></i></span><div><strong>Quiz interactif</strong><small>Teste tes connaissances</small></div></div>' +
+                            '<div class="ia-public-mode"><span class="ia-mode-icon ia-mode-icon-note"><i class="fas fa-file-lines"></i></span><div><strong>Fiche de révision</strong><small>Les notions à retenir</small></div></div>' +
+                        '</div>' +
+                    '</section>' +
                 '</div>'
             };
         }
@@ -2592,23 +2614,27 @@
 
         return {
             titre: NOM_IA,
-            html: '<div class="container py-4">' +
-                heroIA(DESCRIPTION_IA) +
-                '<div class="d-flex flex-wrap justify-content-end align-items-center gap-2 mb-3">' +
-                    '<a class="btn btn-outline-secondary btn-sm" href="#/profil"><i class="fas fa-chart-line me-1"></i>Ma progression</a>' +
+            html: '<div class="container py-4 ia-page">' +
+                heroIA('Ton assistant de cours personnel : comprends mieux, révise plus vite et entraîne-toi.') +
+                '<div class="ia-page-toolbar"><p class="ia-welcome-line"><span class="ia-welcome-dot"></span>Bonjour ' +
+                    esc(user.username || 'et bienvenue') + ', on révise quoi aujourd’hui ?</p>' +
+                    '<a class="btn btn-outline-primary btn-sm ia-progress-link" href="#/profil"><i class="fas fa-chart-line me-1"></i>Ma progression</a>' +
                 '</div>' +
-                '<div class="alert alert-warning small"><i class="fas fa-triangle-exclamation me-1"></i>' +
-                    'Contenu généré par intelligence artificielle : vérifiez toujours les informations avant de les apprendre.</div>' +
-                '<ul class="nav nav-tabs mb-3" id="ia-onglets">' +
-                    '<li class="nav-item"><button class="nav-link ' + (modeInitial === 'etude' ? 'active' : '') + '" type="button" data-mode="etude"><i class="fas fa-book-open me-1"></i>Étude d\'œuvre</button></li>' +
-                    '<li class="nav-item"><button class="nav-link ' + (modeInitial === 'question' ? 'active' : '') + '" type="button" data-mode="question"><i class="fas fa-magnifying-glass me-1"></i>Recherche / question</button></li>' +
-                    '<li class="nav-item"><button class="nav-link ' + (modeInitial === 'quiz' ? 'active' : '') + '" type="button" data-mode="quiz"><i class="fas fa-circle-question me-1"></i>Quiz interactif</button></li>' +
-                    '<li class="nav-item"><button class="nav-link ' + (modeInitial === 'fiche' ? 'active' : '') + '" type="button" data-mode="fiche"><i class="fas fa-file-lines me-1"></i>Fiche de révision</button></li>' +
-                '</ul>' +
-                '<div class="content mb-4">' +
-                    '<form id="form-etude" class="' + (modeInitial === 'etude' ? '' : 'd-none') + '">' +
+                '<div class="ia-workspace">' +
+                    '<section class="ia-generator content" aria-label="Générer un contenu pédagogique">' +
+                        '<div class="ia-generator-heading"><div><span class="ia-section-eyebrow">Studio de révision</span>' +
+                            '<h2>Que veux-tu travailler ?</h2><p>Choisis un format, donne ton sujet et je prépare le contenu.</p></div>' +
+                            '<span class="ia-generator-spark"><i class="fas fa-wand-magic-sparkles"></i></span></div>' +
+                        '<div class="ia-modes" id="ia-onglets" role="tablist" aria-label="Format de génération">' +
+                            '<button class="ia-mode-card ' + (modeInitial === 'etude' ? 'active' : '') + '" type="button" role="tab" aria-selected="' + (modeInitial === 'etude') + '" data-mode="etude"><span class="ia-mode-icon ia-mode-icon-book"><i class="fas fa-book-open"></i></span><span class="ia-mode-copy"><strong>Étude d’œuvre</strong><small>Analyse littéraire</small></span><i class="fas fa-chevron-right ia-mode-arrow"></i></button>' +
+                            '<button class="ia-mode-card ' + (modeInitial === 'question' ? 'active' : '') + '" type="button" role="tab" aria-selected="' + (modeInitial === 'question') + '" data-mode="question"><span class="ia-mode-icon ia-mode-icon-search"><i class="fas fa-magnifying-glass"></i></span><span class="ia-mode-copy"><strong>Question</strong><small>Comprendre une notion</small></span><i class="fas fa-chevron-right ia-mode-arrow"></i></button>' +
+                            '<button class="ia-mode-card ' + (modeInitial === 'quiz' ? 'active' : '') + '" type="button" role="tab" aria-selected="' + (modeInitial === 'quiz') + '" data-mode="quiz"><span class="ia-mode-icon ia-mode-icon-quiz"><i class="fas fa-circle-question"></i></span><span class="ia-mode-copy"><strong>Quiz interactif</strong><small>S’entraîner en jouant</small></span><i class="fas fa-chevron-right ia-mode-arrow"></i></button>' +
+                            '<button class="ia-mode-card ' + (modeInitial === 'fiche' ? 'active' : '') + '" type="button" role="tab" aria-selected="' + (modeInitial === 'fiche') + '" data-mode="fiche"><span class="ia-mode-icon ia-mode-icon-note"><i class="fas fa-file-lines"></i></span><span class="ia-mode-copy"><strong>Fiche de révision</strong><small>Mémoriser l’essentiel</small></span><i class="fas fa-chevron-right ia-mode-arrow"></i></button>' +
+                        '</div>' +
+                        '<div class="ia-form-panel">' +
+                    '<form id="form-etude" role="tabpanel" class="' + (modeInitial === 'etude' ? '' : 'd-none') + '">' +
                         '<div class="row g-3">' +
-                            '<div class="col-md-6">' +
+                            '<div class="col-md-6 ia-field">' +
                                 '<label class="form-label" for="ia-oeuvre">Œuvre</label>' +
                                 '<select class="form-select" id="ia-oeuvre">' +
                                     '<option value="">Choisir dans le programme…</option>' +
@@ -2618,39 +2644,40 @@
                                 '<input class="form-control mt-2 d-none" id="ia-oeuvre-autre" maxlength="120" placeholder="Titre de l\'œuvre">' +
                                 '<div class="small mt-2 d-none" id="ia-lien-fiche"></div>' +
                             '</div>' +
-                            '<div class="col-md-3">' +
+                            '<div class="col-md-3 ia-field">' +
                                 '<label class="form-label" for="ia-auteur">Auteur (optionnel)</label>' +
                                 '<input class="form-control" id="ia-auteur" maxlength="80" placeholder="ex. Mariama Bâ">' +
                             '</div>' +
-                            '<div class="col-md-3">' +
+                            '<div class="col-md-3 ia-field">' +
                                 '<label class="form-label" for="ia-niveau">Niveau</label>' +
                                 '<select class="form-select" id="ia-niveau">' + optionsNiveaux + '</select>' +
                             '</div>' +
                             '<div class="col-12">' +
-                                '<button class="btn btn-primary" type="submit"><i class="fas fa-wand-magic-sparkles me-1"></i>Générer ma fiche</button>' +
+                                '<button class="btn btn-primary ia-generate-button" type="submit"><i class="fas fa-wand-magic-sparkles me-2"></i>Générer mon étude<span class="ia-button-arrow"><i class="fas fa-arrow-right"></i></span></button>' +
                             '</div>' +
                         '</div>' +
                     '</form>' +
-                    '<form id="form-question" class="' + (modeInitial === 'question' ? '' : 'd-none') + '">' +
+                    '<form id="form-question" role="tabpanel" class="' + (modeInitial === 'question' ? '' : 'd-none') + '">' +
                         '<div class="row g-3">' +
                             '<div class="col-12">' +
-                                '<label class="form-label" for="ia-question">Votre question</label>' +
-                                '<textarea class="form-control" id="ia-question" rows="3" maxlength="500" placeholder="ex. Qu\'est-ce que le registre lyrique ?"></textarea>' +
+                                '<label class="form-label" for="ia-question">La notion ou question qui te bloque</label>' +
+                                '<textarea class="form-control ia-question-input" id="ia-question" rows="3" maxlength="500" placeholder="ex. Comment reconnaître une métaphore ?"></textarea>' +
+                                '<div class="ia-field-footer"><span>Décris ce que tu veux comprendre.</span><span data-ia-counter="ia-question">0 / 500</span></div>' +
                             '</div>' +
                             '<div class="col-md-3">' +
                                 '<label class="form-label" for="ia-niveau-question">Niveau</label>' +
                                 '<select class="form-select" id="ia-niveau-question">' + optionsNiveaux + '</select>' +
                             '</div>' +
                             '<div class="col-md-9 d-flex align-items-end">' +
-                                '<button class="btn btn-primary" type="submit"><i class="fas fa-magnifying-glass me-1"></i>Obtenir une réponse</button>' +
+                                '<button class="btn btn-primary ia-generate-button" type="submit"><i class="fas fa-wand-magic-sparkles me-2"></i>M’expliquer<span class="ia-button-arrow"><i class="fas fa-arrow-right"></i></span></button>' +
                             '</div>' +
                         '</div>' +
                     '</form>' +
-                    '<form id="form-quiz" class="' + (modeInitial === 'quiz' ? '' : 'd-none') + '">' +
+                    '<form id="form-quiz" role="tabpanel" class="' + (modeInitial === 'quiz' ? '' : 'd-none') + '">' +
                         '<div class="row g-3">' +
                             '<div class="col-md-6">' +
-                                '<label class="form-label" for="ia-sujet-quiz">Sujet du quiz</label>' +
-                                '<input class="form-control" id="ia-sujet-quiz" maxlength="300" required placeholder="ex. Le registre lyrique">' +
+                                '<label class="form-label" for="ia-sujet-quiz">Sujet à maîtriser</label>' +
+                                '<input class="form-control" id="ia-sujet-quiz" maxlength="300" required placeholder="ex. Les figures de style">' +
                             '</div>' +
                             '<div class="col-md-3">' +
                                 '<label class="form-label" for="ia-niveau-quiz">Niveau</label>' +
@@ -2663,13 +2690,13 @@
                                     '<option value="8">8 questions</option><option value="10">10 questions</option>' +
                                 '</select>' +
                             '</div>' +
-                            '<div class="col-12"><button class="btn btn-primary" type="submit"><i class="fas fa-wand-magic-sparkles me-1"></i>Créer le quiz</button></div>' +
+                            '<div class="col-12"><button class="btn btn-primary ia-generate-button" type="submit"><i class="fas fa-wand-magic-sparkles me-2"></i>Lancer mon quiz<span class="ia-button-arrow"><i class="fas fa-arrow-right"></i></span></button></div>' +
                         '</div>' +
                     '</form>' +
-                    '<form id="form-fiche" class="' + (modeInitial === 'fiche' ? '' : 'd-none') + '">' +
+                    '<form id="form-fiche" role="tabpanel" class="' + (modeInitial === 'fiche' ? '' : 'd-none') + '">' +
                         '<div class="row g-3">' +
                             '<div class="col-md-6">' +
-                                '<label class="form-label" for="ia-sujet-fiche">Sujet à réviser</label>' +
+                                '<label class="form-label" for="ia-sujet-fiche">Matière ou notion</label>' +
                                 '<input class="form-control" id="ia-sujet-fiche" maxlength="300" required placeholder="ex. La poésie engagée">' +
                             '</div>' +
                             '<div class="col-md-3">' +
@@ -2683,12 +2710,15 @@
                                 '<label class="form-label" for="ia-niveau-fiche">Niveau</label>' +
                                 '<select class="form-select" id="ia-niveau-fiche">' + optionsNiveaux + '</select>' +
                             '</div>' +
-                            '<div class="col-12"><button class="btn btn-primary" type="submit"><i class="fas fa-wand-magic-sparkles me-1"></i>Créer ma fiche</button></div>' +
+                            '<div class="col-12"><button class="btn btn-primary ia-generate-button" type="submit"><i class="fas fa-wand-magic-sparkles me-2"></i>Créer ma fiche<span class="ia-button-arrow"><i class="fas fa-arrow-right"></i></span></button></div>' +
                         '</div>' +
                     '</form>' +
+                        '</div>' +
+                        '<div class="ia-trust-note"><i class="fas fa-shield-halved"></i><span>Un contenu clair et personnalisé. Pense à comparer les informations avec ton cours.</span></div>' +
+                    '</section>' +
                 '</div>' +
-                '<div id="ia-resultat"></div>' +
-                '<div class="content mt-4" id="ia-historique"></div>' +
+                '<div id="ia-resultat" aria-live="polite" aria-atomic="true"></div>' +
+                '<section class="ia-history content mt-4" id="ia-historique"></section>' +
             '</div>',
             after: function (racine) {
                 const onglets = racine.querySelectorAll('#ia-onglets [data-mode]');
@@ -2702,10 +2732,13 @@
                 const selectOeuvre = racine.querySelector('#ia-oeuvre');
                 const oeuvreLibre = racine.querySelector('#ia-oeuvre-autre');
                 let quizCourant = null;
+                let elementQuizCourant = null;
+                let generationEnCours = false;
 
                 function activerMode(mode) {
                     onglets.forEach(function (bouton) {
                         bouton.classList.toggle('active', bouton.dataset.mode === mode);
+                        bouton.setAttribute('aria-selected', String(bouton.dataset.mode === mode));
                     });
                     Object.keys(formulaires).forEach(function (cle) {
                         formulaires[cle].classList.toggle('d-none', cle !== mode);
@@ -2714,17 +2747,45 @@
 
                 onglets.forEach(function (bouton) {
                     bouton.addEventListener('click', function () { activerMode(bouton.dataset.mode); });
+                    bouton.addEventListener('keydown', function (event) {
+                        if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+                        event.preventDefault();
+                        const pas = event.key === 'ArrowRight' ? 1 : -1;
+                        const index = Array.prototype.indexOf.call(onglets, bouton);
+                        const suivant = onglets[(index + pas + onglets.length) % onglets.length];
+                        suivant.focus();
+                        activerMode(suivant.dataset.mode);
+                    });
                 });
 
                 function afficherChargement(texte) {
-                    zone.innerHTML = '<div class="content text-center text-muted py-4">' +
-                        '<i class="fas fa-spinner fa-spin me-2"></i>' + esc(texte) + '</div>';
+                    zone.innerHTML = '<section class="ia-loading-card" role="status">' +
+                        '<span class="ia-loading-icon"><i class="fas fa-wand-magic-sparkles"></i></span>' +
+                        '<span class="ia-loading-spinner"></span>' +
+                        '<h2>' + esc(texte) + '</h2>' +
+                        '<p>Je prépare une réponse claire et adaptée à ton niveau. Cela peut prendre quelques secondes.</p>' +
+                        '<div class="ia-loading-track"><span></span></div>' +
+                    '</section>';
                     zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
 
                 zone.addEventListener('click', function (event) {
+                    const boutonRecommencer = event.target.closest('[data-quiz-action="recommencer"]');
+                    if (boutonRecommencer) {
+                        rendre(elementQuizCourant);
+                        return;
+                    }
                     const bouton = event.target.closest('[data-quiz-action="verifier"]');
                     if (!bouton || !quizCourant) return;
+                    const nonRepondues = quizCourant.questions.reduce(function (liste, question, index) {
+                        const groupe = zone.querySelector('[data-quiz-question="' + index + '"]');
+                        if (!groupe || !groupe.querySelector('input[name="ia-quiz-' + index + '"]:checked')) liste.push(index + 1);
+                        return liste;
+                    }, []);
+                    if (nonRepondues.length) {
+                        toast('Réponds aux questions ' + nonRepondues.join(', ') + ' avant de vérifier ton score.', 'warning');
+                        return;
+                    }
                     let score = 0;
                     quizCourant.questions.forEach(function (question, index) {
                         const groupe = zone.querySelector('[data-quiz-question="' + index + '"]');
@@ -2734,6 +2795,9 @@
                         groupe.classList.add(juste ? 'border-success' : 'border-danger');
                         const explication = groupe.querySelector('[data-quiz-explication]');
                         explication.classList.remove('d-none');
+                        groupe.querySelectorAll('input[type="radio"]').forEach(function (reponse) {
+                            reponse.disabled = true;
+                        });
                         const retour = document.createElement('span');
                         retour.className = 'd-block small fw-semibold mt-2 ' + (juste ? 'text-success' : 'text-danger');
                         retour.textContent = juste ? 'Bonne réponse.' :
@@ -2743,6 +2807,7 @@
                     const resultat = zone.querySelector('[data-quiz-score]');
                     resultat.textContent = 'Votre score : ' + score + ' / ' + quizCourant.questions.length;
                     bouton.disabled = true;
+                    zone.querySelector('[data-quiz-action="recommencer"]').classList.remove('d-none');
                 });
 
                 function afficherErreur(texte) {
@@ -2751,6 +2816,7 @@
                 }
 
                 function rendre(item) {
+                    if (!item || !item.contenu) return;
                     const corps = item.type === 'question'
                         ? htmlReponseIA(item.contenu)
                         : item.type === 'quiz'
@@ -2759,46 +2825,58 @@
                                 ? htmlFicheRevisionIA(item.contenu)
                                 : htmlEtudeIA(item.contenu);
                     quizCourant = item.type === 'quiz' ? item.contenu : null;
-                    zone.innerHTML = '<div class="content">' +
+                    elementQuizCourant = item.type === 'quiz' ? item : null;
+                    zone.innerHTML = '<section class="ia-result-card content">' +
+                        '<div class="ia-result-heading"><span class="ia-result-label"><i class="fas fa-sparkles me-2"></i>TON CONTENU EST PRÊT</span>' +
+                            '<span class="ia-result-type">' + esc(window.LearnHubIA.libelleType(item.type)) + '</span></div>' +
                         (item.demo
                             ? '<div class="alert alert-info small"><i class="fas fa-circle-info me-1"></i>' +
-                              'Mode démonstration : aucune clé IA n\'est configurée. Voici la présentation type d\'une fiche.</div>'
+                              'Aucune génération IA réelle n’est configurée ici : ce résultat est un exemple de démonstration.</div>'
                             : '') +
                         corps +
-                        '<p class="text-muted small mt-4 mb-0"><i class="fas fa-robot me-1"></i>Généré le ' +
+                        '<p class="ia-result-meta"><i class="fas fa-clock me-2"></i>Généré le ' +
                             new Date(item.date).toLocaleString('fr-FR') +
-                            (item.modele ? ' · ' + esc(item.modele) : '') + '</p>' +
-                    '</div>';
+                            (item.modele ? ' <span>·</span> ' + esc(item.modele) : '') + '</p>' +
+                    '</section>';
                 }
 
                 async function rafraichirHistorique() {
                     const contenus = window.LearnHubIA.mesContenus();
                     if (!contenus.length) {
-                        historique.innerHTML = '<h2 class="h5 mb-3"><i class="fas fa-clock-rotate-left me-2"></i>Mes fiches</h2>' +
-                            '<p class="text-muted mb-0">Vos fiches générées apparaîtront ici.</p>';
+                        historique.innerHTML = '<div class="ia-history-heading"><div><span class="ia-section-eyebrow">Bibliothèque personnelle</span>' +
+                            '<h2><i class="fas fa-clock-rotate-left me-2"></i>Mes contenus récents</h2></div><span class="ia-history-count">0 contenu</span></div>' +
+                            '<div class="ia-history-empty"><span class="ia-history-empty-icon"><i class="fas fa-book-open"></i></span>' +
+                                '<div><strong>Ton espace de révision t’attend.</strong><p>Les contenus que tu génères apparaîtront ici.</p></div></div>';
                         return;
                     }
-                    historique.innerHTML = '<h2 class="h5 mb-3"><i class="fas fa-clock-rotate-left me-2"></i>Mes fiches (' + contenus.length + ')</h2>' +
-                        '<div class="list-group">' + contenus.map(function (item) {
-                            return '<div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">' +
-                                '<div>' +
-                                    '<div class="fw-semibold">' + esc(item.requete) + '</div>' +
-                                    '<small class="text-muted">' + esc(window.LearnHubIA.libelleType(item.type)) + ' · ' +
+                    historique.innerHTML = '<div class="ia-history-heading"><div><span class="ia-section-eyebrow">Bibliothèque personnelle</span>' +
+                        '<h2><i class="fas fa-clock-rotate-left me-2"></i>Mes contenus récents</h2></div>' +
+                        '<span class="ia-history-count">' + contenus.length + ' contenu' + (contenus.length > 1 ? 's' : '') + '</span></div>' +
+                        '<div class="ia-history-list">' + contenus.map(function (item) {
+                            return '<article class="ia-history-item">' +
+                                '<span class="ia-history-item-icon"><i class="fas ' +
+                                    (item.type === 'quiz' ? 'fa-circle-question' : item.type === 'fiche' ? 'fa-file-lines' : item.type === 'question' ? 'fa-magnifying-glass' : 'fa-book-open') +
+                                    '"></i></span><div class="ia-history-item-copy">' +
+                                    '<strong>' + esc(item.requete) + '</strong>' +
+                                    '<small>' + esc(window.LearnHubIA.libelleType(item.type)) + ' · ' +
                                         new Date(item.date).toLocaleString('fr-FR') +
                                         (item.niveau ? ' · ' + esc(item.niveau) : '') +
                                     '</small>' +
-                                '</div>' +
-                                '<div class="d-flex gap-2">' +
-                                    '<button class="btn btn-sm btn-outline-primary" data-action="ouvrir" data-id="' + esc(item.id) + '"><i class="fas fa-eye me-1"></i>Ouvrir</button>' +
-                                    '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-id="' + esc(item.id) + '" title="Supprimer"><i class="fas fa-trash"></i></button>' +
-                                '</div>' +
-                            '</div>';
+                                '</div><div class="ia-history-actions">' +
+                                    '<button class="btn btn-sm btn-outline-primary" data-action="ouvrir" data-id="' + esc(item.id) + '"><i class="fas fa-arrow-up-right-from-square me-1"></i>Ouvrir</button>' +
+                                    '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-id="' + esc(item.id) + '" title="Supprimer" aria-label="Supprimer ' + esc(item.requete) + '"><i class="fas fa-trash"></i></button>' +
+                                '</div></article>';
                         }).join('') + '</div>';
                 }
 
                 async function lancer(mode, parametres) {
+                    if (generationEnCours) return;
+                    generationEnCours = true;
                     const boutons = racine.querySelectorAll('form button[type="submit"]');
-                    boutons.forEach(function (bouton) { bouton.disabled = true; });
+                    boutons.forEach(function (bouton) {
+                        bouton.disabled = true;
+                        bouton.setAttribute('aria-busy', 'true');
+                    });
                     const chargements = {
                         etude: 'L\'IA rédige la fiche d’œuvre…',
                         question: 'L\'IA prépare la réponse…',
@@ -2806,39 +2884,49 @@
                         fiche: 'L\'IA rédige la fiche de révision…'
                     };
                     afficherChargement(chargements[mode]);
+                    try {
+                        let resultat = await window.LearnHubIA.generer(parametres);
+                        let demo = false;
+                        if (!resultat.ok && (resultat.code === 'local' || resultat.code === 'non_configure')) {
+                            demo = true;
+                            resultat = { ok: true, contenu: window.LearnHubIA.exemple(mode, parametres), modele: '' };
+                        }
+                        if (!resultat.ok) {
+                            afficherErreur(resultat.error || 'Génération impossible. Vérifie ta connexion et réessaie.');
+                            return;
+                        }
 
-                    let resultat = await window.LearnHubIA.generer(parametres);
-                    let demo = false;
-                    if (!resultat.ok && (resultat.code === 'local' || resultat.code === 'non_configure')) {
-                        demo = true;
-                        resultat = { ok: true, contenu: window.LearnHubIA.exemple(mode, parametres), modele: '' };
+                        const item = {
+                            type: mode,
+                            requete: parametres.oeuvre || parametres.question || parametres.sujetQuiz || parametres.sujetFiche,
+                            auteur: parametres.auteur || '',
+                            niveau: parametres.niveau || '',
+                            modele: resultat.modele || '',
+                            contenu: resultat.contenu,
+                            demo: demo,
+                            date: new Date().toISOString()
+                        };
+
+                        if (!demo) {
+                            const enregistre = await window.LearnHubIA.enregistrer(item);
+                            if (!enregistre.ok) toast('Le contenu est prêt, mais son enregistrement a échoué : ' + enregistre.error, 'warning');
+                            else await rafraichirHistorique();
+                        }
+
+                        rendre(item);
+                        zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    } catch (erreur) {
+                        console.error('Génération IA :', erreur);
+                        afficherErreur(erreur && erreur.message
+                            ? 'La génération a échoué : ' + erreur.message
+                            : 'La génération a échoué. Vérifie ta connexion et réessaie.');
+                    } finally {
+                        generationEnCours = false;
+                        boutons.forEach(function (bouton) {
+                            bouton.disabled = false;
+                            bouton.removeAttribute('aria-busy');
+                        });
                     }
-                    boutons.forEach(function (bouton) { bouton.disabled = false; });
-
-                    if (!resultat.ok) {
-                        afficherErreur(resultat.error || 'Génération impossible.');
-                        return;
-                    }
-
-                    const item = {
-                        type: mode,
-                        requete: parametres.oeuvre || parametres.question || parametres.sujetQuiz || parametres.sujetFiche,
-                        auteur: parametres.auteur || '',
-                        niveau: parametres.niveau || '',
-                        modele: resultat.modele || '',
-                        contenu: resultat.contenu,
-                        demo: demo,
-                        date: new Date().toISOString()
-                    };
-
-                    if (!demo) {
-                        const enregistre = await window.LearnHubIA.enregistrer(item);
-                        if (!enregistre.ok) toast(enregistre.error, 'warning');
-                        else await rafraichirHistorique();
-                    }
-
-                    rendre(item);
-                    zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
 
                 function majLienFiche() {

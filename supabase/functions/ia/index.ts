@@ -244,7 +244,8 @@ const SYSTEME = [
   'Tu es un professeur de lettres et de littérature françaises, rigoureux et pédagogique.',
   'Tu réponds UNIQUEMENT par un objet JSON valide, sans texte avant ou après, sans balise Markdown.',
   'Toutes les valeurs sont en français, en texte brut, sans HTML.',
-  'Si une information est incertaine, reste général plutôt que d\'inventer un fait précis.'
+  'Adapte les explications au niveau demandé, privilégie les formulations claires et les exemples utiles.',
+  'Ne fabrique ni citation, ni référence, ni fait précis : si une information est incertaine, reste général.'
 ].join(' ');
 
 function promptEtude(oeuvre: string, auteur: string, niveau: string): string {
@@ -262,7 +263,9 @@ function promptEtude(oeuvre: string, auteur: string, niveau: string): string {
     '  "questions": [string],',
     '  "sujets": [string]',
     '}',
-    'Adapte le vocabulaire et la profondeur au niveau demandé.'
+    'Adapte le vocabulaire et la profondeur au niveau demandé.',
+    'Ne présente une citation entre guillemets que si tu es certain de sa formulation et de son attribution ; sinon, laisse la liste "citations" vide.',
+    'Pour chaque thème ou procédé, explique clairement son effet ou son intérêt dans l’œuvre.'
   ].join('\n');
 }
 
@@ -274,14 +277,17 @@ function promptQuestion(question: string, niveau: string): string {
     '  "question": string, "reponse": string, "explication": string, "exemple": string,',
     '  "aRetenir": [string], "questions": [string]',
     '}',
-    '"questions" contient trois questions courtes pour vérifier la compréhension.'
+    '"questions" contient trois questions courtes pour vérifier la compréhension.',
+    'Commence par une réponse directe, puis développe avec des étapes simples et un exemple concret adapté au niveau.'
   ].join('\n');
 }
 
 function promptQuiz(sujet: string, niveau: string, nombreQuestions: number): string {
   return [
     `Crée un quiz interactif sur « ${sujet} », adapté au niveau ${niveau}, avec ${nombreQuestions} questions.`,
-    'Chaque question doit avoir 3 ou 4 choix, une seule bonne réponse et une explication pédagogique.',
+    `Génère exactement ${nombreQuestions} questions distinctes, progressives et centrées sur le sujet.`,
+    'Chaque question doit avoir 3 ou 4 choix plausibles, une seule bonne réponse et une explication pédagogique courte.',
+    'Répartis les bonnes réponses entre les différentes positions des choix et évite les formulations ambiguës.',
     'Réponds exactement avec ce schéma JSON :',
     '{',
     '  "titre": string,',
@@ -299,7 +305,9 @@ function promptFiche(sujet: string, typeFiche: string, niveau: string): string {
     '  "titre": string, "ideeGenerale": string, "essentiels": [string],',
     '  "notions": [{"titre": string, "definition": string}],',
     '  "methode": [string], "autoEvaluation": [string]',
-    '}'
+    '}',
+    'Présente les notions avec des définitions courtes et la méthode sous forme d’étapes directement applicables.',
+    'N’ajoute pas de faits ni de citations spécifiques si tu ne peux pas les établir avec confiance.'
   ].join('\n');
 }
 
