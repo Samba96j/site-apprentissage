@@ -2082,10 +2082,16 @@
             titre: 'Connexion',
             html: '<div class="container auth-page">' +
                 '<div class="auth-layout">' +
+                    '<div class="auth-visuels">' +
                     '<figure class="auth-visuel auth-visuel--classe">' +
                         '<img src="assets/images/carrousel/slide-5.jpg" alt="Un élève concentré sur son travail en classe" loading="lazy">' +
                         '<figcaption><i class="fas fa-book-open" aria-hidden="true"></i><span>Apprendre ensemble, grandir chaque jour.</span></figcaption>' +
                     '</figure>' +
+                    '<figure class="auth-visuel auth-visuel--accompagnement">' +
+                        '<img src="assets/images/carrousel/slide-2.jpg" alt="Un enseignant accompagne une élève dans son apprentissage" loading="lazy">' +
+                        '<figcaption><i class="fas fa-lightbulb" aria-hidden="true"></i><span>Chaque réussite commence par un premier pas.</span></figcaption>' +
+                    '</figure>' +
+                    '</div>' +
                     '<div class="auth-card' + (mode === 'inscription' ? ' auth-card--large' : '') + '">' +
                     '<div class="auth-head">' +
                         '<span class="auth-logo"><i class="fas fa-graduation-cap"></i></span>' +
@@ -2134,10 +2140,6 @@
                         ? 'E-mail et mot de passe de votre compte LearnHub. Aucun identifiant n\'est affiché sur cette page.'
                         : 'Identifiants fournis par l\'administrateur de la plateforme.') + '</p>' +
                     '</div>' +
-                    '<figure class="auth-visuel auth-visuel--accompagnement">' +
-                        '<img src="assets/images/carrousel/slide-2.jpg" alt="Un enseignant accompagne une élève dans son apprentissage" loading="lazy">' +
-                        '<figcaption><i class="fas fa-lightbulb" aria-hidden="true"></i><span>Chaque réussite commence par un premier pas.</span></figcaption>' +
-                    '</figure>' +
                 '</div>' +
             '</div>',
             after: function (racine) {
