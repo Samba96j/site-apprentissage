@@ -28,7 +28,7 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 - [migration-ressources-classes.sql](migration-ressources-classes.sql) — **obligatoire pour le ciblage des ressources** : ajoute `resources.classe_ids` pour affecter les ressources à une ou plusieurs classes ;
 - [migration-exercices-devoir.sql](migration-exercices-devoir.sql) — **obligatoire pour les devoirs** : ajoute `exercises.devoir`, `classe_ids`, `echeance` et `consigne`, qui permettent de donner un exercice à une classe et d'en informer les élèves ;
 - [migration-suppression-seances.sql](migration-suppression-seances.sql) — supprime la table `seances` (fonctionnalité remplacée par les documents de cours).
-- [migration-presence-en-direct.sql](migration-presence-en-direct.sql) — autorise les comptes connectés à rejoindre le canal privé Supabase Realtime utilisé pour le statut en ligne.
+- [migration-presence-en-direct.sql](migration-presence-en-direct.sql) — autorise les comptes connectés à rejoindre et publier sur le canal privé Supabase Realtime utilisé pour le statut en ligne.
 
 ## 3. Authentification
 
