@@ -176,6 +176,8 @@ Fournisseurs compatibles OpenAI pris en charge : `gemini` (palier gratuit, par d
 
 La fonction vérifie le JWT Supabase, applique le quota quotidien, exige une sortie JSON et normalise le contenu (balises HTML supprimées, longueurs bornées). Sans clé, elle répond `non_configure` : le site bascule alors en mode démonstration. Les fiches validées sont enregistrées par le site dans `ia_contenus`, avec une RLS limitée à leur auteur.
 
+Le mode **Recherche Web** consulte l’API Wikipédia en français, demande à l’IA de résumer les extraits trouvés avec des références, puis propose des liens de recherche vers Wikipédia, Google, DuckDuckGo et Google Scholar. L’API Wikipédia ne nécessite pas de clé ; la question et les extraits sont transmis au fournisseur IA configuré. Ces recherches sont enregistrées comme des questions existantes et ne nécessitent pas de migration SQL. Après une mise à jour de `functions/ia/index.ts`, redéployez la fonction avec `supabase functions deploy ia`.
+
 **Quota non contournable.** Le décompte ne repose pas sur les lignes enregistrées par le navigateur (qu'un appel direct ou une suppression remettrait à zéro), mais sur la table `ia_quotas`, écrite uniquement par `ia_consommer()` — une fonction `security definer` appelée par la fonction `ia` avec le JWT de l'élève. Elle réserve une génération avant l'appel au fournisseur ; en cas d'échec, `ia_liberer()` rend la réservation. Le plafond global (`IA_LIMITE_GLOBALE`) protège le projet même si plusieurs comptes sont créés.
 
 **Vérifier ce qui est réellement déployé** — un appel `GET` renvoie la version du code en ligne, sans exposer la clé :
@@ -184,7 +186,7 @@ La fonction vérifie le JWT Supabase, applique le quota quotidien, exige une sor
 curl.exe -s "https://<projet>.supabase.co/functions/v1/ia"
 ```
 
-Réponse attendue : `{"ok":true,"service":"learnhub-ia","version":"2026-10-29","configure":true,"fournisseur":"gemini","modele":"gemini-3.5-flash"}`
+Réponse attendue : `{"ok":true,"service":"learnhub-ia","version":"2026-11-07.1","configure":true,"fournisseur":"gemini","modele":"gemini-3.5-flash"}`
 Un `405 Méthode non autorisée` signifie que le code en ligne est une version antérieure : il faut redéployer.
 
 > Le fichier [functions/ia/deno.d.ts](functions/ia/deno.d.ts) ne sert qu'à l'éditeur : il déclare les globales `Deno` et les imports par URL, que l'extension TypeScript de VS Code ne connaît pas. Il n'est pas utilisé au déploiement. Si vous installez l'extension VS Code « Deno », il devient inutile.

@@ -14,7 +14,56 @@
     /* Identité de l'assistant IA : un seul endroit à modifier pour renommer. */
     const NOM_IA = 'YA FAMA AI';
     const DESCRIPTION_IA = 'Assistant pédagogique IA : étudiez une œuvre ou posez une question, LearnHub met le résultat en forme.';
-    const BADGE_IA = '<span class="bg-primary text-white rounded-pill px-3 py-2 small fw-bold">IA</span>';
+    const RESSOURCES_BIBLIOTHEQUE = [
+        {
+            source: 'Wikisource',
+            titre: 'Fables de La Fontaine',
+            description: 'Lire une œuvre classique en texte intégral dans une bibliothèque de textes libres.',
+            url: 'https://fr.wikisource.org/wiki/Fables_de_La_Fontaine',
+            icone: 'fa-book-open',
+            categorie: 'Littérature'
+        },
+        {
+            source: 'Sésamath',
+            titre: 'Manuels numériques de mathématiques',
+            description: 'Consulter des manuels et cahiers numériques, du collège au lycée.',
+            url: 'https://manuel.sesamath.net/',
+            icone: 'fa-square-root-alt',
+            categorie: 'Mathématiques'
+        },
+        {
+            source: 'Mathenpoche',
+            titre: 'Cours et exercices de mathématiques',
+            description: 'S’entraîner avec des cours, exercices, QCM et activités interactives.',
+            url: 'https://mathenpoche.sesamath.net/',
+            icone: 'fa-calculator',
+            categorie: 'Exercices'
+        },
+        {
+            source: 'Lumni',
+            titre: 'Réviser et découvrir',
+            description: 'Explorer des vidéos, dossiers et quiz gratuits, du primaire au bac.',
+            url: 'https://www.lumni.fr/',
+            icone: 'fa-play-circle',
+            categorie: 'Cours et médias'
+        },
+        {
+            source: 'FUN MOOC',
+            titre: 'Cours en ligne ouverts',
+            description: 'Découvrir des cours en ligne proposés par des établissements et organismes.',
+            url: 'https://www.fun-mooc.fr/fr/',
+            icone: 'fa-laptop',
+            categorie: 'Cours en ligne'
+        },
+        {
+            source: 'OpenStax',
+            titre: 'Manuels universitaires libres',
+            description: 'Accéder à des manuels gratuits, principalement disponibles en anglais.',
+            url: 'https://openstax.org/subjects',
+            icone: 'fa-graduation-cap',
+            categorie: 'Enseignement supérieur'
+        }
+    ];
 
     /* --------------------------------- Utilitaires --------------------------------- */
 
@@ -183,7 +232,7 @@
                                 '<li><a class="dropdown-item" href="#/exercices"><i class="fas fa-gamepad me-2"></i>Exercices</a></li>' +
                             '</ul>' +
                         '</li>' +
-                        '<li class="nav-item"><a class="nav-link text-nowrap" href="#/ia" data-nav="ia"><i class="fas fa-wand-magic-sparkles me-1"></i>' + NOM_IA + BADGE_IA + '</a></li>' +
+                        '<li class="nav-item"><a class="nav-link text-nowrap" href="#/ia" data-nav="ia"><i class="fas fa-wand-magic-sparkles me-1"></i>' + NOM_IA + '</a></li>' +
                     '</ul>' +
                     '<form class="d-flex header-search my-2 my-lg-0" id="form-recherche" role="search">' +
                         '<label class="visually-hidden" for="champ-recherche">Rechercher</label>' +
@@ -1159,10 +1208,35 @@
             html: '<div class="container py-4">' +
                 '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">' +
                     '<div>' +
+                        '<span class="biblio-eyebrow">Ressources pour apprendre</span>' +
                         '<h1 class="h3 mb-1"><i class="fas fa-book-open me-2"></i>Bibliothèque</h1>' +
-                        '<p class="text-muted mb-0">Livres, cours et documents libres pour approfondir toutes les matières.</p>' +
+                        '<p class="text-muted mb-0">Des documents LearnHub et une sélection de ressources pédagogiques de confiance.</p>' +
                     '</div>' +
                 '</div>' +
+                '<section class="biblio-ressources mt-4 mb-4" aria-labelledby="biblio-ressources-titre">' +
+                    '<div class="biblio-ressources-heading"><div><span class="biblio-eyebrow">Pour aller plus loin</span>' +
+                        '<h2 id="biblio-ressources-titre">Ressources ouvertes et fiables</h2>' +
+                        '<p>Accès direct à des livres, manuels et cours proposés par des plateformes reconnues.</p></div>' +
+                        '<span class="biblio-ressources-mark" aria-hidden="true"><i class="fas fa-compass"></i></span></div>' +
+                    '<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">' +
+                        RESSOURCES_BIBLIOTHEQUE.map(function (ressource) {
+                            return '<div class="col"><article class="biblio-ressource-card h-100">' +
+                                '<div class="biblio-ressource-top"><span class="biblio-ressource-icon"><i class="fas ' +
+                                    esc(ressource.icone) + '"></i></span><span class="biblio-ressource-category">' +
+                                    esc(ressource.categorie) + '</span></div>' +
+                                '<p class="biblio-ressource-source">' + esc(ressource.source) + '</p>' +
+                                '<h3>' + esc(ressource.titre) + '</h3>' +
+                                '<p class="biblio-ressource-description">' + esc(ressource.description) + '</p>' +
+                                '<a class="biblio-ressource-link" href="' + esc(ressource.url) +
+                                    '" target="_blank" rel="noopener noreferrer">Découvrir <i class="fas fa-external-link-alt" aria-hidden="true"></i>' +
+                                    '<span class="visually-hidden"> (ouvre un nouvel onglet)</span></a>' +
+                            '</article></div>';
+                        }).join('') +
+                    '</div>' +
+                    '<p class="biblio-ressources-note"><i class="fas fa-circle-info me-1"></i>Ces sites sont externes à LearnHub ; leurs langues, contenus et conditions d’accès peuvent varier.</p>' +
+                '</section>' +
+                '<div class="biblio-catalogue-heading"><div><span class="biblio-eyebrow">Espace LearnHub</span>' +
+                    '<h2>Documents de la plateforme</h2></div></div>' +
                 '<div class="input-group mb-3" style="max-width:520px">' +
                     '<span class="input-group-text"><i class="fas fa-search"></i></span>' +
                     '<input class="form-control" id="biblio-recherche" type="search" placeholder="Rechercher un titre, un auteur, une matière…" autocomplete="off">' +
@@ -2488,6 +2562,58 @@
         '</article>';
     }
 
+    function htmlLiensRecherche(contenu, requete) {
+        const c = contenu || {};
+        const sources = Array.isArray(c.sources) ? c.sources : [];
+        const liens = [
+            { nom: 'Wikipédia', url: 'https://fr.wikipedia.org/w/index.php?search=' + encodeURIComponent(requete) },
+            { nom: 'Google', url: 'https://www.google.com/search?q=' + encodeURIComponent(requete) },
+            { nom: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=' + encodeURIComponent(requete) },
+            { nom: 'Google Scholar', url: 'https://scholar.google.com/scholar?q=' + encodeURIComponent(requete) }
+        ];
+        const cartesSources = sources.map(function (source) {
+            let url;
+            try {
+                const candidate = new URL(source.url);
+                if (candidate.protocol !== 'https:' || candidate.hostname !== 'fr.wikipedia.org') return '';
+                url = candidate.href;
+            } catch {
+                return '';
+            }
+            return '<li class="list-group-item">' +
+                '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer" class="fw-semibold">' +
+                    esc(source.titre || 'Article Wikipédia') +
+                    '<i class="fas fa-arrow-up-right-from-square ms-2 small" aria-hidden="true"></i>' +
+                '</a>' +
+                (source.extrait ? '<p class="small text-muted mb-0 mt-1">' + esc(source.extrait) + '</p>' : '') +
+            '</li>';
+        }).filter(Boolean);
+
+        return '<section class="mt-4" aria-label="Sources et recherches complémentaires">' +
+            '<h3 class="h5"><i class="fas fa-book-open me-2"></i>' +
+                (cartesSources.length
+                    ? 'Sources consultées'
+                    : sources.length
+                        ? 'Aucune source exploitable'
+                        : Array.isArray(c.sources) ? 'Aucun résultat trouvé' : 'Poursuivre la recherche') +
+            '</h3>' +
+            (cartesSources.length
+                ? '<ol class="list-group list-group-numbered mb-3">' + cartesSources.join('') + '</ol>'
+                : '<p class="small text-muted">' +
+                    (sources.length
+                        ? 'Les résultats reçus ne contenaient pas de liens Wikipédia valides.'
+                        : Array.isArray(c.sources)
+                            ? 'Aucun résultat Wikipédia pertinent. Tu peux essayer les autres moteurs.'
+                            : 'La recherche Wikipédia n’a pas été activée pour cette réponse.') +
+                '</p>') +
+            '<div class="d-flex flex-wrap gap-2">' + liens.map(function (lien) {
+                return '<a class="btn btn-sm btn-outline-primary" href="' + esc(lien.url) +
+                    '" target="_blank" rel="noopener noreferrer">Rechercher sur ' + esc(lien.nom) + '</a>';
+            }).join('') + '</div>' +
+            '<p class="form-text mt-2 mb-0">Vérifie les informations avec les sources originales : la réponse IA peut contenir des erreurs.</p>' +
+        '</section>';
+    }
+
     function htmlQuizIA(contenu) {
         const c = contenu || {};
         const questions = Array.isArray(c.questions) ? c.questions : [];
@@ -2592,7 +2718,7 @@
                         '</div>' +
                         '<div class="ia-public-modes" aria-label="Les modes disponibles">' +
                             '<div class="ia-public-mode"><span class="ia-mode-icon ia-mode-icon-book"><i class="fas fa-book-open"></i></span><div><strong>Étude d’œuvre</strong><small>Résumé, thèmes et personnages</small></div></div>' +
-                            '<div class="ia-public-mode"><span class="ia-mode-icon ia-mode-icon-search"><i class="fas fa-magnifying-glass"></i></span><div><strong>Recherche / question</strong><small>Une explication à ton niveau</small></div></div>' +
+                            '<div class="ia-public-mode"><span class="ia-mode-icon ia-mode-icon-search"><i class="fas fa-magnifying-glass"></i></span><div><strong>Recherche / question</strong><small>Une explication avec des sources Web</small></div></div>' +
                             '<div class="ia-public-mode"><span class="ia-mode-icon ia-mode-icon-quiz"><i class="fas fa-circle-question"></i></span><div><strong>Quiz interactif</strong><small>Teste tes connaissances</small></div></div>' +
                             '<div class="ia-public-mode"><span class="ia-mode-icon ia-mode-icon-note"><i class="fas fa-file-lines"></i></span><div><strong>Fiche de révision</strong><small>Les notions à retenir</small></div></div>' +
                         '</div>' +
@@ -2627,7 +2753,7 @@
                             '<span class="ia-generator-spark"><i class="fas fa-wand-magic-sparkles"></i></span></div>' +
                         '<div class="ia-modes" id="ia-onglets" role="tablist" aria-label="Format de génération">' +
                             '<button class="ia-mode-card ' + (modeInitial === 'etude' ? 'active' : '') + '" type="button" role="tab" aria-selected="' + (modeInitial === 'etude') + '" data-mode="etude"><span class="ia-mode-icon ia-mode-icon-book"><i class="fas fa-book-open"></i></span><span class="ia-mode-copy"><strong>Étude d’œuvre</strong><small>Analyse littéraire</small></span><i class="fas fa-chevron-right ia-mode-arrow"></i></button>' +
-                            '<button class="ia-mode-card ' + (modeInitial === 'question' ? 'active' : '') + '" type="button" role="tab" aria-selected="' + (modeInitial === 'question') + '" data-mode="question"><span class="ia-mode-icon ia-mode-icon-search"><i class="fas fa-magnifying-glass"></i></span><span class="ia-mode-copy"><strong>Question</strong><small>Comprendre une notion</small></span><i class="fas fa-chevron-right ia-mode-arrow"></i></button>' +
+                            '<button class="ia-mode-card ' + (modeInitial === 'question' ? 'active' : '') + '" type="button" role="tab" aria-selected="' + (modeInitial === 'question') + '" data-mode="question"><span class="ia-mode-icon ia-mode-icon-search"><i class="fas fa-magnifying-glass"></i></span><span class="ia-mode-copy"><strong>Recherche Web</strong><small>Réponse et sources</small></span><i class="fas fa-chevron-right ia-mode-arrow"></i></button>' +
                             '<button class="ia-mode-card ' + (modeInitial === 'quiz' ? 'active' : '') + '" type="button" role="tab" aria-selected="' + (modeInitial === 'quiz') + '" data-mode="quiz"><span class="ia-mode-icon ia-mode-icon-quiz"><i class="fas fa-circle-question"></i></span><span class="ia-mode-copy"><strong>Quiz interactif</strong><small>S’entraîner en jouant</small></span><i class="fas fa-chevron-right ia-mode-arrow"></i></button>' +
                             '<button class="ia-mode-card ' + (modeInitial === 'fiche' ? 'active' : '') + '" type="button" role="tab" aria-selected="' + (modeInitial === 'fiche') + '" data-mode="fiche"><span class="ia-mode-icon ia-mode-icon-note"><i class="fas fa-file-lines"></i></span><span class="ia-mode-copy"><strong>Fiche de révision</strong><small>Mémoriser l’essentiel</small></span><i class="fas fa-chevron-right ia-mode-arrow"></i></button>' +
                         '</div>' +
@@ -2668,8 +2794,15 @@
                                 '<label class="form-label" for="ia-niveau-question">Niveau</label>' +
                                 '<select class="form-select" id="ia-niveau-question">' + optionsNiveaux + '</select>' +
                             '</div>' +
+                            '<div class="col-12">' +
+                                '<div class="form-check form-switch">' +
+                                    '<input class="form-check-input" type="checkbox" role="switch" id="ia-recherche-web" checked>' +
+                                    '<label class="form-check-label" for="ia-recherche-web">Consulter Wikipédia et citer les sources dans la réponse</label>' +
+                                '</div>' +
+                                '<p class="form-text mb-0">Tu pourras aussi ouvrir la recherche sur Google, DuckDuckGo ou Google Scholar.</p>' +
+                            '</div>' +
                             '<div class="col-md-9 d-flex align-items-end">' +
-                                '<button class="btn btn-primary ia-generate-button" type="submit"><i class="fas fa-wand-magic-sparkles me-2"></i>M’expliquer<span class="ia-button-arrow"><i class="fas fa-arrow-right"></i></span></button>' +
+                                '<button class="btn btn-primary ia-generate-button" type="submit"><i class="fas fa-magnifying-glass me-2"></i>Rechercher et expliquer<span class="ia-button-arrow"><i class="fas fa-arrow-right"></i></span></button>' +
                             '</div>' +
                         '</div>' +
                     '</form>' +
@@ -2715,6 +2848,7 @@
                     '</form>' +
                         '</div>' +
                         '<div class="ia-trust-note"><i class="fas fa-shield-halved"></i><span>Un contenu clair et personnalisé. Pense à comparer les informations avec ton cours.</span></div>' +
+                        '<div class="ia-resource-prompt"><span>Besoin d’un manuel ou d’un cours libre ?</span><a href="#/bibliotheque">Explorer les ressources pédagogiques <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>' +
                     '</section>' +
                 '</div>' +
                 '<div id="ia-resultat" aria-live="polite" aria-atomic="true"></div>' +
@@ -2834,6 +2968,7 @@
                               'Aucune génération IA réelle n’est configurée ici : ce résultat est un exemple de démonstration.</div>'
                             : '') +
                         corps +
+                        (item.type === 'question' ? htmlLiensRecherche(item.contenu, item.requete) : '') +
                         '<p class="ia-result-meta"><i class="fas fa-clock me-2"></i>Généré le ' +
                             new Date(item.date).toLocaleString('fr-FR') +
                             (item.modele ? ' <span>·</span> ' + esc(item.modele) : '') + '</p>' +
@@ -2879,7 +3014,9 @@
                     });
                     const chargements = {
                         etude: 'L\'IA rédige la fiche d’œuvre…',
-                        question: 'L\'IA prépare la réponse…',
+                        question: parametres.rechercheWeb
+                            ? 'Recherche sur Wikipédia puis préparation de la réponse…'
+                            : 'L\'IA prépare la réponse…',
                         quiz: 'L\'IA prépare le quiz…',
                         fiche: 'L\'IA rédige la fiche de révision…'
                     };
@@ -2887,12 +3024,16 @@
                     try {
                         let resultat = await window.LearnHubIA.generer(parametres);
                         let demo = false;
-                        if (!resultat.ok && (resultat.code === 'local' || resultat.code === 'non_configure')) {
+                        if (!resultat.ok && !parametres.rechercheWeb &&
+                            (resultat.code === 'local' || resultat.code === 'non_configure')) {
                             demo = true;
                             resultat = { ok: true, contenu: window.LearnHubIA.exemple(mode, parametres), modele: '' };
                         }
                         if (!resultat.ok) {
                             afficherErreur(resultat.error || 'Génération impossible. Vérifie ta connexion et réessaie.');
+                            if (mode === 'question') {
+                                zone.innerHTML += htmlLiensRecherche({}, parametres.question);
+                            }
                             return;
                         }
 
@@ -2920,6 +3061,9 @@
                         afficherErreur(erreur && erreur.message
                             ? 'La génération a échoué : ' + erreur.message
                             : 'La génération a échoué. Vérifie ta connexion et réessaie.');
+                        if (mode === 'question') {
+                            zone.innerHTML += htmlLiensRecherche({}, parametres.question);
+                        }
                     } finally {
                         generationEnCours = false;
                         boutons.forEach(function (bouton) {
@@ -2979,7 +3123,8 @@
                     lancer('question', {
                         mode: 'question',
                         question: question,
-                        niveau: racine.querySelector('#ia-niveau-question').value
+                        niveau: racine.querySelector('#ia-niveau-question').value,
+                        rechercheWeb: racine.querySelector('#ia-recherche-web').checked
                     });
                 });
 
