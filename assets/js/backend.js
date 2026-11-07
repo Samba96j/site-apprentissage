@@ -32,6 +32,11 @@ window.LearnHubBackend = (function () {
     let progression = {};
     let listeIA = [];
     let derniereErreur = null;
+    let presenceChannel = null;
+    let presenceConnectee = false;
+    let presenceEtat = 'disconnected';
+    let presenceUtilisateurs = [];
+    const observateursPresence = new Set();
 
     if (active) {
         try {
@@ -75,6 +80,118 @@ window.LearnHubBackend = (function () {
 
     function listeEspaces() {
         return espaces;
+    }
+
+    function notifierPresence() {
+        const etat = {
+            connected: presenceConnectee,
+            status: presenceEtat,
+            users: presenceUtilisateurs.slice()
+        };
+        observateursPresence.forEach(function (observateur) {
+            observateur(etat);
+        });
+    }
+
+    function mettreAJourPresence(channel) {
+        const state = channel.presenceState();
+        presenceUtilisateurs = Object.keys(state).map(function (userId) {
+            const presences = state[userId] || [];
+            const dates = presences.map(function (presence) {
+                return presence.online_since;
+            }).filter(Boolean).sort();
+            return { userId: userId, onlineSince: dates[0] || null };
+        });
+        notifierPresence();
+    }
+
+    function suivrePresence() {
+        if (!estActif() || !profil || !profil.id || presenceChannel) return;
+
+        const utilisateurId = profil.id;
+        const channel = client.channel('learnhub-presence', {
+            config: { private: true, presence: { key: utilisateurId } }
+        });
+        presenceChannel = channel;
+        presenceEtat = 'connecting';
+        presenceConnectee = false;
+        notifierPresence();
+
+        channel.on('presence', { event: 'sync' }, function () {
+            mettreAJourPresence(channel);
+        });
+        channel.subscribe(async function (status) {
+            if (status === 'SUBSCRIBED') {
+                presenceEtat = 'connected';
+                presenceConnectee = true;
+                try {
+                    const resultat = await channel.track({
+                        user_id: utilisateurId,
+                        online_since: new Date().toISOString()
+                    });
+                    if (resultat !== 'ok') {
+                        signaler(new Error('Supabase Realtime : suivi de présence impossible (' + resultat + ').'));
+                        presenceEtat = 'error';
+                        presenceConnectee = false;
+                    }
+                } catch (erreur) {
+                    signaler(erreur);
+                    presenceEtat = 'error';
+                    presenceConnectee = false;
+                }
+                notifierPresence();
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                presenceEtat = 'error';
+                presenceConnectee = false;
+                notifierPresence();
+                signaler(new Error('Supabase Realtime : connexion de présence impossible (' + status + ').'));
+            }
+        });
+    }
+
+    function observerPresence(observateur) {
+        observateursPresence.add(observateur);
+        observateur({
+            connected: presenceConnectee,
+            status: presenceEtat,
+            users: presenceUtilisateurs.slice()
+        });
+        return function () {
+            observateursPresence.delete(observateur);
+        };
+    }
+
+    async function chargerProfilsPresence(ids) {
+        if (!estActif() || !profil || profil.role !== 'superadmin') {
+            throw new Error('La consultation des profils connectés est réservée au super-administrateur.');
+        }
+        const identifiants = Array.isArray(ids) ? ids.filter(function (id) {
+            return typeof id === 'string' && id.length > 0;
+        }) : [];
+        if (!identifiants.length) return [];
+
+        const resultat = await client.from('profiles').select('*').in('id', identifiants);
+        if (resultat.error) {
+            signaler(resultat.error);
+            throw resultat.error;
+        }
+        return (resultat.data || []).map(versUtilisateur);
+    }
+
+    async function arreterPresence() {
+        if (!presenceChannel) return;
+        const channel = presenceChannel;
+        presenceChannel = null;
+        presenceConnectee = false;
+        presenceEtat = 'disconnected';
+        presenceUtilisateurs = [];
+        notifierPresence();
+        try {
+            const status = await client.removeChannel(channel);
+            if (status === 'error') signaler(new Error('Supabase Realtime : fermeture du canal de présence impossible.'));
+        } catch (erreur) {
+            signaler(erreur);
+        }
     }
 
     function signaler(erreur) {
@@ -351,6 +468,7 @@ window.LearnHubBackend = (function () {
         const profilCharge = await chargerProfil();
         if (!profilCharge) return null;
         await chargerTout();
+        suivrePresence();
         return profil;
     }
 
@@ -425,6 +543,7 @@ window.LearnHubBackend = (function () {
 
     async function deconnecter() {
         if (!disponible()) return;
+        await arreterPresence();
         await client.auth.signOut();
         profil = null;
         cache = null;
@@ -965,6 +1084,8 @@ window.LearnHubBackend = (function () {
         utilisateursCache: utilisateursCache,
         progressionCache: progressionCache,
         listeEspaces: listeEspaces,
+        observerPresence: observerPresence,
+        chargerProfilsPresence: chargerProfilsPresence,
         connecter: connecter,
         inscrire: inscrire,
         renvoyerConfirmation: renvoyerConfirmation,

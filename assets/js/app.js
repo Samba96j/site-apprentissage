@@ -3218,6 +3218,23 @@
                     carteStat('bg-warning', 'fa-chalkboard-user', 'Enseignants', totalAdmins) +
                     carteStat('bg-info', 'fa-shield-halved', 'Super-admins', totalSupers) +
                 '</div>' +
+                '<div class="admin-panel mb-4" id="presence-panel">' +
+                    '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">' +
+                        '<h2 class="h5 mb-0"><i class="fas fa-signal me-2"></i>Présence en direct</h2>' +
+                        '<span class="badge bg-secondary" id="presence-count">' + (backendActif ? 'Connexion…' : 'Indisponible') + '</span>' +
+                    '</div>' +
+                    '<p class="text-muted small mb-3" id="presence-status">' +
+                        (backendActif ? 'Connexion à Supabase Realtime…' : 'Le suivi en direct nécessite le backend Supabase partagé.') +
+                    '</p>' +
+                    '<div class="table-responsive" id="presence-table">' +
+                        '<table class="table table-sm table-striped align-middle mb-0">' +
+                            '<thead><tr><th>Utilisateur</th><th>E-mail</th><th>Rôle</th><th>Espace</th><th>Classe</th><th>Connecté depuis</th></tr></thead>' +
+                            '<tbody id="presence-utilisateurs"><tr><td colspan="6" class="text-muted">' +
+                                (backendActif ? 'Chargement…' : 'Activez le backend partagé pour consulter les présences.') +
+                            '</td></tr></tbody>' +
+                        '</table>' +
+                    '</div>' +
+                '</div>' +
                 '<div class="content mb-4">' +
                     '<h2 class="h5 mb-3"><i class="fas fa-id-card me-2"></i>Mes identifiants super-admin</h2>' +
                     (backendActif
@@ -3320,6 +3337,79 @@
             after: function (racine) {
                 const zone = racine.querySelector('#super-message');
                 const table = racine.querySelector('#table-comptes');
+
+                if (backendActif && window.LearnHubBackend.observerPresence) {
+                    const compteurPresence = racine.querySelector('#presence-count');
+                    const statutPresence = racine.querySelector('#presence-status');
+                    const listePresence = racine.querySelector('#presence-utilisateurs');
+                    const panneauPresence = racine.querySelector('#presence-panel');
+                    const comptesParId = {};
+                    comptes.forEach(function (compte) {
+                        if (compte.id) comptesParId[compte.id] = compte;
+                    });
+
+                    let revisionPresence = 0;
+                    const arreterObservation = window.LearnHubBackend.observerPresence(async function (etat) {
+                        const revision = ++revisionPresence;
+                        if (!panneauPresence.isConnected) {
+                            arreterObservation();
+                            return;
+                        }
+                        if (!etat.connected) {
+                            compteurPresence.className = 'badge bg-secondary';
+                            compteurPresence.textContent = '— connecté';
+                            statutPresence.textContent = etat.status === 'error'
+                                ? 'La connexion en direct a échoué. Vérifiez la configuration Realtime de Supabase.'
+                                : 'Connexion à Supabase Realtime…';
+                            listePresence.innerHTML = '<tr><td colspan="6" class="text-muted">Présence en cours de chargement…</td></tr>';
+                            return;
+                        }
+
+                        const profilsManquants = etat.users.filter(function (session) {
+                            return !comptesParId[session.userId];
+                        }).map(function (session) { return session.userId; });
+                        if (profilsManquants.length) {
+                            try {
+                                const profils = await window.LearnHubBackend.chargerProfilsPresence(profilsManquants);
+                                profils.forEach(function (compte) {
+                                    comptesParId[compte.id] = compte;
+                                });
+                            } catch (erreur) {
+                                if (revision !== revisionPresence) return;
+                                compteurPresence.className = 'badge bg-danger';
+                                compteurPresence.textContent = 'Informations indisponibles';
+                                statutPresence.textContent = 'Impossible de charger les profils des utilisateurs connectés.';
+                                listePresence.innerHTML = '<tr><td colspan="6" class="text-danger">Erreur lors du chargement des profils.</td></tr>';
+                                return;
+                            }
+                        }
+                        if (revision !== revisionPresence || !panneauPresence.isConnected) return;
+
+                        compteurPresence.className = 'badge bg-success';
+                        compteurPresence.textContent = etat.users.length + ' personne' + (etat.users.length === 1 ? '' : 's') +
+                            ' connectée' + (etat.users.length === 1 ? '' : 's');
+                        statutPresence.textContent = 'Mise à jour automatique en temps réel.';
+                        const lignesPresence = etat.users.map(function (session) {
+                            const compte = comptesParId[session.userId];
+                            if (!compte) return '';
+                            const infos = infosEspaceCompte(compte);
+                            return '<tr>' +
+                                '<td class="fw-semibold">' + esc(compte.username) + '</td>' +
+                                '<td class="text-muted small">' + esc(compte.email) + '</td>' +
+                                '<td>' + esc(LIBELLES_ROLES[compte.role] || compte.role) + '</td>' +
+                                '<td class="small">' + esc(infos.espace) + '</td>' +
+                                '<td class="small">' + esc(infos.classe) + '</td>' +
+                                '<td class="text-muted small text-nowrap">' +
+                                    (session.onlineSince ? new Date(session.onlineSince).toLocaleString('fr-FR') : '—') +
+                                '</td>' +
+                            '</tr>';
+                        }).filter(Boolean);
+                        listePresence.innerHTML = lignesPresence.length
+                            ? lignesPresence.join('')
+                            : '<tr><td colspan="6" class="text-muted">Aucun utilisateur connecté.</td></tr>';
+                    });
+                    window.addEventListener('hashchange', arreterObservation, { once: true });
+                }
 
                 function afficher(texte, type) {
                     zone.className = 'alert alert-' + type + ' py-2';

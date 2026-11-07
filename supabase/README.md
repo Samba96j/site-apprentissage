@@ -13,6 +13,7 @@ Le site reste hébergé sur **GitHub Pages**. Supabase fournit uniquement l'auth
 1. Dans le projet : **SQL Editor** → **New query**.
 2. Coller l'intégralité de [schema.sql](schema.sql).
 3. **Run**. Le script crée les tables, les index, les fonctions, les déclencheurs et les politiques RLS (Row Level Security).
+4. Exécuter également [migration-presence-en-direct.sql](migration-presence-en-direct.sql) pour autoriser l'accès authentifié au canal privé de présence.
 
 Si le projet a été créé avec une première version du schéma, exécuter une fois les scripts de migration (idempotents) :
 
@@ -27,6 +28,7 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 - [migration-ressources-classes.sql](migration-ressources-classes.sql) — **obligatoire pour le ciblage des ressources** : ajoute `resources.classe_ids` pour affecter les ressources à une ou plusieurs classes ;
 - [migration-exercices-devoir.sql](migration-exercices-devoir.sql) — **obligatoire pour les devoirs** : ajoute `exercises.devoir`, `classe_ids`, `echeance` et `consigne`, qui permettent de donner un exercice à une classe et d'en informer les élèves ;
 - [migration-suppression-seances.sql](migration-suppression-seances.sql) — supprime la table `seances` (fonctionnalité remplacée par les documents de cours).
+- [migration-presence-en-direct.sql](migration-presence-en-direct.sql) — autorise les comptes connectés à rejoindre le canal privé Supabase Realtime utilisé pour le statut en ligne.
 
 ## 3. Authentification
 
@@ -94,6 +96,7 @@ La restriction est appliquée par la politique RLS `documents_select`, pas seule
 - Le super-admin voit tout.
 - Un utilisateur ne peut pas modifier son propre rôle ni son espace (déclencheur `proteger_profil`).
 - L'inscription ne peut jamais créer un `superadmin`.
+- La présence en direct est réservée à la page Super-administration. Elle utilise Supabase Realtime et n'envoie que l'identifiant de profil et l'heure de connexion ; les informations de compte affichées proviennent des profils déjà protégés par RLS.
 
 ## 7. Migration des données locales
 
