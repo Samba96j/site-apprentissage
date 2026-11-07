@@ -21,6 +21,7 @@
             description: 'Lire une œuvre classique en texte intégral dans une bibliothèque de textes libres.',
             url: 'https://fr.wikisource.org/wiki/Fables_de_La_Fontaine',
             icone: 'fa-book-open',
+            illustration: 'assets/images/ressources/litterature.svg',
             categorie: 'Littérature'
         },
         {
@@ -29,6 +30,7 @@
             description: 'Consulter des manuels et cahiers numériques, du collège au lycée.',
             url: 'https://manuel.sesamath.net/',
             icone: 'fa-square-root-alt',
+            illustration: 'assets/images/ressources/mathematiques.svg',
             categorie: 'Mathématiques'
         },
         {
@@ -37,6 +39,7 @@
             description: 'S’entraîner avec des cours, exercices, QCM et activités interactives.',
             url: 'https://mathenpoche.sesamath.net/',
             icone: 'fa-calculator',
+            illustration: 'assets/images/ressources/exercices.svg',
             categorie: 'Exercices'
         },
         {
@@ -45,6 +48,7 @@
             description: 'Explorer des vidéos, dossiers et quiz gratuits, du primaire au bac.',
             url: 'https://www.lumni.fr/',
             icone: 'fa-play-circle',
+            illustration: 'assets/images/ressources/medias.svg',
             categorie: 'Cours et médias'
         },
         {
@@ -53,6 +57,7 @@
             description: 'Découvrir des cours en ligne proposés par des établissements et organismes.',
             url: 'https://www.fun-mooc.fr/fr/',
             icone: 'fa-laptop',
+            illustration: 'assets/images/ressources/cours-en-ligne.svg',
             categorie: 'Cours en ligne'
         },
         {
@@ -61,6 +66,7 @@
             description: 'Accéder à des manuels gratuits, principalement disponibles en anglais.',
             url: 'https://openstax.org/subjects',
             icone: 'fa-graduation-cap',
+            illustration: 'assets/images/ressources/superieur.svg',
             categorie: 'Enseignement supérieur'
         }
     ];
@@ -194,14 +200,14 @@
         return data.matieres.map(function (matiere) {
             return '<li><a class="dropdown-item" href="#/matiere/' + esc(matiere.slug) + '">' + esc(matiere.nom) + '</a></li>';
         }).join('') +
-            '<li><hr class="dropdown-divider"></li>' +
             '<li><a class="dropdown-item" href="#/matieres">Toutes les matières</a></li>';
     }
 
     function menuNiveaux() {
         return data.niveaux.map(function (niveau) {
             return '<li><a class="dropdown-item" href="#/niveau/' + esc(niveau.slug) + '">' + esc(niveau.nom) + ' <span class="text-muted small">' + esc(niveau.cycle) + '</span></a></li>';
-        }).join('');
+        }).join('') +
+            '<li><a class="dropdown-item" href="#/niveaux">Tous les niveaux</a></li>';
     }
 
     function htmlEntete() {
@@ -216,20 +222,18 @@
                     '<ul class="navbar-nav me-auto mb-2 mb-lg-0">' +
                         '<li class="nav-item"><a class="nav-link" href="#/" data-nav="accueil">Accueil</a></li>' +
                         '<li class="nav-item dropdown">' +
-                            '<a class="nav-link dropdown-toggle" href="#/matieres" role="button" data-bs-toggle="dropdown" data-nav="matieres">Matières</a>' +
-                            '<ul class="dropdown-menu">' + menuMatières() + '</ul>' +
-                        '</li>' +
-                        '<li class="nav-item dropdown">' +
-                            '<a class="nav-link dropdown-toggle" href="#/niveaux" role="button" data-bs-toggle="dropdown" data-nav="niveaux">Niveaux</a>' +
-                            '<ul class="dropdown-menu">' + menuNiveaux() + '</ul>' +
-                        '</li>' +
-                        '<li class="nav-item dropdown">' +
                             '<a class="nav-link dropdown-toggle" href="#/lecons" role="button" data-bs-toggle="dropdown" data-nav="apprendre">Apprendre</a>' +
-                            '<ul class="dropdown-menu">' +
-                                '<li><a class="dropdown-item" href="#/lecons"><i class="fas fa-book-open me-2"></i>Leçons</a></li>' +
-                                '<li><a class="dropdown-item" href="#/ressources"><i class="fas fa-folder-open me-2"></i>Ressources</a></li>' +
-                                '<li><a class="dropdown-item" href="#/bibliotheque"><i class="fas fa-book me-2"></i>Bibliothèque</a></li>' +
-                                '<li><a class="dropdown-item" href="#/exercices"><i class="fas fa-gamepad me-2"></i>Exercices</a></li>' +
+                            '<ul class="dropdown-menu menu-apprendre">' +
+                                '<li class="menu-apprendre-raccourcis"><ul class="list-unstyled mb-0">' +
+                                    '<li><a class="dropdown-item" href="#/lecons"><i class="fas fa-book-open me-2"></i>Leçons</a></li>' +
+                                    '<li><a class="dropdown-item" href="#/ressources"><i class="fas fa-folder-open me-2"></i>Ressources</a></li>' +
+                                    '<li><a class="dropdown-item" href="#/bibliotheque"><i class="fas fa-book me-2"></i>Bibliothèque</a></li>' +
+                                    '<li><a class="dropdown-item" href="#/exercices"><i class="fas fa-gamepad me-2"></i>Exercices</a></li>' +
+                                '</ul></li>' +
+                                '<li class="menu-apprendre-catalogue">' +
+                                    '<section class="menu-apprendre-groupe"><h6>Matières</h6><ul class="list-unstyled mb-0">' + menuMatières() + '</ul></section>' +
+                                    '<section class="menu-apprendre-groupe"><h6>Niveaux</h6><ul class="list-unstyled mb-0">' + menuNiveaux() + '</ul></section>' +
+                                '</li>' +
                             '</ul>' +
                         '</li>' +
                         '<li class="nav-item"><a class="nav-link text-nowrap" href="#/ia" data-nav="ia"><i class="fas fa-wand-magic-sparkles me-1"></i>' + NOM_IA + '</a></li>' +
@@ -443,7 +447,7 @@
         '</div>';
     }
 
-    const SECTIONS_APPRENDRE = ['lecons', 'lecon', 'ressources', 'bibliotheque', 'exercices'];
+    const SECTIONS_APPRENDRE = ['lecons', 'lecon', 'ressources', 'bibliotheque', 'exercices', 'matieres', 'matiere', 'chapitre', 'niveaux', 'niveau'];
 
     function majEntete(segments) {
         const zoneAuth = document.getElementById('zone-auth');
@@ -594,9 +598,9 @@
         const diapositives = Array.isArray(data.diapositives) && data.diapositives.length
             ? data.diapositives
             : [];
-        const cartes = data.matieres.map(function (matiere) {
-            return '<div class="col-md-6 col-lg-3">' +
-                '<div class="card h-100 domaine-card">' +
+        const cartes = data.matieres.map(function (matiere, index) {
+            return '<div class="col-md-6 col-lg-3" style="--delai-carte:' + (index * 90) + 'ms">' +
+                '<div class="card h-100 domaine-card domaine-card--matiere" data-matiere="' + esc(matiere.slug) + '">' +
                     '<div class="card-body text-center">' +
                         '<div class="domaine-icon ' + esc(matiere.couleur) + '"><i class="fas ' + esc(matiere.icone) + '"></i></div>' +
                         '<h3 class="h5 mt-3">' + esc(matiere.nom) + '</h3>' +
@@ -647,7 +651,7 @@
                         '</div>' +
                     '</div>' +
                 '</section>' +
-                '<section class="py-5 bg-light">' +
+                '<section class="py-5 bg-light domaines-section">' +
                     '<div class="container">' +
                         '<h2 class="text-center mb-5">Explorez nos domaines de connaissance</h2>' +
                         '<div class="row g-4">' + cartes + '</div>' +
@@ -1103,9 +1107,19 @@
     }
 
     function estDocumentPdf(lecon) {
-        const url = String(lecon.supportUrl || '').split('?')[0];
-        const nom = String(lecon.supportNom || '');
-        return /\.pdf$/i.test(url) || /\.pdf$/i.test(nom);
+        const url = String(lecon.supportUrl || lecon.url || '').split(/[?#]/)[0];
+        const nom = String(lecon.supportNom || lecon.nom || lecon.titre || '');
+        const type = String(lecon.supportType || lecon.type || '');
+        return /\bpdf\b/i.test(type) || /\.pdf$/i.test(url) || /\.pdf$/i.test(nom);
+    }
+
+    function urlLecteurPdf(url, titre, nom, type) {
+        return '#/document/lire?' + new URLSearchParams({
+            url: url || '',
+            titre: titre || 'Document PDF',
+            nom: nom || titre || 'document.pdf',
+            type: type || 'PDF'
+        }).toString();
     }
 
     function actionsDocument(lecon, taille) {
@@ -1221,6 +1235,8 @@
                     '<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">' +
                         RESSOURCES_BIBLIOTHEQUE.map(function (ressource) {
                             return '<div class="col"><article class="biblio-ressource-card h-100">' +
+                                '<img class="biblio-ressource-illustration" src="' + esc(ressource.illustration) +
+                                    '" alt="" aria-hidden="true" loading="lazy">' +
                                 '<div class="biblio-ressource-top"><span class="biblio-ressource-icon"><i class="fas ' +
                                     esc(ressource.icone) + '"></i></span><span class="biblio-ressource-category">' +
                                     esc(ressource.categorie) + '</span></div>' +
@@ -1298,6 +1314,12 @@
 
                 function carte(document) {
                     const type = LIBELLES_DOC[document.type] ? document.type : 'autre';
+                    const estPdf = estDocumentPdf({
+                        url: document.url,
+                        nom: document.nom || document.titre,
+                        titre: document.titre,
+                        type: type
+                    });
                     const badges = [];
                     if (document.matiere) badges.push('<span class="badge text-bg-primary">' + esc(nomMatiere(document.matiere)) + '</span>');
                     if (document.niveau) badges.push('<span class="badge text-bg-secondary">' + esc(nomNiveau(document.niveau)) + '</span>');
@@ -1322,7 +1344,9 @@
                                     (document.taille ? '<span class="badge text-bg-light border">' + esc(document.taille) + '</span>' : '') +
                                 '</div>' +
                                 '<div class="d-flex gap-2 mt-auto">' +
-                                    '<a class="btn btn-sm btn-primary" href="' + esc(document.url) + '" target="_blank" rel="noopener"><i class="fas fa-eye me-1"></i>Ouvrir</a>' +
+                                    (estPdf
+                                        ? '<a class="btn btn-sm btn-primary" href="' + esc(urlLecteurPdf(document.url, document.titre, document.nom, type)) + '"><i class="fas fa-book-open me-1"></i>Lire le livre</a>'
+                                        : '<a class="btn btn-sm btn-primary" href="' + esc(document.url) + '" target="_blank" rel="noopener"><i class="fas fa-eye me-1"></i>Ouvrir</a>') +
                                     '<a class="btn btn-sm btn-outline-secondary" href="' + esc(document.url) + '" target="_blank" rel="noopener" download="' + esc(document.titre) + '"><i class="fas fa-download me-1"></i>Télécharger</a>' +
                                 '</div>' +
                             '</div>' +
@@ -1455,6 +1479,12 @@
             const url = String(ressource.url || '');
             const externe = /^https?:/i.test(url);
             const video = idYoutube(url);
+            const pdf = estDocumentPdf({
+                url: url,
+                nom: ressource.titre,
+                titre: ressource.titre,
+                type: ressource.type
+            });
             const icone = video ? 'fa-circle-play' : (ICONES_RESSOURCE[ressource.type] || 'fa-file');
             const date = dateRessource(ressource.date);
 
@@ -1476,9 +1506,12 @@
                         ' title="Ouvrir sur YouTube"><i class="fab fa-youtube"></i></a>' +
                   '</div>'
                 : '<div class="mt-auto d-flex gap-2">' +
-                    '<a class="btn btn-primary btn-sm" href="' + esc(url) + '"' +
-                        (externe ? ' target="_blank" rel="noopener"' : '') + '>' +
-                        '<i class="fas fa-eye me-1"></i>Ouvrir</a>' +
+                    (pdf
+                        ? '<a class="btn btn-primary btn-sm" href="' + esc(urlLecteurPdf(url, ressource.titre, ressource.titre, ressource.type)) + '">' +
+                            '<i class="fas fa-book-open me-1"></i>Lire le livre</a>'
+                        : '<a class="btn btn-primary btn-sm" href="' + esc(url) + '"' +
+                            (externe ? ' target="_blank" rel="noopener"' : '') + '>' +
+                            '<i class="fas fa-eye me-1"></i>Ouvrir</a>') +
                     (externe
                         ? '<a class="btn btn-outline-secondary btn-sm" href="' + esc(url) + '" target="_blank" rel="noopener" download="' + esc(ressource.titre) + '" title="Télécharger">' +
                             '<i class="fas fa-download"></i></a>'
@@ -2048,7 +2081,12 @@
         return {
             titre: 'Connexion',
             html: '<div class="container auth-page">' +
-                '<div class="auth-card' + (mode === 'inscription' ? ' auth-card--large' : '') + '">' +
+                '<div class="auth-layout">' +
+                    '<figure class="auth-visuel auth-visuel--classe">' +
+                        '<img src="assets/images/carrousel/slide-5.jpg" alt="Un élève concentré sur son travail en classe" loading="lazy">' +
+                        '<figcaption><i class="fas fa-book-open" aria-hidden="true"></i><span>Apprendre ensemble, grandir chaque jour.</span></figcaption>' +
+                    '</figure>' +
+                    '<div class="auth-card' + (mode === 'inscription' ? ' auth-card--large' : '') + '">' +
                     '<div class="auth-head">' +
                         '<span class="auth-logo"><i class="fas fa-graduation-cap"></i></span>' +
                         '<h1 class="auth-title">' + (mode === 'inscription' ? 'Créer un compte' : 'Bon retour !') + '</h1>' +
@@ -2095,6 +2133,11 @@
                     '<p class="auth-note"><i class="fas fa-shield-halved"></i>' + (backendActif
                         ? 'E-mail et mot de passe de votre compte LearnHub. Aucun identifiant n\'est affiché sur cette page.'
                         : 'Identifiants fournis par l\'administrateur de la plateforme.') + '</p>' +
+                    '</div>' +
+                    '<figure class="auth-visuel auth-visuel--accompagnement">' +
+                        '<img src="assets/images/carrousel/slide-2.jpg" alt="Un enseignant accompagne une élève dans son apprentissage" loading="lazy">' +
+                        '<figcaption><i class="fas fa-lightbulb" aria-hidden="true"></i><span>Chaque réussite commence par un premier pas.</span></figcaption>' +
+                    '</figure>' +
                 '</div>' +
             '</div>',
             after: function (racine) {
@@ -3820,6 +3863,40 @@
         };
     }
 
+    function vueDocumentPdf(parametres) {
+        const url = parametres.get('url') || '';
+        const titre = parametres.get('titre') || 'Document PDF';
+        const nom = parametres.get('nom') || '';
+        const type = parametres.get('type') || '';
+        let urlValide = false;
+        try {
+            const adresse = new URL(url, window.location.href);
+            urlValide = adresse.protocol === 'https:' || adresse.protocol === 'http:';
+        } catch (erreur) {
+            urlValide = false;
+        }
+        const document = { supportUrl: url, supportNom: nom, supportType: type };
+        if (!urlValide || !window.LearnHubLecteur || !window.LearnHubLecteur.estPdf(document)) {
+            return vueIntrouvable('Ce lecteur est réservé aux documents PDF accessibles par une adresse HTTP ou HTTPS.');
+        }
+        return {
+            titre: 'Lire — ' + titre,
+            html: '<div class="lecteur-conteneur"></div>',
+            after: function (racine) {
+                const cible = racine.querySelector('.lecteur-conteneur');
+                if (cible) {
+                    window.LearnHubLecteur.render(cible, {
+                        titre: titre,
+                        supportUrl: url,
+                        supportNom: nom,
+                        supportType: type,
+                        urlRetour: '#/bibliotheque'
+                    });
+                }
+            }
+        };
+    }
+
     /* ---------------------------------- Routage ---------------------------------- */
 
     let vueCourante = null;
@@ -3838,6 +3915,10 @@
             case 'lecon': return vueLecon(segments[1], segments[2]);
             case 'ressources': return vueRessources();
             case 'bibliotheque': return vueBibliotheque(parametres);
+            case 'document':
+                return segments[1] === 'lire'
+                    ? vueDocumentPdf(parametres)
+                    : vueIntrouvable();
             case 'contact': return vueContact();
             case 'exercices': return vueExercices(parametres);
             case 'recherche': return vueRecherche(parametres);

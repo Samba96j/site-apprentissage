@@ -1060,14 +1060,64 @@ body {
 }
 
 .biblio-ressource-card {
+    position: relative;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     padding: 1rem;
     border: 1px solid rgba(98, 53, 139, 0.11);
     border-radius: 0.95rem;
-    background: #fff;
+    background:
+        radial-gradient(ellipse at 100% 0, rgba(151, 113, 207, 0.14), transparent 58%),
+        linear-gradient(145deg, #fff 35%, #f8f4fc);
     box-shadow: 0 4px 14px rgba(47, 29, 67, 0.045);
     transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.biblio-ressources .row > .col:nth-child(6n + 2) .biblio-ressource-card {
+    background:
+        radial-gradient(ellipse at 100% 0, rgba(102, 171, 224, 0.16), transparent 58%),
+        linear-gradient(145deg, #fff 35%, #f2f8fd);
+}
+
+.biblio-ressources .row > .col:nth-child(6n + 3) .biblio-ressource-card {
+    background:
+        radial-gradient(ellipse at 100% 0, rgba(91, 190, 151, 0.15), transparent 58%),
+        linear-gradient(145deg, #fff 35%, #f2faf6);
+}
+
+.biblio-ressources .row > .col:nth-child(6n + 4) .biblio-ressource-card {
+    background:
+        radial-gradient(ellipse at 100% 0, rgba(237, 170, 104, 0.16), transparent 58%),
+        linear-gradient(145deg, #fff 35%, #fff8f1);
+}
+
+.biblio-ressources .row > .col:nth-child(6n + 5) .biblio-ressource-card {
+    background:
+        radial-gradient(ellipse at 100% 0, rgba(111, 160, 224, 0.15), transparent 58%),
+        linear-gradient(145deg, #fff 35%, #f3f7fd);
+}
+
+.biblio-ressources .row > .col:nth-child(6n) .biblio-ressource-card {
+    background:
+        radial-gradient(ellipse at 100% 0, rgba(218, 132, 177, 0.15), transparent 58%),
+        linear-gradient(145deg, #fff 35%, #fdf4f8);
+}
+
+.biblio-ressource-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.biblio-ressource-card .biblio-ressource-illustration {
+    display: block;
+    width: calc(100% + 2rem);
+    height: 9rem;
+    flex: 0 0 9rem;
+    margin: -1rem -1rem 0.9rem;
+    object-fit: cover;
+    border-bottom: 1px solid rgba(98, 53, 139, 0.08);
 }
 
 .biblio-ressource-card:hover {
@@ -1850,13 +1900,66 @@ body {
     justify-content: center;
     padding: 1rem;
     overflow: auto;
+    background-color: #173c35;
+    background-image:
+        linear-gradient(180deg, rgba(10, 35, 29, 0.06), rgba(7, 24, 21, 0.3)),
+        url("../images/lecteur-foret.svg");
+    background-position: center;
+    background-size: cover;
 }
 
 .lecteur-livre {
     position: relative;
+    z-index: 0;
     width: 100%;
     max-width: 1150px;
     margin: 0 auto;
+    background: #fff;
+    filter: drop-shadow(0 14px 18px rgba(5, 20, 17, 0.32));
+}
+
+.lecteur-livre:not(.lecteur-livre-portrait)::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    z-index: 4;
+    width: 100%;
+    transform: translateX(-50%);
+    background:
+        radial-gradient(ellipse 4.5% 110% at 50% 50%, rgba(35, 25, 28, 0.2), transparent 100%),
+        linear-gradient(
+            90deg,
+            transparent 47%,
+            rgba(255, 255, 255, 0.2) 49%,
+            rgba(34, 24, 27, 0.14) 49.8%,
+            rgba(34, 24, 27, 0.18) 50%,
+            rgba(34, 24, 27, 0.1) 50.2%,
+            rgba(255, 255, 255, 0.2) 51%,
+            transparent 53%
+        );
+    pointer-events: none;
+}
+
+.lecteur-livre:not(.lecteur-livre-portrait) .lecteur-page.--simple::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.lecteur-livre:not(.lecteur-livre-portrait) .lecteur-page.--simple.--left::after {
+    background:
+        linear-gradient(90deg, rgba(43, 31, 28, 0.04), transparent 10%, transparent 70%, rgba(43, 31, 28, 0.03) 82%, rgba(43, 31, 28, 0.14) 94%, rgba(255, 255, 255, 0.24) 97%, rgba(43, 31, 28, 0.1)),
+        linear-gradient(180deg, rgba(43, 31, 28, 0.12), transparent 4%, transparent 96%, rgba(43, 31, 28, 0.11));
+}
+
+.lecteur-livre:not(.lecteur-livre-portrait) .lecteur-page.--simple.--right::after {
+    background:
+        linear-gradient(270deg, rgba(43, 31, 28, 0.04), transparent 10%, transparent 70%, rgba(43, 31, 28, 0.03) 82%, rgba(43, 31, 28, 0.14) 94%, rgba(255, 255, 255, 0.24) 97%, rgba(43, 31, 28, 0.1)),
+        linear-gradient(180deg, rgba(43, 31, 28, 0.12), transparent 4%, transparent 96%, rgba(43, 31, 28, 0.11));
 }
 
 .lecteur-page,
@@ -2167,6 +2270,44 @@ body {
     box-shadow: 0 14px 36px rgba(47, 29, 67, 0.16);
 }
 
+.navbar .menu-apprendre {
+    width: min(34rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 5rem);
+    overflow-y: auto;
+}
+
+.menu-apprendre-raccourcis > ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.15rem 0.4rem;
+}
+
+.menu-apprendre-catalogue {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 0.8rem;
+    margin-top: 0.55rem;
+    padding: 0.7rem 0.45rem 0.15rem;
+    border-top: 1px solid rgba(47, 29, 67, 0.12);
+}
+
+.menu-apprendre-groupe {
+    min-width: 0;
+}
+
+.menu-apprendre-groupe h6 {
+    margin: 0 0 0.35rem;
+    padding: 0 0.5rem;
+    color: #745a88;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.menu-apprendre-catalogue .dropdown-item {
+    padding: 0.38rem 0.5rem;
+    white-space: normal;
+}
+
 .dropdown-item {
     border-radius: 0.55rem;
     transition: color 0.18s ease, background-color 0.18s ease;
@@ -2210,6 +2351,135 @@ body {
 .methode-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 16px 34px rgba(47, 29, 67, 0.14);
+}
+
+.domaines-section .domaine-card--matiere {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid rgba(73, 47, 97, 0.1);
+    background: linear-gradient(155deg, #fff 16%, #f3f8ff 100%);
+    box-shadow: 0 10px 28px rgba(47, 29, 67, 0.1);
+    animation: domaine-entree 650ms cubic-bezier(0.2, 0.7, 0.25, 1) both;
+    animation-delay: var(--delai-carte, 0ms);
+    transition: transform 280ms ease, box-shadow 280ms ease, border-color 280ms ease, background-position 500ms ease;
+}
+
+.domaines-section .domaine-card--matiere::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0 0 auto;
+    height: 72%;
+    background:
+        radial-gradient(ellipse at 86% 12%, rgba(87, 144, 255, 0.25), transparent 34%),
+        radial-gradient(ellipse at 12% 0%, rgba(123, 191, 255, 0.2), transparent 42%),
+        linear-gradient(145deg, rgba(226, 241, 255, 0.9), rgba(255, 255, 255, 0));
+    transition: opacity 300ms ease, transform 500ms ease;
+}
+
+.domaines-section .domaine-card--matiere::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: -4.5rem;
+    right: -3rem;
+    width: 10rem;
+    height: 10rem;
+    border: 1px solid rgba(88, 139, 214, 0.18);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1.2rem rgba(88, 139, 214, 0.045), 0 0 0 2.4rem rgba(88, 139, 214, 0.035);
+    transition: transform 600ms cubic-bezier(0.2, 0.7, 0.25, 1), border-color 300ms ease;
+}
+
+.domaines-section .domaine-card--matiere .card-body {
+    position: relative;
+    z-index: 1;
+}
+
+.domaines-section .domaine-card--matiere[data-matiere="maths"] {
+    background: linear-gradient(155deg, #fff 16%, #edf5ff 100%);
+}
+
+.domaines-section .domaine-card--matiere[data-matiere="francais"] {
+    background: linear-gradient(155deg, #fff 16%, #fff0f3 100%);
+}
+
+.domaines-section .domaine-card--matiere[data-matiere="sciences"] {
+    background: linear-gradient(155deg, #fff 16%, #eff9f1 100%);
+}
+
+.domaines-section .domaine-card--matiere[data-matiere="langues"] {
+    background: linear-gradient(155deg, #fff 16%, #fff6eb 100%);
+}
+
+.domaines-section .domaine-card--matiere[data-matiere="informatique"] {
+    background: linear-gradient(155deg, #fff 16%, #eaf8f7 100%);
+}
+
+.domaines-section .domaine-card--matiere[data-matiere="francais"]::before {
+    background:
+        radial-gradient(ellipse at 86% 12%, rgba(236, 91, 128, 0.22), transparent 34%),
+        radial-gradient(ellipse at 12% 0%, rgba(255, 173, 183, 0.2), transparent 42%),
+        linear-gradient(145deg, rgba(255, 232, 237, 0.92), rgba(255, 255, 255, 0));
+}
+
+.domaines-section .domaine-card--matiere[data-matiere="sciences"]::before {
+    background:
+        radial-gradient(ellipse at 86% 12%, rgba(58, 158, 105, 0.22), transparent 34%),
+        radial-gradient(ellipse at 12% 0%, rgba(150, 218, 164, 0.2), transparent 42%),
+        linear-gradient(145deg, rgba(228, 247, 232, 0.92), rgba(255, 255, 255, 0));
+}
+
+.domaines-section .domaine-card--matiere[data-matiere="langues"]::before {
+    background:
+        radial-gradient(ellipse at 86% 12%, rgba(238, 151, 59, 0.22), transparent 34%),
+        radial-gradient(ellipse at 12% 0%, rgba(255, 206, 132, 0.2), transparent 42%),
+        linear-gradient(145deg, rgba(255, 243, 224, 0.92), rgba(255, 255, 255, 0));
+}
+
+.domaines-section .domaine-card--matiere[data-matiere="informatique"]::before {
+    background:
+        radial-gradient(ellipse at 86% 12%, rgba(40, 157, 151, 0.22), transparent 34%),
+        radial-gradient(ellipse at 12% 0%, rgba(133, 216, 205, 0.2), transparent 42%),
+        linear-gradient(145deg, rgba(223, 246, 243, 0.92), rgba(255, 255, 255, 0));
+}
+
+.domaines-section .domaine-card--matiere:hover {
+    transform: translateY(-8px);
+    border-color: rgba(98, 53, 139, 0.24);
+    box-shadow: 0 20px 38px rgba(47, 29, 67, 0.16);
+}
+
+.domaines-section .domaine-card--matiere:hover::before {
+    opacity: 0.78;
+    transform: scale(1.08);
+}
+
+.domaines-section .domaine-card--matiere:hover::after {
+    transform: translate(-0.7rem, 0.7rem) rotate(12deg);
+    border-color: rgba(88, 139, 214, 0.32);
+}
+
+.domaines-section .domaine-card--matiere .domaine-icon {
+    transition: transform 320ms ease, box-shadow 320ms ease;
+}
+
+.domaines-section .domaine-card--matiere:hover .domaine-icon {
+    transform: translateY(-4px) rotate(-5deg) scale(1.06);
+    box-shadow: 0 10px 22px rgba(47, 29, 67, 0.2);
+}
+
+@keyframes domaine-entree {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .btn {
@@ -2317,6 +2587,10 @@ footer a:hover {
 }
 
 @media (max-width: 575.98px) {
+    .navbar .menu-apprendre {
+        width: min(34rem, calc(100vw - 3rem));
+    }
+
     .content {
         border-radius: 1rem;
     }
@@ -2331,11 +2605,21 @@ footer a:hover {
     }
 }
 
+@media (max-width: 359.98px) {
+    .menu-apprendre-catalogue {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
         scroll-behavior: auto !important;
         transition-duration: 0.01ms !important;
+    }
+
+    .domaines-section .domaine-card--matiere {
+        animation: none;
     }
 }

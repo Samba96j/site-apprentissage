@@ -41,9 +41,10 @@ window.LearnHubLecteur = (function () {
 
     /** Le document est-il un PDF (seul format que le livre sait paginer) ? */
     function estPdf(lecon) {
-        const url = String(lecon.supportUrl || '').split('?')[0];
-        const nom = String(lecon.supportNom || '');
-        return /\.pdf$/i.test(url) || /\.pdf$/i.test(nom);
+        const url = String(lecon.supportUrl || lecon.url || '').split(/[?#]/)[0];
+        const nom = String(lecon.supportNom || lecon.nom || '');
+        return /\bpdf\b/i.test(String(lecon.supportType || lecon.type || '')) ||
+            /\.pdf$/i.test(url) || /\.pdf$/i.test(nom);
     }
 
     function etat(racine, html) {
@@ -59,14 +60,17 @@ window.LearnHubLecteur = (function () {
     }
 
     /**
-     * Monte le lecteur dans `racine` et charge le document de la leçon.
-     * `lecon` : { id, titre, supportUrl, supportNom }.
+     * Monte le lecteur dans `racine` et charge un document PDF.
+     * `lecon` : { id?, titre, supportUrl, supportNom, supportType?, urlRetour? }.
      */
     function render(racine, lecon) {
+        const retour = lecon.urlRetour || (lecon.id
+            ? '#/lecon/' + encodeURIComponent(lecon.id)
+            : '#/bibliotheque');
         racine.innerHTML =
             '<div class="lecteur">' +
                 '<div class="lecteur-barre">' +
-                    '<a class="lecteur-btn" href="#/lecon/' + encodeURIComponent(lecon.id) + '">' +
+                    '<a class="lecteur-btn" href="' + esc(retour) + '">' +
                         '<i class="fas fa-arrow-left me-1"></i><span class="d-none d-sm-inline">Quitter la lecture</span><span class="d-sm-none">Retour</span></a>' +
                     '<div class="lecteur-titre" title="' + esc(lecon.titre) + '"><i class="fas fa-book-open me-2"></i>' + esc(lecon.titre) + '</div>' +
                     '<div class="lecteur-outils">' +
@@ -182,6 +186,9 @@ window.LearnHubLecteur = (function () {
 
         // Index de double page (0 = couverture seule) → numéros de pages PDF visibles.
         function pagesDe(indice) {
+            if (flip.getOrientation() === 'portrait') {
+                return [indice + 1].filter(function (p) { return p <= total; });
+            }
             const pages = indice === 0 ? [1] : [2 * indice, 2 * indice + 1];
             return pages.filter(function (p) { return p >= 1 && p <= total; });
         }
@@ -206,7 +213,7 @@ window.LearnHubLecteur = (function () {
 
         const FlipClasse = Flip;
         const flip = new FlipClasse(livre, {
-            width: 1000,
+            width: 500,
             height: 707,
             size: 'stretch',
             minWidth: 300,
@@ -216,7 +223,7 @@ window.LearnHubLecteur = (function () {
             maxShadowOpacity: 0.45,
             showCover: true,
             mobileScrollSupport: false,
-            usePortrait: false,
+            usePortrait: true,
             startPage: 0,
             flippingTime: 700,
             useMouseEvents: true,
@@ -226,7 +233,12 @@ window.LearnHubLecteur = (function () {
             startZIndex: 0
         });
 
+        function synchroniserOrientation() {
+            livre.classList.toggle('lecteur-livre-portrait', flip.getOrientation() === 'portrait');
+        }
+
         flip.loadFromHTML(Array.prototype.slice.call(livre.querySelectorAll('.lecteur-page')));
+        synchroniserOrientation();
 
         const zonePage = racine.querySelector('#lecteur-page');
         zonePage.textContent = libelle(0);
@@ -249,6 +261,19 @@ window.LearnHubLecteur = (function () {
                 scene.requestFullscreen();
             }
         });
+        scene.addEventListener('fullscreenchange', function () {
+            boutonPlein.innerHTML = document.fullscreenElement
+                ? '<i class="fas fa-compress"></i>'
+                : '<i class="fas fa-expand"></i>';
+            boutonPlein.title = document.fullscreenElement ? 'Quitter le plein écran' : 'Plein écran';
+            if (typeof flip.update === 'function') {
+                flip.update();
+                synchroniserOrientation();
+                const indice = flip.getCurrentPageIndex();
+                zonePage.textContent = libelle(indice);
+                rendreAutour(indice);
+            }
+        });
 
         const touche = function (event) {
             if (!document.body.contains(livre)) return;
@@ -260,7 +285,13 @@ window.LearnHubLecteur = (function () {
 
         window.addEventListener('resize', function () {
             if (!document.body.contains(livre)) return;
-            if (typeof flip.update === 'function') flip.update();
+            if (typeof flip.update === 'function') {
+                flip.update();
+                synchroniserOrientation();
+                const indice = flip.getCurrentPageIndex();
+                zonePage.textContent = libelle(indice);
+                rendreAutour(indice);
+            }
         });
 
         etat(racine, null);
