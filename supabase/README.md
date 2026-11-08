@@ -19,13 +19,18 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 
 - [migration-profil-trigger.sql](migration-profil-trigger.sql) — déclencheur des profils : attribution du rôle `superadmin` depuis le SQL Editor, suppression d'une classe peuplée, et blocage de l'affectation directe à une classe ;
 - [migration-comptes-admin.sql](migration-comptes-admin.sql) — fonctions `admin_supprimer_compte` et `admin_changer_role` qui permettent la gestion des comptes depuis la page Super-administration ;
+- [migration-admin-email.sql](migration-admin-email.sql) — synchronise l'adresse e-mail de `profiles` après une modification du compte Auth par l'Edge Function ;
 - [migration-bibliotheque.sql](migration-bibliotheque.sql) — table `documents` et bucket de stockage `documents` de la bibliothèque publique ;
 - [migration-bibliotheque-visibilite.sql](migration-bibliotheque-visibilite.sql) — colonne `visibilite` (public / élèves / enseignants) et politique RLS correspondante ;
 - [migration-ia.sql](migration-ia.sql) — table `ia_contenus` de l'assistant IA (études d'œuvres et questions), privée par élève ;
 - [migration-ia-quota.sql](migration-ia-quota.sql) — table `ia_quotas` et fonctions `ia_consommer()` / `ia_liberer()` : quota quotidien tenu côté base, impossible à remettre à zéro depuis le navigateur ;
 - [migration-classes-avatars.sql](migration-classes-avatars.sql) — colonne `classes.matiere`, colonne `profiles.avatar_url` et bucket de stockage public `avatars` (écriture limitée au dossier de chaque compte) ;
+- [migration-inscription-classe.sql](migration-inscription-classe.sql) — affiche les classes correspondant à la matière et au niveau choisis sans exposer leur code, puis rattache automatiquement l’élève connecté à la classe sélectionnée ;
+- [migration-superadmin-activites.sql](migration-superadmin-activites.sql) — crée le journal global des connexions réussies, résultats, changements de comptes, espaces, classes, contenus, messages et usages IA, accessible uniquement au super-administrateur ;
 - [migration-lecons-document.sql](migration-lecons-document.sql) — **obligatoire pour les cours** : colonnes `classe_ids`, `support_url`, `support_nom`, `support_taille`, `couverture_url` et plafond de 50 Mo sur le bucket `documents`. Elle regroupe les anciennes migrations `lecons-classes` et `lecons-support`. Sans elle, l'enregistrement d'un cours échoue et l'élève ne voit rien ;
 - [migration-ressources-classes.sql](migration-ressources-classes.sql) — **obligatoire pour le ciblage des ressources** : ajoute `resources.classe_ids` pour affecter les ressources à une ou plusieurs classes ;
+- [migration-ressources-matiere.sql](migration-ressources-matiere.sql) — ajoute la matière des ressources pour organiser les playlists de tutoriels ;
+- [migration-tutoriels-progression.sql](migration-tutoriels-progression.sql) — stocke la progression des tutoriels séparément des résultats d'exercices, avec RLS par élève ;
 - [migration-exercices-devoir.sql](migration-exercices-devoir.sql) — **obligatoire pour les devoirs** : ajoute `exercises.devoir`, `classe_ids`, `echeance` et `consigne`, qui permettent de donner un exercice à une classe et d'en informer les élèves ;
 - [migration-suppression-seances.sql](migration-suppression-seances.sql) — supprime la table `seances` (fonctionnalité remplacée par les documents de cours).
 - [migration-presence-en-direct.sql](migration-presence-en-direct.sql) — autorise les comptes connectés à rejoindre et publier sur le canal privé Supabase Realtime utilisé pour le statut en ligne.
@@ -35,6 +40,9 @@ Si le projet a été créé avec une première version du schéma, exécuter une
 - **Authentication → Providers → Email** : activer.
 - Pour des tests rapides, désactiver **Confirm email** ; en production, le laisser activé.
 - Les inscriptions transmettent `username` et `role` (`eleve` ou `admin`) dans les métadonnées ; le déclencheur crée automatiquement le profil et, pour un enseignant, son espace.
+- L’inscription élève à une classe est facultative : l’élève choisit matière, niveau et classe; il est rattaché à cette classe après création du compte, sans exposer le code. Avec la confirmation d’adresse activée, le choix est conservé dans le navigateur jusqu’à la première connexion sur le même appareil. La migration doit être appliquée pour activer cette fonction.
+- Un compte `admin` (enseignant) gère ses classes, ses élèves et ses contenus dans son propre espace. La gestion globale de tous les espaces reste réservée au `superadmin`.
+- Exécuter `migration-superadmin-activites.sql` après les migrations des fonctions utilisées (notamment IA) pour alimenter le journal global. Il trace les connexions/déconnexions réussies et les changements enregistrés en base; il ne suit pas les pages consultées ni les tentatives de connexion échouées.
 - Le rôle `superadmin` n'est **jamais** attribuable depuis le formulaire. Après avoir créé votre compte, exécuter dans le SQL Editor :
 
 ```sql
@@ -143,11 +151,18 @@ Le super-administrateur dispose d'un CRUD complet depuis `#/superadmin` :
 |---|---|
 | **Créer** | `auth.signUp` sur un client Supabase secondaire (sans persistance) : la session du super-admin n'est pas remplacée ; le déclencheur `creer_profil` crée le profil et, pour un enseignant, son espace. |
 | **Changer le rôle** | RPC `admin_changer_role` (crée un espace si le compte devient enseignant). |
-| **Renommer** | `update profiles set username` (autorisé par la RLS pour un super-admin). |
+| **Modifier le nom** | RPC `profiles.username` (autorisé par la RLS pour un super-admin). |
+| **Modifier l'e-mail** | Edge Function `admin-update-email`, qui vérifie la session et le rôle super-admin puis utilise l'API Auth Admin côté serveur. L'adresse est remplacée immédiatement, sans validation du nouvel e-mail ; `profiles.email` est synchronisé par un déclencheur. |
 | **Supprimer** | RPC `admin_supprimer_compte` (`delete from auth.users`, cascade sur le profil, l'espace et les contenus). |
 | **Réinitialiser la progression** | `delete from attempts` (politique RLS dédiée). |
 
-Les deux RPC sont `security definer` et vérifient `public.mon_role() = 'superadmin'` : un enseignant ou un élève ne peut pas les appeler. Aucune clé `service_role` n'est nécessaire.
+Les RPC de suppression et de changement de rôle sont `security definer` et vérifient `public.mon_role() = 'superadmin'`. La modification d'e-mail passe par une Edge Function qui vérifie le JWT et le rôle avant d'utiliser la clé de service conservée dans l'environnement Supabase ; cette clé n'est jamais envoyée au navigateur.
+
+Pour activer la modification des e-mails, exécuter [migration-admin-email.sql](migration-admin-email.sql), puis déployer la fonction :
+
+```bash
+supabase functions deploy admin-update-email
+```
 
 ## 9. Assistant IA (Edge Function `ia`)
 

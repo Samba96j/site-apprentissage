@@ -726,12 +726,13 @@ window.LearnHubAdmin = (function () {
             }
             liste.innerHTML =
                 '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
-                    '<thead><tr><th>Titre</th><th>Type</th><th>Classes</th><th>Format</th><th>Date</th><th class="text-end">Actions</th></tr></thead>' +
+                    '<thead><tr><th>Titre</th><th>Type</th><th>Matière</th><th>Classes</th><th>Format</th><th>Date</th><th class="text-end">Actions</th></tr></thead>' +
                     '<tbody>' + ressources.map(function (res) {
                         const cibles = res.classeIds || [];
                         return '<tr>' +
                             '<td class="fw-semibold">' + esc(res.titre) + '</td>' +
                             '<td>' + esc(res.type) + '</td>' +
+                            '<td>' + esc(res.matiere ? nomMatiere(res.matiere) : 'Toutes') + '</td>' +
                             '<td class="small">' + (cibles.length
                                 ? cibles.map(function (id) {
                                     return '<span class="badge bg-info bg-opacity-10 text-dark border me-1">' + esc(nomClasse(id)) + '</span>';
@@ -776,8 +777,16 @@ window.LearnHubAdmin = (function () {
                                 return '<option value="' + esc(type) + '"' + (ressource && ressource.type === type ? ' selected' : '') + '>' + esc(type) + '</option>';
                             }).join('') +
                         '</select></div>' +
+                    '<div class="col-md-6"><label class="form-label" for="res-matiere"><i class="fas fa-book me-1"></i>Matière de la ressource</label>' +
+                        '<select class="form-select" id="res-matiere"><option value="">Toutes les matières</option>' +
+                            window.LearnHubData.matieres.map(function (matiere) {
+                                return '<option value="' + esc(matiere.slug) + '"' + (ressource && ressource.matiere === matiere.slug ? ' selected' : '') + '>' +
+                                    esc(matiere.nom) + '</option>';
+                            }).join('') +
+                        '</select>' +
+                        '<div class="form-text">Pour une vidéo, cette matière déterminera sa playlist de tutoriels.</div></div>' +
                     '<div class="col-md-6"><label class="form-label" for="res-url">Lien (URL ou ancre interne)</label><input type="text" class="form-control" id="res-url" placeholder="https://www.youtube.com/watch?v=…" value="' + esc(ressource ? ressource.url : '') + '">' +
-                        '<div class="form-text">Un lien YouTube (youtu.be, watch?v=, shorts) se regarde directement dans la page Ressources, sans quitter le site.</div></div>' +
+                        '<div class="form-text">Les liens YouTube (youtu.be, watch?v=, shorts) seront ajoutés à la playlist tutoriels de la matière choisie.</div></div>' +
                     '<div class="col-md-6"><label class="form-label">… ou fichier PDF (max ' + limiteMo + ' Mo)</label>' +
                         '<input type="file" class="form-control" id="res-fichier" accept="application/pdf">' +
                             '<div class="form-text">' + (backendActif
@@ -814,6 +823,7 @@ window.LearnHubAdmin = (function () {
                 const bouton = formulaire.querySelector('#enregistrer-ressource');
                 const titre = formulaire.querySelector('#res-titre').value.trim();
                 const type = formulaire.querySelector('#res-type').value;
+                const matiere = formulaire.querySelector('#res-matiere').value;
                 const url = formulaire.querySelector('#res-url').value.trim();
                 const fichier = formulaire.querySelector('#res-fichier').files[0];
                 const classeSelectionnees = Array.prototype.slice.call(
@@ -830,6 +840,7 @@ window.LearnHubAdmin = (function () {
                         id: ressource ? ressource.id : undefined,
                         titre: titre,
                         type: type,
+                        matiere: matiere,
                         url: lien,
                         taille: taille,
                         classeIds: classeSelectionnees,
@@ -919,7 +930,6 @@ window.LearnHubAdmin = (function () {
     /* -------------------------------- Utilisateurs -------------------------------- */
 
     function renderUtilisateurs(racine) {
-        const backendActif = !!(window.LearnHubBackend && window.LearnHubBackend.estActif());
         racine.innerHTML =
             '<div id="admin-message" class="d-none"></div>' +
             '<h2 class="mb-3"><i class="fas fa-users me-2"></i>Utilisateurs</h2>' +
@@ -947,7 +957,7 @@ window.LearnHubAdmin = (function () {
                             '<td class="text-muted small">' + esc(user.email) + '</td>' +
                             '<td class="small">' + esc(classe ? classe.nom : '—') + '</td>' +
                             '<td>' +
-                                '<select class="form-select form-select-sm" data-action="role" data-username="' + esc(user.username) + '" style="max-width:120px" ' + (backendActif ? 'disabled title="Géré par le super-administrateur"' : '') + '>' +
+                                '<select class="form-select form-select-sm" data-action="role" data-username="' + esc(user.username) + '" style="max-width:120px" disabled title="Géré par le super-administrateur">' +
                                     '<option value="eleve" ' + (user.role === 'eleve' ? 'selected' : '') + '>Élève</option>' +
                                     '<option value="admin" ' + (user.role === 'admin' ? 'selected' : '') + '>Admin</option>' +
                                 '</select>' +
@@ -956,22 +966,20 @@ window.LearnHubAdmin = (function () {
                             '<td>' + (moyenne === null ? '—' : moyenne + ' %') + '</td>' +
                             '<td class="text-end text-nowrap">' +
                                 '<button class="btn btn-sm btn-outline-secondary me-1" data-action="reinitialiser" data-username="' + esc(user.username) + '" title="Réinitialiser la progression"><i class="fas fa-rotate-left"></i></button>' +
-                                '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-username="' + esc(user.username) + '" title="Supprimer le compte" ' + (backendActif ? 'disabled title="Géré par le super-administrateur"' : '') + '><i class="fas fa-trash"></i></button>' +
+                                '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-username="' + esc(user.username) + '" title="Géré par le super-administrateur" disabled><i class="fas fa-trash"></i></button>' +
                             '</td>' +
                         '</tr>';
                     }).join('') + '</tbody>' +
                 '</table></div>' +
                 '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Seuls les élèves rattachés à vos classes apparaissent ici. ' +
-                    (backendActif
-                        ? 'Les rôles et les suppressions de comptes sont réservés au super-administrateur (page <a href="#/superadmin">Super-administration</a>).'
-                        : 'Les comptes sont enregistrés dans le navigateur : ils ne sont pas partagés entre appareils.') +
+                    'La création, la modification et la suppression des comptes sont réservées au super-administrateur (page <a href="#/superadmin">Super-administration</a>). Vous pouvez toujours réinitialiser la progression des élèves de vos classes.' +
                 '</p>';
         }
 
-        liste.addEventListener('change', function (event) {
+        liste.addEventListener('change', async function (event) {
             const select = event.target.closest('select[data-action="role"]');
             if (!select) return;
-            const resultat = window.LearnHubAuth.setRole(select.dataset.username, select.value);
+            const resultat = await window.LearnHubAuth.setRole(select.dataset.username, select.value);
             if (!resultat.ok) {
                 message(zoneMessage, resultat.error, 'danger');
                 rafraichir();
@@ -981,7 +989,7 @@ window.LearnHubAdmin = (function () {
             rafraichir();
         });
 
-        liste.addEventListener('click', function (event) {
+        liste.addEventListener('click', async function (event) {
             const bouton = event.target.closest('button[data-action]');
             if (!bouton) return;
             const username = bouton.dataset.username;
@@ -994,7 +1002,7 @@ window.LearnHubAdmin = (function () {
                 }
             } else if (bouton.dataset.action === 'supprimer') {
                 if (window.confirm('Supprimer définitivement le compte ' + username + ' ?')) {
-                    const resultat = window.LearnHubAuth.removeUser(username);
+                    const resultat = await window.LearnHubAuth.removeUser(username);
                     if (!resultat.ok) {
                         message(zoneMessage, resultat.error, 'danger');
                         return;
@@ -1342,6 +1350,10 @@ window.LearnHubAdmin = (function () {
                     description: editeur.querySelector('#classe-description').value.trim()
                 };
                 if (classe) donnees.id = classe.id;
+                if (!window.LearnHubAuth.espaceActif()) {
+                    message(zoneMessage, 'Votre compte administrateur n’a pas d’espace enseignant associé. Vérifiez le rôle du compte ou demandez au super-administrateur de rétablir votre espace.', 'danger');
+                    return;
+                }
                 const enregistre = window.LearnHubStore.classes.save(donnees);
                 if (!enregistre) {
                     message(zoneMessage, 'Enregistrement impossible.', 'danger');
@@ -1427,7 +1439,7 @@ window.LearnHubAdmin = (function () {
                             '</li>';
                         }).join('') + '</ul>'
                         : '<p class="text-muted mb-0">Aucun élève inscrit pour le moment.</p>') +
-                    '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Un élève rejoint cette classe en créant un compte puis en saisissant le code <strong>' + esc(classe.code) + '</strong> dans « Ma progression ».</p>' +
+                    '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Un élève peut choisir cette classe à l’inscription ou saisir le code <strong>' + esc(classe.code) + '</strong> dans « Ma progression ».</p>' +
                 '</div>';
         }
 

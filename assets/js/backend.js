@@ -30,6 +30,7 @@ window.LearnHubBackend = (function () {
     let utilisateurs = [];
     let cache = null;
     let progression = {};
+    let progressionTutoriels = [];
     let listeIA = [];
     let derniereErreur = null;
     let presenceChannel = null;
@@ -71,6 +72,10 @@ window.LearnHubBackend = (function () {
 
     function progressionCache() {
         return progression;
+    }
+
+    function progressionTutorielsCache() {
+        return progressionTutoriels.slice();
     }
 
     function contenusIA() {
@@ -283,6 +288,7 @@ window.LearnHubBackend = (function () {
             espaceId: row.espace_id,
             titre: row.titre,
             type: row.type || '',
+            matiere: row.matiere || '',
             url: row.url,
             taille: row.taille || '',
             classeIds: row.classe_ids || [],
@@ -347,6 +353,7 @@ window.LearnHubBackend = (function () {
                 espace_id: espaceId,
                 titre: item.titre,
                 type: item.type || null,
+                matiere: item.matiere || null,
                 url: item.url,
                 taille: item.taille || null,
                 classe_ids: item.classeIds || []
@@ -433,6 +440,7 @@ window.LearnHubBackend = (function () {
         });
 
         progression = {};
+        progressionTutoriels = [];
         attemptsRows.forEach(function (tentative) {
             const auteur = utilisateurs.find(function (u) { return u.id === tentative.user_id; });
             if (!auteur) return;
@@ -472,6 +480,46 @@ window.LearnHubBackend = (function () {
         return profil;
     }
 
+    async function journaliserAuthentification(action) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        try {
+            const resultat = await client.rpc('journaliser_authentification', { p_action: action });
+            if (resultat.error) return { ok: false, error: resultat.error.message };
+            return { ok: true };
+        } catch (erreur) {
+            console.error('Audit : impossible d’enregistrer l’authentification.', erreur);
+            return { ok: false, error: 'Journal d’activité indisponible.' };
+        }
+    }
+
+    async function chargerActivitesGlobales(decalage, limite) {
+        if (!estActif() || profil.role !== 'superadmin') {
+            return { ok: false, error: 'Accès réservé au super-administrateur.' };
+        }
+        const debut = Math.max(0, Number(decalage) || 0);
+        const taille = Math.min(100, Math.max(1, Number(limite) || 50));
+        try {
+            const resultat = await client.from('audit_events')
+                .select('id, actor_user_id, subject_user_id, action, entity, entity_id, details, created_at', { count: 'exact' })
+                .order('created_at', { ascending: false })
+                .order('id', { ascending: false })
+                .range(debut, debut + taille - 1);
+            if (resultat.error) {
+                const brut = resultat.error.message || '';
+                return {
+                    ok: false,
+                    error: /audit_events|schema cache|does not exist/i.test(brut)
+                        ? 'Journal non installé : exécutez supabase/migration-superadmin-activites.sql.'
+                        : brut
+                };
+            }
+            return { ok: true, events: resultat.data || [], total: resultat.count || 0 };
+        } catch (erreur) {
+            console.error('Audit : impossible de charger le journal global.', erreur);
+            return { ok: false, error: 'Le journal global est momentanément indisponible.' };
+        }
+    }
+
     /* ------------------------------- Auth -------------------------------- */
 
     function traduireErreur(erreur) {
@@ -506,6 +554,8 @@ window.LearnHubBackend = (function () {
             await client.auth.signOut();
             return { ok: false, error: 'Profil introuvable. Le schéma Supabase est-il bien installé ?' };
         }
+        const journal = await journaliserAuthentification('login');
+        if (!journal.ok) console.error('Audit :', journal.error);
         return { ok: true };
     }
 
@@ -544,6 +594,8 @@ window.LearnHubBackend = (function () {
     async function deconnecter() {
         if (!disponible()) return;
         await arreterPresence();
+        const journal = await journaliserAuthentification('logout');
+        if (!journal.ok) console.error('Audit :', journal.error);
         await client.auth.signOut();
         profil = null;
         cache = null;
@@ -567,13 +619,97 @@ window.LearnHubBackend = (function () {
 
     /* ------------------------- Classes et espaces ------------------------- */
 
-    async function rejoindreClasse(code) {
+    async function listerClassesInscription(matiere, niveau) {
+        if (!matiere || !niveau) return { ok: false, error: 'Choisissez une matière et un niveau.' };
+        if (!disponible()) {
+            const store = window.LearnHubStore;
+            if (!store || !store.classes) {
+                return { ok: false, error: 'Le stockage local des classes est indisponible.' };
+            }
+            const classes = store.classes.all().filter(function (classe) {
+                return (!classe.matiere || classe.matiere === matiere) &&
+                    (!classe.niveau || classe.niveau === niveau);
+            }).map(function (classe) {
+                return { id: classe.id, nom: classe.nom };
+            }).sort(function (a, b) {
+                return a.nom.localeCompare(b.nom);
+            });
+            return { ok: true, classes: classes };
+        }
+
+        try {
+            const resultat = await client.rpc('lister_classes_inscription', {
+                p_matiere: matiere,
+                p_niveau: niveau
+            });
+            if (resultat.error) {
+                const brut = resultat.error.message || '';
+                const migrationManquante = /could not find the function|schema cache/i.test(brut);
+                return {
+                    ok: false,
+                    error: migrationManquante
+                        ? 'La base de données doit être mise à jour : exécutez supabase/migration-inscription-classe.sql.'
+                        : brut
+                };
+            }
+            return {
+                ok: true,
+                classes: (resultat.data || []).map(function (classe) {
+                    return { id: classe.id, nom: classe.nom };
+                })
+            };
+        } catch (erreur) {
+            console.error('Inscription : impossible de charger les classes.', erreur);
+            return { ok: false, error: 'Le service de classes est momentanément indisponible.' };
+        }
+    }
+
+    async function rejoindreClasseParId(id, matiere, niveau) {
         if (!estActif()) return { ok: false, error: 'Connexion requise.' };
-        const resultat = await client.rpc('rejoindre_classe', { p_code: code });
+        const resultat = await client.rpc('rejoindre_classe_selectionnee', {
+            p_classe_id: String(id || ''),
+            p_matiere: matiere || null,
+            p_niveau: niveau || null
+        });
         if (resultat.error) {
-            const message = /Code de classe inconnu/i.test(resultat.error.message)
-                ? 'Aucune classe ne correspond à ce code.'
-                : resultat.error.message;
+            const brut = resultat.error.message || '';
+            let message = brut;
+            if (/Classe introuvable|Code de classe inconnu/i.test(brut)) {
+                message = 'La classe sélectionnée n’est plus disponible.';
+            } else if (/matière sélectionnée/i.test(brut)) {
+                message = 'Cette classe ne correspond plus à la matière sélectionnée.';
+            } else if (/niveau sélectionné/i.test(brut)) {
+                message = 'Cette classe ne correspond plus au niveau sélectionné.';
+            } else if (/élèves uniquement/i.test(brut)) {
+                message = 'Seuls les élèves peuvent rejoindre une classe.';
+            } else if (/could not find the function|schema cache/i.test(brut)) {
+                message = 'La base de données doit être mise à jour : exécutez supabase/migration-inscription-classe.sql.';
+            }
+            return { ok: false, error: message };
+        }
+        await initSession();
+        return { ok: true };
+    }
+
+    async function rejoindreClasse(code, matiere, niveau) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        const resultat = await client.rpc('rejoindre_classe', {
+            p_code: String(code || '').trim().toUpperCase(),
+            p_matiere: matiere || null,
+            p_niveau: niveau || null
+        });
+        if (resultat.error) {
+            const brut = resultat.error.message || '';
+            let message = brut;
+            if (/Code de classe inconnu/i.test(brut)) {
+                message = 'Aucune classe ne correspond à ce code.';
+            } else if (/matière sélectionnée/i.test(brut)) {
+                message = 'Le code saisi ne correspond pas à la matière sélectionnée.';
+            } else if (/niveau sélectionné/i.test(brut)) {
+                message = 'Le code saisi ne correspond pas au niveau sélectionné.';
+            } else if (/could not find the function|schema cache/i.test(brut)) {
+                message = 'La base de données doit être mise à jour : exécutez supabase/migration-inscription-classe.sql.';
+            }
             return { ok: false, error: message };
         }
         await initSession();
@@ -671,6 +807,52 @@ window.LearnHubBackend = (function () {
         });
     }
 
+    async function chargerProgressionTutoriels() {
+        if (!estActif() || profil.role !== 'eleve') {
+            return { ok: false, error: 'Le suivi des tutoriels est réservé aux élèves connectés.' };
+        }
+        try {
+            const resultat = await client.from('tutorial_progress')
+                .select('resource_id')
+                .eq('user_id', profil.id);
+            if (resultat.error) {
+                const brut = resultat.error.message || '';
+                const error = /could not find the table|relation .* does not exist/i.test(brut)
+                    ? 'Le suivi des tutoriels nécessite la migration supabase/migration-tutoriels-progression.sql.'
+                    : 'Impossible de charger votre progression de tutoriels.';
+                return { ok: false, error: error };
+            }
+            progressionTutoriels = (resultat.data || []).map(function (ligne) { return ligne.resource_id; });
+            return { ok: true, resourceIds: progressionTutorielsCache() };
+        } catch (erreur) {
+            console.error('Tutoriels : progression impossible à charger.', erreur);
+            return { ok: false, error: 'Impossible de charger votre progression de tutoriels.' };
+        }
+    }
+
+    async function marquerTutorielTermine(resourceId) {
+        if (!estActif() || profil.role !== 'eleve') {
+            return { ok: false, error: 'Le suivi des tutoriels est réservé aux élèves connectés.' };
+        }
+        const id = String(resourceId || '').trim();
+        if (!id) return { ok: false, error: 'Tutoriel introuvable.' };
+        if (progressionTutoriels.indexOf(id) >= 0) return { ok: true, unchanged: true };
+        try {
+            const resultat = await client.from('tutorial_progress').insert({
+                user_id: profil.id,
+                resource_id: id
+            });
+            if (resultat.error && resultat.error.code !== '23505') {
+                return { ok: false, error: 'Impossible d’enregistrer votre progression. Vérifiez la migration des tutoriels.' };
+            }
+            progressionTutoriels.push(id);
+            return { ok: true };
+        } catch (erreur) {
+            console.error('Tutoriels : progression impossible à enregistrer.', erreur);
+            return { ok: false, error: 'Impossible d’enregistrer votre progression.' };
+        }
+    }
+
     function effacerProgression(username) {
         if (!estActif()) return;
         const auteur = utilisateurs.find(function (u) { return u.username === username; });
@@ -679,6 +861,12 @@ window.LearnHubBackend = (function () {
         delete progression[username];
         client.from('attempts').delete().eq('user_id', id).then(function (resultat) {
             if (resultat.error) signaler(resultat.error);
+        });
+        if (profil && profil.id === id) progressionTutoriels = [];
+        client.from('tutorial_progress').delete().eq('user_id', id).then(function (resultat) {
+            if (resultat.error && !/could not find the table|relation .* does not exist/i.test(resultat.error.message || '')) {
+                signaler(resultat.error);
+            }
         });
     }
 
@@ -804,6 +992,31 @@ window.LearnHubBackend = (function () {
         if (resultat.error) return { ok: false, error: resultat.error.message };
         await initSession();
         return { ok: true };
+    }
+
+    async function modifierEmailCompte(id, email) {
+        if (!estActif()) return { ok: false, error: 'Connexion requise.' };
+        if (!id) return { ok: false, error: 'Compte introuvable.' };
+        const adresse = String(email || '').trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adresse)) {
+            return { ok: false, error: 'Adresse e-mail invalide.' };
+        }
+        try {
+            const resultat = await client.functions.invoke('admin-update-email', {
+                body: { userId: id, email: adresse }
+            });
+            if (resultat.error) {
+                let corps = resultat.data || null;
+                if (!corps && resultat.error.context && typeof resultat.error.context.json === 'function') {
+                    corps = await resultat.error.context.json().catch(function () { return null; });
+                }
+                return { ok: false, error: (corps && corps.error) || resultat.error.message || 'Modification de l’adresse e-mail impossible.' };
+            }
+            await chargerTout();
+            return { ok: true, email: adresse };
+        } catch (erreur) {
+            return { ok: false, error: erreur && erreur.message ? erreur.message : 'Modification de l’adresse e-mail impossible.' };
+        }
     }
 
     /* -------------------------- Bibliothèque publique --------------------- */
@@ -1079,10 +1292,12 @@ window.LearnHubBackend = (function () {
         disponible: disponible,
         estActif: estActif,
         initSession: initSession,
+        chargerActivitesGlobales: chargerActivitesGlobales,
         profilCourant: profilCourant,
         cacheDonnees: cacheDonnees,
         utilisateursCache: utilisateursCache,
         progressionCache: progressionCache,
+        progressionTutorielsCache: progressionTutorielsCache,
         listeEspaces: listeEspaces,
         observerPresence: observerPresence,
         chargerProfilsPresence: chargerProfilsPresence,
@@ -1091,18 +1306,23 @@ window.LearnHubBackend = (function () {
         renvoyerConfirmation: renvoyerConfirmation,
         deconnecter: deconnecter,
         changerMotDePasse: changerMotDePasse,
+        listerClassesInscription: listerClassesInscription,
+        rejoindreClasseParId: rejoindreClasseParId,
         rejoindreClasse: rejoindreClasse,
         quitterClasse: quitterClasse,
         retirerDeClasse: retirerDeClasse,
         renommerEspace: renommerEspace,
         synchroniser: synchroniser,
         ajouterTentative: ajouterTentative,
+        chargerProgressionTutoriels: chargerProgressionTutoriels,
+        marquerTutorielTermine: marquerTutorielTermine,
         effacerProgression: effacerProgression,
         ajouterMessage: ajouterMessage,
         creerCompte: creerCompte,
         supprimerCompte: supprimerCompte,
         changerRole: changerRole,
         renommerCompte: renommerCompte,
+        modifierEmailCompte: modifierEmailCompte,
         listerDocuments: listerDocuments,
         ajouterDocument: ajouterDocument,
         supprimerDocument: supprimerDocument,

@@ -13,6 +13,7 @@
 --   resources  : liens et documents
 --   attempts   : résultats des élèves
 --   messages   : messages du formulaire de contact
+--   audit_events: journal global (consultation super-administrateur uniquement)
 --
 -- Les identifiants des contenus sont des textes générés côté client
 -- (« lecon-… », « exo-… ») afin de pouvoir migrer les données locales.
@@ -50,6 +51,8 @@ create table if not exists public.classes (
     code text not null unique,
     created_at timestamptz not null default now()
 );
+
+alter table public.classes add column if not exists matiere text;
 
 do $$
 begin
@@ -105,6 +108,7 @@ create table if not exists public.resources (
     espace_id uuid not null references public.espaces(id) on delete cascade,
     titre text not null,
     type text,
+    matiere text,
     url text not null,
     taille text,
     classe_ids text[] not null default '{}',
@@ -120,6 +124,13 @@ create table if not exists public.attempts (
     score int not null default 0,
     total int not null default 0,
     created_at timestamptz not null default now()
+);
+
+create table if not exists public.tutorial_progress (
+    user_id uuid not null references public.profiles(id) on delete cascade,
+    resource_id text not null,
+    completed_at timestamptz not null default now(),
+    primary key (user_id, resource_id)
 );
 
 create table if not exists public.messages (
@@ -251,11 +262,121 @@ create trigger on_auth_user_created
     after insert on auth.users
     for each row execute function public.creer_profil();
 
+create or replace function public.synchroniser_email_profil()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    update public.profiles
+    set email = new.email
+    where id = new.id
+      and email is distinct from new.email;
+    return new;
+end;
+$$;
+
+drop trigger if exists synchroniser_email_auth_profil on auth.users;
+create trigger synchroniser_email_auth_profil
+    after update of email on auth.users
+    for each row
+    when (old.email is distinct from new.email)
+    execute function public.synchroniser_email_profil();
+
 -- ----------------------------------------------------------------------------
 -- 5. Rejoindre une classe avec un code (contourne la RLS de façon contrôlée)
 -- ----------------------------------------------------------------------------
 
-create or replace function public.rejoindre_classe(p_code text)
+drop function if exists public.lister_classes_inscription(text, text);
+create function public.lister_classes_inscription(
+    p_matiere text,
+    p_niveau text
+)
+returns table (id text, nom text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if nullif(trim(p_matiere), '') is null or nullif(trim(p_niveau), '') is null then
+        raise exception 'Matière et niveau obligatoires';
+    end if;
+
+    return query
+    select c.id, c.nom
+    from public.classes c
+    where (nullif(trim(c.matiere), '') is null or c.matiere = trim(p_matiere))
+      and (nullif(trim(c.niveau), '') is null or c.niveau = trim(p_niveau))
+    order by c.nom, c.id;
+end;
+$$;
+
+revoke all on function public.lister_classes_inscription(text, text) from public;
+grant execute on function public.lister_classes_inscription(text, text) to anon, authenticated;
+
+create or replace function public.rejoindre_classe_selectionnee(
+    p_classe_id text,
+    p_matiere text,
+    p_niveau text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_espace uuid;
+    v_matiere text;
+    v_niveau text;
+    v_role text;
+begin
+    if auth.uid() is null then
+        raise exception 'Connexion requise';
+    end if;
+
+    select role into v_role
+    from public.profiles
+    where id = auth.uid();
+
+    if v_role is distinct from 'eleve' then
+        raise exception 'Réservé aux élèves uniquement';
+    end if;
+
+    select c.espace_id, c.matiere, c.niveau
+    into v_espace, v_matiere, v_niveau
+    from public.classes c
+    where c.id = p_classe_id;
+
+    if v_espace is null then
+        raise exception 'Classe introuvable';
+    end if;
+
+    if p_matiere is null or (v_matiere is not null and v_matiere <> p_matiere) then
+        raise exception 'Cette classe ne correspond pas à la matière sélectionnée';
+    end if;
+    if p_niveau is null or (v_niveau is not null and v_niveau <> p_niveau) then
+        raise exception 'Cette classe ne correspond pas au niveau sélectionné';
+    end if;
+
+    perform set_config('learnhub.bypass', 'on', true);
+    update public.profiles set classe_id = p_classe_id where id = auth.uid();
+    perform set_config('learnhub.bypass', '', true);
+
+    return v_espace;
+end;
+$$;
+
+revoke all on function public.rejoindre_classe_selectionnee(text, text, text) from public;
+grant execute on function public.rejoindre_classe_selectionnee(text, text, text) to authenticated;
+
+drop function if exists public.rejoindre_classe(text);
+drop function if exists public.rejoindre_classe(text, text, text);
+create function public.rejoindre_classe(
+    p_code text,
+    p_matiere text default null,
+    p_niveau text default null
+)
 returns uuid
 language plpgsql
 security definer
@@ -264,17 +385,27 @@ as $$
 declare
     v_classe text;
     v_espace uuid;
+    v_matiere text;
+    v_niveau text;
 begin
     if auth.uid() is null then
         raise exception 'Connexion requise';
     end if;
 
-    select id, espace_id into v_classe, v_espace
+    select id, espace_id, matiere, niveau
+    into v_classe, v_espace, v_matiere, v_niveau
     from public.classes
     where upper(code) = upper(trim(p_code));
 
     if v_classe is null then
         raise exception 'Code de classe inconnu';
+    end if;
+
+    if p_matiere is not null and v_matiere is not null and p_matiere <> v_matiere then
+        raise exception 'Cette classe ne correspond pas à la matière sélectionnée';
+    end if;
+    if p_niveau is not null and v_niveau is not null and p_niveau <> v_niveau then
+        raise exception 'Cette classe ne correspond pas au niveau sélectionné';
     end if;
 
     -- Le code fait foi : on autorise exceptionnellement cette écriture au
@@ -287,7 +418,7 @@ begin
 end;
 $$;
 
-grant execute on function public.rejoindre_classe(text) to authenticated;
+grant execute on function public.rejoindre_classe(text, text, text) to authenticated;
 
 -- ----------------------------------------------------------------------------
 -- 5 bis. Gestion des comptes réservée au super-administrateur
@@ -438,6 +569,7 @@ alter table public.lessons enable row level security;
 alter table public.exercises enable row level security;
 alter table public.resources enable row level security;
 alter table public.attempts enable row level security;
+alter table public.tutorial_progress enable row level security;
 alter table public.messages enable row level security;
 
 -- Espaces -------------------------------------------------------------------
@@ -575,6 +707,16 @@ create policy attempts_delete on public.attempts
         )
     );
 
+drop policy if exists tutorial_progress_select on public.tutorial_progress;
+create policy tutorial_progress_select on public.tutorial_progress
+    for select to authenticated
+    using (user_id = auth.uid() and public.mon_role() = 'eleve');
+
+drop policy if exists tutorial_progress_insert on public.tutorial_progress;
+create policy tutorial_progress_insert on public.tutorial_progress
+    for insert to authenticated
+    with check (user_id = auth.uid() and public.mon_role() = 'eleve');
+
 -- Messages de contact -------------------------------------------------------
 drop policy if exists messages_insert on public.messages;
 create policy messages_insert on public.messages
@@ -643,7 +785,162 @@ create policy documents_objet_delete on storage.objects
     );
 
 -- ----------------------------------------------------------------------------
--- 9. Promouvoir un super-administrateur (à exécuter manuellement)
+-- 9. Journal global des activités (visible uniquement au super-administrateur)
+-- ----------------------------------------------------------------------------
+
+create table if not exists public.audit_events (
+    id bigint generated always as identity primary key,
+    actor_user_id uuid references auth.users(id) on delete set null,
+    subject_user_id uuid references auth.users(id) on delete set null,
+    action text not null,
+    entity text not null,
+    entity_id text,
+    details jsonb not null default '{}'::jsonb,
+    created_at timestamptz not null default now()
+);
+
+create index if not exists idx_audit_events_created
+    on public.audit_events (created_at desc, id desc);
+create index if not exists idx_audit_events_actor
+    on public.audit_events (actor_user_id, created_at desc);
+create index if not exists idx_audit_events_subject
+    on public.audit_events (subject_user_id, created_at desc);
+
+alter table public.audit_events enable row level security;
+revoke all on public.audit_events from anon, authenticated;
+grant select on public.audit_events to authenticated;
+
+drop policy if exists audit_events_superadmin_select on public.audit_events;
+create policy audit_events_superadmin_select on public.audit_events
+    for select to authenticated
+    using (public.mon_role() = 'superadmin');
+
+create or replace function public.journaliser_changement()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_old jsonb := case when tg_op = 'INSERT' then '{}'::jsonb else to_jsonb(old) end;
+    v_new jsonb := case when tg_op = 'DELETE' then '{}'::jsonb else to_jsonb(new) end;
+    v_ligne jsonb;
+    v_action text;
+    v_id text;
+    v_sujet uuid;
+    v_details jsonb := '{}'::jsonb;
+begin
+    v_ligne := case when tg_op = 'DELETE' then v_old else v_new end;
+    v_action := lower(tg_op);
+    if v_action = 'insert' then v_action := 'created'; end if;
+    if v_action = 'update' then v_action := 'updated'; end if;
+    if v_action = 'delete' then v_action := 'deleted'; end if;
+
+    v_id := coalesce(v_ligne ->> 'id', v_ligne ->> 'user_id');
+    if tg_table_name = 'profiles' then
+        v_sujet := nullif(v_ligne ->> 'id', '')::uuid;
+        v_details := jsonb_build_object(
+            'username', v_ligne ->> 'username',
+            'role', v_ligne ->> 'role',
+            'previous_role', v_old ->> 'role',
+            'class_id', v_ligne ->> 'classe_id',
+            'previous_class_id', v_old ->> 'classe_id'
+        );
+    elsif tg_table_name in ('attempts', 'ia_contenus', 'ia_quotas') then
+        v_sujet := nullif(v_ligne ->> 'user_id', '')::uuid;
+        if tg_table_name = 'attempts' then
+            v_details := jsonb_build_object(
+                'title', v_ligne ->> 'titre',
+                'type', v_ligne ->> 'type',
+                'score', v_ligne ->> 'score',
+                'total', v_ligne ->> 'total'
+            );
+        elsif tg_table_name = 'ia_contenus' then
+            v_details := jsonb_build_object('type', v_ligne ->> 'type');
+        else
+            v_details := jsonb_build_object(
+                'jour', v_ligne ->> 'jour',
+                'etudes', v_ligne ->> 'etudes',
+                'questions', v_ligne ->> 'questions'
+            );
+        end if;
+    elsif tg_table_name = 'espaces' then
+        v_sujet := nullif(v_ligne ->> 'owner_id', '')::uuid;
+        v_details := jsonb_build_object('name', v_ligne ->> 'nom');
+    elsif tg_table_name = 'classes' then
+        v_details := jsonb_build_object(
+            'name', v_ligne ->> 'nom',
+            'subject', v_ligne ->> 'matiere',
+            'level', v_ligne ->> 'niveau'
+        );
+    elsif tg_table_name in ('lessons', 'exercises', 'resources', 'documents') then
+        v_details := jsonb_build_object(
+            'title', coalesce(v_ligne ->> 'titre', v_ligne ->> 'title'),
+            'type', v_ligne ->> 'type'
+        );
+    elsif tg_table_name = 'messages' then
+        v_details := jsonb_build_object('subject', v_ligne ->> 'sujet');
+    end if;
+
+    insert into public.audit_events (
+        actor_user_id, subject_user_id, action, entity, entity_id, details
+    ) values (
+        auth.uid(), v_sujet, v_action, tg_table_name, v_id, v_details
+    );
+
+    if tg_op = 'DELETE' then return old; end if;
+    return new;
+end;
+$$;
+
+do $$
+declare
+    v_table text;
+begin
+    foreach v_table in array array[
+        'espaces', 'profiles', 'classes', 'lessons', 'exercises',
+        'resources', 'attempts', 'messages', 'documents', 'ia_contenus',
+        'ia_quotas'
+    ] loop
+        if to_regclass('public.' || v_table) is not null then
+            execute format('drop trigger if exists journaliser_changement on public.%I', v_table);
+            execute format(
+                'create trigger journaliser_changement after insert or update or delete on public.%I for each row execute function public.journaliser_changement()',
+                v_table
+            );
+        end if;
+    end loop;
+end;
+$$;
+
+revoke all on function public.journaliser_changement() from public, anon, authenticated;
+
+create or replace function public.journaliser_authentification(p_action text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_uid uuid := auth.uid();
+begin
+    if v_uid is null then
+        raise exception 'Connexion requise';
+    end if;
+    if p_action is null or p_action not in ('login', 'logout') then
+        raise exception 'Action d’authentification invalide';
+    end if;
+
+    insert into public.audit_events (actor_user_id, subject_user_id, action, entity, entity_id)
+    values (v_uid, v_uid, p_action, 'auth', v_uid::text);
+end;
+$$;
+
+revoke all on function public.journaliser_authentification(text) from public, anon;
+grant execute on function public.journaliser_authentification(text) to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- 10. Promouvoir un super-administrateur (à exécuter manuellement)
 --
 -- Après avoir créé le compte via l'application :
 --   update public.profiles set role = 'superadmin' where username = 'votre_pseudo';

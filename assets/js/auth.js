@@ -12,7 +12,8 @@ window.LearnHubAuth = (function () {
     const KEYS = {
         users: PREFIX + 'users',
         session: PREFIX + 'session',
-        progress: PREFIX + 'progress'
+        progress: PREFIX + 'progress',
+        tutorialProgress: PREFIX + 'tutorial-progress'
     };
 
     const ROLES = { ELEVE: 'eleve', ADMIN: 'admin', SUPERADMIN: 'superadmin' };
@@ -386,9 +387,9 @@ window.LearnHubAuth = (function () {
         };
     }
 
-    async function rejoindreClasse(code) {
+    async function rejoindreClasse(code, matiere, niveau) {
         const b = backend();
-        if (b) return b.rejoindreClasse(code);
+        if (b) return b.rejoindreClasse(code, matiere, niveau);
 
         const user = current();
         if (!user) return { ok: false, error: 'Connectez-vous pour rejoindre une classe.' };
@@ -396,10 +397,41 @@ window.LearnHubAuth = (function () {
         const store = window.LearnHubStore;
         const classe = store && store.classes ? store.classes.byCode(code) : null;
         if (!classe) return { ok: false, error: 'Aucune classe ne correspond à ce code.' };
+        if (matiere && classe.matiere && matiere !== classe.matiere) {
+            return { ok: false, error: 'Cette classe ne correspond pas à la matière sélectionnée.' };
+        }
+        if (niveau && classe.niveau && niveau !== classe.niveau) {
+            return { ok: false, error: 'Cette classe ne correspond pas au niveau sélectionné.' };
+        }
         const liste = users();
         const cible = liste.find(function (u) { return u.username === user.username; });
+        if (!cible) return { ok: false, error: 'Compte élève introuvable.' };
         cible.classeId = classe.id;
-        write(KEYS.users, liste);
+        if (!write(KEYS.users, liste)) return { ok: false, error: 'Impossible d’enregistrer votre classe dans ce navigateur.' };
+        return { ok: true, classe: classe };
+    }
+
+    async function rejoindreClasseParId(id, matiere, niveau) {
+        const b = backend();
+        if (b) return b.rejoindreClasseParId(id, matiere, niveau);
+
+        const user = current();
+        if (!user) return { ok: false, error: 'Connectez-vous pour rejoindre une classe.' };
+        if (user.role !== ROLES.ELEVE) return { ok: false, error: 'Seuls les élèves peuvent rejoindre une classe.' };
+        const store = window.LearnHubStore;
+        const classe = store && store.classes ? store.classes.get(id) : null;
+        if (!classe) return { ok: false, error: 'La classe sélectionnée n’est plus disponible.' };
+        if (matiere && classe.matiere && matiere !== classe.matiere) {
+            return { ok: false, error: 'Cette classe ne correspond pas à la matière sélectionnée.' };
+        }
+        if (niveau && classe.niveau && niveau !== classe.niveau) {
+            return { ok: false, error: 'Cette classe ne correspond pas au niveau sélectionné.' };
+        }
+        const liste = users();
+        const cible = liste.find(function (u) { return u.username === user.username; });
+        if (!cible) return { ok: false, error: 'Compte élève introuvable.' };
+        cible.classeId = classe.id;
+        if (!write(KEYS.users, liste)) return { ok: false, error: 'Impossible d’enregistrer votre classe dans ce navigateur.' };
         return { ok: true, classe: classe };
     }
 
@@ -554,12 +586,12 @@ window.LearnHubAuth = (function () {
     }
 
     async function setRole(username, role) {
+        const acteur = current();
+        if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
+            return { ok: false, error: 'Action réservée au super-administrateur.' };
+        }
         const b = backend();
         if (b) {
-            const acteur = current();
-            if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
-                return { ok: false, error: 'Action réservée au super-administrateur.' };
-            }
             const cible = users().find(function (u) { return u.username === username; });
             if (!cible) return { ok: false, error: 'Utilisateur introuvable.' };
             return b.changerRole(cible.id, role);
@@ -567,14 +599,6 @@ window.LearnHubAuth = (function () {
         if ([ROLES.ADMIN, ROLES.ELEVE, ROLES.SUPERADMIN].indexOf(role) === -1) {
             return { ok: false, error: 'Rôle inconnu.' };
         }
-        const acteur = current();
-        if (!acteur || (acteur.role !== ROLES.ADMIN && acteur.role !== ROLES.SUPERADMIN)) {
-            return { ok: false, error: 'Action réservée aux administrateurs.' };
-        }
-        if (acteur.role === ROLES.ADMIN && role === ROLES.SUPERADMIN) {
-            return { ok: false, error: 'Seul un super-administrateur peut attribuer ce rôle.' };
-        }
-
         const liste = users();
         const user = liste.find(function (u) { return u.username === username; });
         if (!user) return { ok: false, error: 'Utilisateur introuvable.' };
@@ -590,10 +614,6 @@ window.LearnHubAuth = (function () {
             if (role !== ROLES.SUPERADMIN && supers.length <= 1) {
                 return { ok: false, error: 'Il doit rester au moins un super-administrateur.' };
             }
-        }
-
-        if (acteur.role === ROLES.ADMIN && user.role === ROLES.ADMIN && user.username !== acteur.username) {
-            return { ok: false, error: 'Seul un super-administrateur peut modifier un autre administrateur.' };
         }
 
         const admins = liste.filter(function (u) { return u.role === ROLES.ADMIN; });
@@ -614,6 +634,82 @@ window.LearnHubAuth = (function () {
             window.LearnHubStore.exercices.importerDemo(user.espaceId);
         }
         return { ok: true };
+    }
+
+    async function renommerCompte(username, nouveauNom) {
+        const acteur = current();
+        if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
+            return { ok: false, error: 'Action réservée au super-administrateur.' };
+        }
+        const nom = String(nouveauNom || '').trim();
+        if (nom.length < 3) return { ok: false, error: "Le nom d'utilisateur doit contenir au moins 3 caractères." };
+        const b = backend();
+        if (b) {
+            const cible = users().find(function (u) { return u.username === username; });
+            if (!cible) return { ok: false, error: 'Utilisateur introuvable.' };
+            const resultat = await b.renommerCompte(cible.id, nom);
+            return resultat.ok ? { ok: true, username: nom } : resultat;
+        }
+
+        const liste = users();
+        const cible = liste.find(function (u) { return u.username === username; });
+        if (!cible) return { ok: false, error: 'Utilisateur introuvable.' };
+        if (liste.some(function (u) { return u.username.toLowerCase() === nom.toLowerCase() && u !== cible; })) {
+            return { ok: false, error: "Ce nom d'utilisateur est déjà pris." };
+        }
+        const ancienNom = cible.username;
+        cible.username = nom;
+        if (!write(KEYS.users, liste)) return { ok: false, error: "La modification du compte n'a pas pu être enregistrée." };
+
+        const avertissements = [];
+        if (ancienNom !== nom) {
+            const progression = read(KEYS.progress, {});
+            if (progression[ancienNom]) {
+                progression[nom] = progression[ancienNom];
+                delete progression[ancienNom];
+                if (!write(KEYS.progress, progression)) {
+                    avertissements.push('La progression associée à l’ancien nom n’a pas pu être déplacée.');
+                }
+            }
+            const session = read(KEYS.session, null);
+            if (session && session.username === ancienNom) {
+                session.username = nom;
+                if (!write(KEYS.session, session)) {
+                    avertissements.push("La session n'a pas pu être actualisée. Reconnectez-vous.");
+                }
+            }
+        }
+        return { ok: true, username: nom, avertissement: avertissements.join(' ') || null };
+    }
+
+    async function modifierEmailCompte(username, nouvelEmail) {
+        const acteur = current();
+        if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
+            return { ok: false, error: 'Action réservée au super-administrateur.' };
+        }
+        const email = String(nouvelEmail || '').trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+            return { ok: false, error: 'Adresse e-mail invalide.' };
+        }
+        const b = backend();
+        const cible = users().find(function (u) { return u.username === username; });
+        if (!cible) return { ok: false, error: 'Utilisateur introuvable.' };
+        if (cible.username === acteur.username) {
+            return { ok: false, error: 'Cette action concerne uniquement les autres comptes.' };
+        }
+        if (cible.email.toLowerCase() === email) return { ok: true, email: email, unchanged: true };
+
+        if (b) return b.modifierEmailCompte(cible.id, email);
+
+        const liste = users();
+        if (liste.some(function (u) { return u.email.toLowerCase() === email && u !== cible; })) {
+            return { ok: false, error: 'Cette adresse e-mail est déjà utilisée.' };
+        }
+        cible.email = email;
+        if (!write(KEYS.users, liste)) {
+            return { ok: false, error: "La modification de l'adresse e-mail n'a pas pu être enregistrée." };
+        }
+        return { ok: true, email: email };
     }
 
     async function creerCompte(data) {
@@ -667,12 +763,12 @@ window.LearnHubAuth = (function () {
     }
 
     async function removeUser(username) {
+        const acteur = current();
+        if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
+            return { ok: false, error: 'Action réservée au super-administrateur.' };
+        }
         const b = backend();
         if (b) {
-            const acteur = current();
-            if (!acteur || acteur.role !== ROLES.SUPERADMIN) {
-                return { ok: false, error: 'Action réservée au super-administrateur.' };
-            }
             const cible = users().find(function (u) { return u.username === username; });
             if (!cible) return { ok: false, error: 'Utilisateur introuvable.' };
             if (cible.username === acteur.username) {
@@ -680,7 +776,6 @@ window.LearnHubAuth = (function () {
             }
             return b.supprimerCompte(cible.id);
         }
-        const acteur = current();
         if (acteur && acteur.username === username) {
             return { ok: false, error: 'Impossible de supprimer votre propre compte.' };
         }
@@ -847,6 +942,47 @@ window.LearnHubAuth = (function () {
         return { ok: true, tentative: tentative };
     }
 
+    function progressionTutoriels(username) {
+        const cible = username || (current() && current().username);
+        if (!cible) return [];
+        const b = backend();
+        if (b && b.estActif()) return b.progressionTutorielsCache();
+        const progression = read(KEYS.tutorialProgress, {});
+        return Array.isArray(progression[cible]) ? progression[cible].slice() : [];
+    }
+
+    async function chargerProgressionTutoriels() {
+        const user = current();
+        if (!user || user.role !== ROLES.ELEVE) {
+            return { ok: false, error: 'Le suivi des tutoriels est réservé aux élèves connectés.' };
+        }
+        const b = backend();
+        if (b && b.estActif()) return b.chargerProgressionTutoriels();
+        return { ok: true, resourceIds: progressionTutoriels(user.username) };
+    }
+
+    async function marquerTutorielTermine(resourceId) {
+        const user = current();
+        if (!user || user.role !== ROLES.ELEVE) {
+            return { ok: false, error: 'Le suivi des tutoriels est réservé aux élèves connectés.' };
+        }
+        const id = String(resourceId || '').trim();
+        if (!id) return { ok: false, error: 'Tutoriel introuvable.' };
+        if (progressionTutoriels(user.username).indexOf(id) >= 0) return { ok: true, unchanged: true };
+        const b = backend();
+        if (b && b.estActif()) return b.marquerTutorielTermine(id);
+
+        const progression = read(KEYS.tutorialProgress, {});
+        const liste = Array.isArray(progression[user.username]) ? progression[user.username] : [];
+        if (liste.indexOf(id) >= 0) return { ok: true, unchanged: true };
+        liste.push(id);
+        progression[user.username] = liste;
+        if (!write(KEYS.tutorialProgress, progression)) {
+            return { ok: false, error: "L'enregistrement de votre progression a échoué." };
+        }
+        return { ok: true, resourceIds: liste.slice() };
+    }
+
     function tentativeCount(username, exerciceId) {
         return attempts(username).filter(function (t) { return t.exerciceId === exerciceId; }).length;
     }
@@ -864,8 +1000,16 @@ window.LearnHubAuth = (function () {
         const progress = allProgress();
         if (username) {
             delete progress[username];
+            const tutoriels = read(KEYS.tutorialProgress, {});
+            delete tutoriels[username];
+            if (!write(KEYS.tutorialProgress, tutoriels)) {
+                return { ok: false, error: "La progression des tutoriels n'a pas pu être réinitialisée." };
+            }
         } else {
             Object.keys(progress).forEach(function (key) { delete progress[key]; });
+            if (!write(KEYS.tutorialProgress, {})) {
+                return { ok: false, error: "La progression des tutoriels n'a pas pu être réinitialisée." };
+            }
         }
         write(KEYS.progress, progress);
         return { ok: true };
@@ -968,6 +1112,7 @@ window.LearnHubAuth = (function () {
         avatarUrl: avatarUrl,
         changerAvatar: changerAvatar,
         effacerAvatar: effacerAvatar,
+        rejoindreClasseParId: rejoindreClasseParId,
         rejoindreClasse: rejoindreClasse,
         quitterClasse: quitterClasse,
         detacherClasse: detacherClasse,
@@ -979,6 +1124,8 @@ window.LearnHubAuth = (function () {
         renvoyerConfirmation: renvoyerConfirmation,
         logout: logout,
         setRole: setRole,
+        renommerCompte: renommerCompte,
+        modifierEmailCompte: modifierEmailCompte,
         creerCompte: creerCompte,
         removeUser: removeUser,
         mettreAJourIdentifiants: mettreAJourIdentifiants,
@@ -986,6 +1133,9 @@ window.LearnHubAuth = (function () {
         attempts: attempts,
         allProgress: allProgress,
         recordAttempt: recordAttempt,
+        progressionTutoriels: progressionTutoriels,
+        chargerProgressionTutoriels: chargerProgressionTutoriels,
+        marquerTutorielTermine: marquerTutorielTermine,
         tentativeCount: tentativeCount,
         clearProgress: clearProgress,
         statsFor: statsFor,

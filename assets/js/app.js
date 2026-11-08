@@ -221,6 +221,7 @@
                 '<div class="collapse navbar-collapse" id="mainNav">' +
                     '<ul class="navbar-nav me-auto mb-2 mb-lg-0">' +
                         '<li class="nav-item"><a class="nav-link" href="#/" data-nav="accueil">Accueil</a></li>' +
+                        '<li class="nav-item"><a class="nav-link" href="#/espace-cours" data-nav="espace-cours"><i class="fas fa-chalkboard-user me-1"></i>Cours</a></li>' +
                         '<li class="nav-item dropdown">' +
                             '<a class="nav-link dropdown-toggle" href="#/lecons" role="button" data-bs-toggle="dropdown" data-nav="apprendre">Apprendre</a>' +
                             '<ul class="dropdown-menu menu-apprendre">' +
@@ -1073,6 +1074,220 @@
                         '</div>' +
                       '</div>') +
             '</div>'
+        };
+    }
+
+    function vueEspaceCours() {
+        const user = auth.current();
+        if (!user || ['eleve', 'admin'].indexOf(user.role) === -1) {
+            return {
+                titre: 'Espace Cours',
+                html: '<div class="container py-5"><div class="content text-center">' +
+                    '<i class="fas fa-lock fa-3x text-primary mb-3"></i>' +
+                    '<h1 class="h3">Espace Cours réservé</h1>' +
+                    '<p class="text-muted">Cet espace est accessible aux élèves et à leurs enseignants.</p>' +
+                    '<a class="btn btn-primary" href="#/connexion?next=espace-cours">Se connecter</a>' +
+                '</div></div>'
+            };
+        }
+
+        const matiereClasse = user.role === 'eleve' ? auth.matiereClasse() : null;
+        const lecons = store.lecons.all().filter(function (lecon) {
+            return !matiereClasse || lecon.matiere === matiereClasse;
+        });
+        const exercices = store.exercices.actifs().filter(function (exercice) {
+            return !matiereClasse || exercice.matiere === matiereClasse;
+        });
+        const ressources = store.ressources.all().filter(function (ressource) {
+            return !matiereClasse || !ressource.matiere || ressource.matiere === matiereClasse;
+        });
+        const tutoriels = ressources.filter(function (ressource) {
+            return ressource.type === 'Vidéo' || !!idYoutube(ressource.url);
+        });
+        const termines = new Set(auth.progressionTutoriels(user.username));
+        const terminesPlaylist = tutoriels.filter(function (video) {
+            return termines.has(video.id);
+        }).length;
+        const pourcentage = tutoriels.length ? Math.round((terminesPlaylist / tutoriels.length) * 100) : 0;
+        const matiereCourante = matiereClasse ? data.getMatiere(matiereClasse) : null;
+
+        function cartesTutoriels() {
+            if (!tutoriels.length) {
+                return '<div class="col-12"><div class="cours-vide">' +
+                    '<i class="fas fa-video"></i><h3 class="h6">La playlist se prépare</h3>' +
+                    '<p class="mb-0">Votre enseignant ajoutera ici les vidéos tutoriels de la matière.</p>' +
+                '</div></div>';
+            }
+            return tutoriels.map(function (video, index) {
+                const fait = termines.has(video.id);
+                const youtube = idYoutube(video.url);
+                const classe = video.classeIds && video.classeIds.length
+                    ? video.classeIds.map(function (classeId) {
+                        const entree = store.classes.get(classeId);
+                        return entree ? entree.nom : '';
+                    }).filter(Boolean).join(', ')
+                    : '';
+                return '<div class="col-md-6 col-xl-4">' +
+                    '<article class="cours-tutoriel-card' + (fait ? ' est-termine' : '') + '" data-tutoriel-card="' + esc(video.id) + '">' +
+                        (youtube
+                            ? '<div class="ratio ratio-16x9 cours-tutoriel-video">' +
+                                '<button type="button" class="lecteur-video-vignette" data-video="' + esc(youtube) + '" aria-label="Lire ' + esc(video.titre) + '">' +
+                                    '<img src="https://i.ytimg.com/vi/' + esc(youtube) + '/hqdefault.jpg" alt="" loading="lazy">' +
+                                    '<span class="lecteur-video-play"><i class="fas fa-play"></i></span>' +
+                                '</button>' +
+                              '</div>'
+                            : '<a class="cours-tutoriel-lien" href="' + esc(video.url) + '" target="_blank" rel="noopener" data-action="ouvrir-tutoriel">' +
+                                '<i class="fas fa-circle-play"></i><span>Ouvrir le tutoriel</span>' +
+                              '</a>') +
+                        '<div class="p-3 d-flex flex-column flex-grow-1">' +
+                            '<div class="d-flex justify-content-between align-items-start gap-2">' +
+                                '<span class="small text-primary fw-semibold">ÉTAPE ' + (index + 1) + '</span>' +
+                                (fait ? '<span class="badge text-bg-success"><i class="fas fa-check me-1"></i>Terminé</span>' : '<span class="badge text-bg-light border">À regarder</span>') +
+                            '</div>' +
+                            '<h3 class="h6 mt-2 mb-1">' + esc(video.titre) + '</h3>' +
+                            (classe ? '<p class="small text-muted mb-2">' + esc(classe) + '</p>' : '') +
+                            (user.role === 'eleve'
+                                ? '<button type="button" class="btn ' + (fait ? 'btn-outline-success' : 'btn-primary') + ' btn-sm mt-auto" data-action="terminer-tutoriel" data-tutoriel="' + esc(video.id) + '" ' + (fait ? 'disabled' : 'disabled title="' + (youtube ? 'Lancez d’abord la vidéo' : 'Ouvrez d’abord le tutoriel') + '"') + '>' +
+                                    (fait ? '<i class="fas fa-check me-1"></i>Terminé' : '<i class="fas fa-circle-check me-1"></i>Marquer comme terminé') +
+                                  '</button>'
+                                : '<span class="small text-muted mt-auto"><i class="fas fa-eye me-1"></i>Aperçu enseignant</span>') +
+                        '</div>' +
+                    '</article>' +
+                '</div>';
+            }).join('');
+        }
+
+        return {
+            titre: 'Espace Cours',
+            html: '<div class="container py-4 cours-espace">' +
+                '<section class="cours-hero mb-4">' +
+                    '<div class="cours-hero-texte"><span class="cours-sur-titre"><i class="fas fa-graduation-cap me-2"></i>APPRENDRE À SON RYTHME</span>' +
+                        '<h1 class="display-6 fw-bold mb-2">Mon espace Cours</h1>' +
+                        '<p class="mb-0">' + (matiereCourante
+                            ? 'Retrouvez les cours et les ressources de ' + esc(matiereCourante.nom) + ', partagés par votre enseignant.'
+                            : 'Retrouvez les cours, exercices et ressources partagés par votre enseignant.') + '</p>' +
+                    '</div>' +
+                    '<div class="cours-hero-icone" aria-hidden="true"><i class="fas fa-book-open-reader"></i></div>' +
+                '</section>' +
+                '<section class="row g-3 mb-4" aria-label="Catégories de cours">' +
+                    '<div class="col-md-4"><a class="cours-categorie" href="#/lecons"><span class="cours-categorie-icone bg-cours-lecons"><i class="fas fa-book-open"></i></span><span><strong>Séances de cours</strong><small>' + lecons.length + ' cours disponibles</small></span><i class="fas fa-arrow-right ms-auto"></i></a></div>' +
+                    '<div class="col-md-4"><a class="cours-categorie" href="#/exercices"><span class="cours-categorie-icone bg-cours-exercices"><i class="fas fa-puzzle-piece"></i></span><span><strong>Exercices</strong><small>' + exercices.length + ' activités pour pratiquer</small></span><i class="fas fa-arrow-right ms-auto"></i></a></div>' +
+                    '<div class="col-md-4"><a class="cours-categorie" href="#/ressources"><span class="cours-categorie-icone bg-cours-ressources"><i class="fas fa-folder-open"></i></span><span><strong>Ressources</strong><small>' + ressources.length + ' documents et supports</small></span><i class="fas fa-arrow-right ms-auto"></i></a></div>' +
+                '</section>' +
+                '<section class="cours-playlist content mb-4" aria-labelledby="titre-playlist">' +
+                    '<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">' +
+                        '<div><span class="cours-sur-titre text-primary"><i class="fas fa-circle-play me-1"></i>APPRENDRE EN VIDÉO</span>' +
+                            '<h2 class="h4 mt-1 mb-1" id="titre-playlist">Playlist de tutoriels</h2>' +
+                            '<p class="text-muted small mb-0">Regardez chaque tutoriel puis marquez-le comme terminé pour suivre votre progression.</p></div>' +
+                        '<span class="cours-playlist-compteur"><i class="fas fa-check-circle me-1 text-success"></i>' + terminesPlaylist + ' / ' + tutoriels.length + ' terminés</span>' +
+                    '</div>' +
+                    '<div class="progress cours-progression mb-2" role="progressbar" aria-label="Progression des tutoriels" aria-valuenow="' + pourcentage + '" aria-valuemin="0" aria-valuemax="100">' +
+                        '<div class="progress-bar" id="cours-progression-barre" style="width:' + pourcentage + '%"></div>' +
+                    '</div>' +
+                    '<div class="alert alert-warning small d-none" id="cours-progression-erreur" role="alert"></div>' +
+                    '<div class="d-flex justify-content-between small text-muted mb-3"><span id="cours-progression-label">' + pourcentage + ' % complétés</span><span>' + (tutoriels.length ? 'Continuez, vous progressez !' : 'La progression commencera avec les premiers tutoriels.') + '</span></div>' +
+                    '<div class="alert alert-success cours-felicitations d-none" id="cours-felicitations" role="status"><span class="cours-applaudissements" aria-hidden="true">👏 🎉 👏</span><strong>Bravo !</strong> Tutoriel terminé, votre progression est enregistrée.</div>' +
+                    '<div class="row g-3" id="cours-playlist">' + cartesTutoriels() + '</div>' +
+                '</section>' +
+                '<div class="text-center small text-muted"><i class="fas fa-lock me-1"></i>Votre espace de cours est visible uniquement par vous et votre enseignant.</div>' +
+            '</div>',
+            after: function (racine) {
+                const playlist = racine.querySelector('#cours-playlist');
+                function actualiserProgression() {
+                    const nombreTermines = tutoriels.filter(function (video) { return termines.has(video.id); }).length;
+                    const avancement = tutoriels.length ? Math.round((nombreTermines / tutoriels.length) * 100) : 0;
+                    const barre = racine.querySelector('#cours-progression-barre');
+                    barre.style.width = avancement + '%';
+                    barre.closest('[role="progressbar"]').setAttribute('aria-valuenow', String(avancement));
+                    racine.querySelector('#cours-progression-label').textContent = avancement + ' % complétés';
+                    racine.querySelector('.cours-playlist-compteur').innerHTML =
+                        '<i class="fas fa-check-circle me-1 text-success"></i>' + nombreTermines + ' / ' + tutoriels.length + ' terminés';
+                    tutoriels.forEach(function (video) {
+                        if (!termines.has(video.id)) return;
+                        const card = Array.prototype.find.call(
+                            playlist.querySelectorAll('[data-tutoriel-card]'),
+                            function (element) { return element.dataset.tutorielCard === video.id; }
+                        );
+                        if (!card) return;
+                        card.classList.add('est-termine');
+                        const statut = card.querySelector('.badge');
+                        statut.className = 'badge text-bg-success';
+                        statut.innerHTML = '<i class="fas fa-check me-1"></i>Terminé';
+                        const button = card.querySelector('[data-action="terminer-tutoriel"]');
+                        if (button) {
+                            button.disabled = true;
+                            button.className = 'btn btn-outline-success btn-sm mt-auto';
+                            button.innerHTML = '<i class="fas fa-check me-1"></i>Terminé';
+                        }
+                    });
+                }
+
+                auth.chargerProgressionTutoriels().then(function (resultat) {
+                    if (!resultat.ok) {
+                        const erreur = racine.querySelector('#cours-progression-erreur');
+                        erreur.textContent = resultat.error;
+                        erreur.classList.remove('d-none');
+                        return;
+                    }
+                    resultat.resourceIds.forEach(function (id) { termines.add(id); });
+                    actualiserProgression();
+                }).catch(function () {
+                    const erreur = racine.querySelector('#cours-progression-erreur');
+                    erreur.textContent = 'Impossible de charger votre progression de tutoriels.';
+                    erreur.classList.remove('d-none');
+                });
+
+                playlist.addEventListener('click', async function (event) {
+                    const declencheurVideo = event.target.closest('[data-video]');
+                    if (declencheurVideo) {
+                        const carte = declencheurVideo.closest('.cours-tutoriel-card');
+                        const zone = carte && carte.querySelector('.cours-tutoriel-video');
+                        if (!zone || zone.querySelector('iframe')) return;
+                        const video = String(declencheurVideo.dataset.video || '');
+                        if (!/^[A-Za-z0-9_-]{6,}$/.test(video)) return;
+                        zone.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + video +
+                            '?autoplay=1&rel=0" title="Tutoriel vidéo" loading="lazy"' +
+                            ' allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"' +
+                            ' referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
+                        const terminer = carte.querySelector('[data-action="terminer-tutoriel"]');
+                        if (terminer) {
+                            terminer.disabled = false;
+                            terminer.removeAttribute('title');
+                        }
+                        return;
+                    }
+
+                    const lienTutoriel = event.target.closest('[data-action="ouvrir-tutoriel"]');
+                    if (lienTutoriel) {
+                        const carte = lienTutoriel.closest('.cours-tutoriel-card');
+                        const terminer = carte && carte.querySelector('[data-action="terminer-tutoriel"]');
+                        if (terminer) {
+                            terminer.disabled = false;
+                            terminer.removeAttribute('title');
+                        }
+                        return;
+                    }
+
+                    const bouton = event.target.closest('[data-action="terminer-tutoriel"]');
+                    if (!bouton || user.role !== 'eleve') return;
+                    const tutorielId = bouton.dataset.tutoriel;
+                    if (termines.has(tutorielId)) return;
+                    bouton.disabled = true;
+                    const tutoriel = await auth.marquerTutorielTermine(tutorielId);
+                    if (!tutoriel.ok) {
+                        bouton.disabled = false;
+                        toast(tutoriel.error || 'Impossible d’enregistrer la progression.', 'danger');
+                        return;
+                    }
+                    termines.add(tutorielId);
+                    actualiserProgression();
+                    const felicitation = racine.querySelector('#cours-felicitations');
+                    felicitation.classList.remove('d-none');
+                    felicitation.classList.remove('cours-felicitations-entree');
+                    void felicitation.offsetWidth;
+                    felicitation.classList.add('cours-felicitations-entree');
+                });
+            }
         };
     }
 
@@ -2130,6 +2345,28 @@
                             champ('reg-password', 'Mot de passe', 'lock', 'password', { autocomplete: 'new-password', motDePasse: true, aide: '6 caractères minimum.' }) +
                             champ('reg-confirm', 'Confirmer', 'lock', 'password', { autocomplete: 'new-password', motDePasse: true }) +
                         '</div>' +
+                        '<section class="auth-inscription-classe" id="inscription-classe">' +
+                            '<h2><i class="fas fa-users-rectangle me-1"></i>Rejoindre une classe <span>(facultatif)</span></h2>' +
+                            '<p>Choisissez la matière et le niveau, puis votre classe. Son code reste privé : le rattachement est automatique après l’inscription.</p>' +
+                            '<div class="auth-grid">' +
+                                '<div class="auth-field"><label for="reg-matiere">Matière</label>' +
+                                    '<select class="form-select" id="reg-matiere"><option value="">Choisir une matière</option>' +
+                                        data.matieres.map(function (matiere) {
+                                            return '<option value="' + esc(matiere.slug) + '">' + esc(matiere.nom) + '</option>';
+                                        }).join('') +
+                                    '</select></div>' +
+                                '<div class="auth-field"><label for="reg-niveau">Niveau</label>' +
+                                    '<select class="form-select" id="reg-niveau"><option value="">Choisir un niveau</option>' +
+                                        data.niveaux.map(function (niveau) {
+                                            return '<option value="' + esc(niveau.slug) + '">' + esc(niveau.nom) + '</option>';
+                                        }).join('') +
+                                    '</select></div>' +
+                                '<div class="auth-field auth-field--full"><label for="reg-classe">Classe et code</label>' +
+                                    '<select class="form-select" id="reg-classe" disabled><option value="">Choisissez d’abord une matière et un niveau</option></select>' +
+                                    '<div class="form-text" id="reg-classe-status" aria-live="polite">Les classes disponibles s’afficheront ici.</div>' +
+                                '</div>' +
+                            '</div>' +
+                        '</section>' +
                         '<label class="auth-check" for="reg-enseignant">' +
                             '<input type="checkbox" id="reg-enseignant">' +
                             '<span>Je suis enseignant : créer mon espace et mes classes</span>' +
@@ -2147,7 +2384,104 @@
                 const formConnexion = racine.querySelector('#form-connexion');
                 const formInscription = racine.querySelector('#form-inscription');
                 const carte = racine.querySelector('.auth-card');
+                const inscriptionClasse = racine.querySelector('#inscription-classe');
+                const selectMatiere = racine.querySelector('#reg-matiere');
+                const selectNiveau = racine.querySelector('#reg-niveau');
+                const selectClasse = racine.querySelector('#reg-classe');
+                const statutClasses = racine.querySelector('#reg-classe-status');
+                const cleClasseEnAttente = 'learnhub.inscription-classe-en-attente';
                 let emailAConfirmer = '';
+                let requeteClasses = 0;
+
+                async function actualiserClassesInscription() {
+                    const requete = ++requeteClasses;
+                    const matiere = selectMatiere.value;
+                    const niveau = selectNiveau.value;
+                    selectClasse.replaceChildren(new Option(
+                        matiere && niveau ? 'Chargement des classes…' : 'Choisissez d’abord une matière et un niveau',
+                        ''
+                    ));
+                    selectClasse.disabled = true;
+                    statutClasses.textContent = matiere && niveau
+                        ? 'Recherche des classes disponibles…'
+                        : 'Les classes disponibles s’afficheront ici.';
+                    if (!matiere || !niveau) return;
+
+                    const resultat = await window.LearnHubBackend.listerClassesInscription(matiere, niveau);
+                    if (requete !== requeteClasses) return;
+                    if (!resultat.ok) {
+                        statutClasses.textContent = 'Impossible de charger les classes : ' + resultat.error;
+                        return;
+                    }
+                    if (!resultat.classes.length) {
+                        selectClasse.replaceChildren(new Option('Aucune classe disponible', ''));
+                        statutClasses.textContent = 'Aucune classe ne correspond à cette matière et à ce niveau.';
+                        return;
+                    }
+                    selectClasse.replaceChildren(
+                        new Option('Choisir une classe', ''),
+                        ...resultat.classes.map(function (classe) {
+                            return new Option(classe.nom, classe.id);
+                        })
+                    );
+                    selectClasse.disabled = false;
+                    statutClasses.textContent = resultat.classes.length + ' classe' +
+                        (resultat.classes.length > 1 ? 's disponibles.' : ' disponible.');
+                }
+
+                function lireClasseEnAttente() {
+                    try {
+                        const valeur = localStorage.getItem(cleClasseEnAttente);
+                        return valeur ? JSON.parse(valeur) : null;
+                    } catch (erreur) {
+                        console.error('Inscription : impossible de lire la classe en attente.', erreur);
+                        return null;
+                    }
+                }
+
+                function enregistrerClasseEnAttente(email, classe) {
+                    try {
+                        localStorage.setItem(cleClasseEnAttente, JSON.stringify({
+                            email: String(email || '').trim().toLowerCase(),
+                            classeId: classe.id,
+                            matiere: classe.matiere,
+                            niveau: classe.niveau,
+                            cree: Date.now()
+                        }));
+                        return true;
+                    } catch (erreur) {
+                        console.error('Inscription : impossible de conserver la classe choisie.', erreur);
+                        return false;
+                    }
+                }
+
+                function effacerClasseEnAttente() {
+                    try {
+                        localStorage.removeItem(cleClasseEnAttente);
+                    } catch (erreur) {
+                        console.error('Inscription : impossible de supprimer la classe en attente.', erreur);
+                    }
+                }
+
+                async function joindreClasseInscription(classe) {
+                    if (classe.classeId) {
+                        return auth.rejoindreClasseParId(classe.classeId, classe.matiere, classe.niveau);
+                    }
+                    // Pending records from the previous registration flow stored a code.
+                    return auth.rejoindreClasse(classe.code, classe.matiere, classe.niveau);
+                }
+
+                async function traiterClasseEnAttente(email) {
+                    const classe = lireClasseEnAttente();
+                    if (!classe || classe.email !== String(email || '').trim().toLowerCase()) return null;
+                    if (!classe.cree || Date.now() - classe.cree > 7 * 24 * 60 * 60 * 1000) {
+                        effacerClasseEnAttente();
+                        return { ok: false, error: 'Votre sélection de classe a expiré. Reconnectez-vous et choisissez une classe, ou demandez son code à votre enseignant.' };
+                    }
+                    const resultat = await joindreClasseInscription(classe);
+                    if (resultat.ok) effacerClasseEnAttente();
+                    return resultat;
+                }
 
                 function afficherMessage(texte, type, options) {
                     zoneMessage.className = 'alert alert-' + type;
@@ -2175,6 +2509,19 @@
                         bouton.setAttribute('aria-label', visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
                     });
                 });
+
+                const caseEnseignant = racine.querySelector('#reg-enseignant');
+                caseEnseignant.addEventListener('change', function () {
+                    const estEnseignant = caseEnseignant.checked;
+                    inscriptionClasse.classList.toggle('d-none', estEnseignant);
+                    inscriptionClasse.querySelectorAll('input, select').forEach(function (champClasse) {
+                        champClasse.disabled = estEnseignant;
+                        if (estEnseignant) champClasse.value = '';
+                    });
+                    if (!estEnseignant) actualiserClassesInscription();
+                });
+                selectMatiere.addEventListener('change', actualiserClassesInscription);
+                selectNiveau.addEventListener('change', actualiserClassesInscription);
 
                 racine.querySelectorAll('[data-mode]').forEach(function (bouton) {
                     bouton.addEventListener('click', function () {
@@ -2225,22 +2572,39 @@
                         afficherMessage(resultat.error, 'danger');
                         return;
                     }
+                    const classeEnAttente = await traiterClasseEnAttente(identifiant);
                     toast('Bienvenue ' + resultat.user.username + ' !');
                     majEntete([]);
+                    if (classeEnAttente && !classeEnAttente.ok) {
+                        toast('Connexion réussie, mais la classe n’a pas pu être rejointe : ' + classeEnAttente.error, 'warning');
+                        naviguer('#/profil');
+                        return;
+                    }
+                    if (classeEnAttente && classeEnAttente.ok) {
+                        toast('Vous avez rejoint votre classe.');
+                    }
                     naviguer(suivant ? '#/' + suivant : (resultat.user.role === 'eleve' ? '#/profil' : '#/'));
                 });
 
                 formInscription.addEventListener('submit', async function (event) {
                     event.preventDefault();
+                    const enseignant = caseEnseignant.checked;
+                    const idClasse = enseignant ? '' : selectClasse.value;
+                    const matiereClasse = enseignant ? '' : racine.querySelector('#reg-matiere').value;
+                    const niveauClasse = enseignant ? '' : racine.querySelector('#reg-niveau').value;
                     const donnees = {
                         username: racine.querySelector('#reg-username').value,
                         email: racine.querySelector('#reg-email').value,
                         password: racine.querySelector('#reg-password').value,
-                        enseignant: racine.querySelector('#reg-enseignant').checked
+                        enseignant: enseignant
                     };
                     const confirmation = racine.querySelector('#reg-confirm').value;
                     if (donnees.password !== confirmation) {
                         afficherMessage('Les mots de passe ne correspondent pas.', 'danger');
+                        return;
+                    }
+                    if ((matiereClasse || niveauClasse) && (!matiereClasse || !niveauClasse || !idClasse)) {
+                        afficherMessage('Pour rejoindre une classe, choisissez une matière, un niveau et une classe. Sinon, laissez ces champs vides.', 'danger');
                         return;
                     }
                     const bouton = formInscription.querySelector('button[type="submit"]');
@@ -2251,9 +2615,23 @@
                         afficherMessage(resultat.error, 'danger');
                         return;
                     }
+                    const classeInscription = idClasse
+                        ? { id: idClasse, matiere: matiereClasse, niveau: niveauClasse }
+                        : null;
                     if (resultat.confirmation) {
+                        if (classeInscription && !enregistrerClasseEnAttente(donnees.email, {
+                            id: classeInscription.id,
+                            matiere: classeInscription.matiere,
+                            niveau: classeInscription.niveau
+                        })) {
+                            afficherMessage('Compte créé, mais le navigateur n’a pas pu conserver la classe choisie. Après confirmation, connectez-vous et demandez à votre enseignant le code de sa classe.', 'warning');
+                            formInscription.reset();
+                            return;
+                        }
                         emailAConfirmer = donnees.email;
-                        afficherMessage('Compte créé. Confirmez votre adresse, puis connectez-vous.', 'success', {
+                        afficherMessage(classeInscription
+                            ? 'Compte créé. Confirmez votre adresse, puis connectez-vous avec cette adresse sur cet appareil : vous serez ajouté à la classe choisie automatiquement.'
+                            : 'Compte créé. Confirmez votre adresse, puis connectez-vous.', 'success', {
                             action: 'Renvoyer l\'e-mail',
                             onClick: async function (cible) {
                                 const envoi = await auth.renvoyerConfirmation(emailAConfirmer);
@@ -2266,11 +2644,33 @@
                             }
                         });
                         formInscription.reset();
+                        inscriptionClasse.classList.remove('d-none');
+                        inscriptionClasse.querySelectorAll('input, select').forEach(function (champClasse) {
+                            champClasse.disabled = champClasse === selectClasse;
+                        });
+                        selectClasse.replaceChildren(new Option('Choisissez d’abord une matière et un niveau', ''));
+                        statutClasses.textContent = 'Les classes disponibles s’afficheront ici.';
                         return;
                     }
                     const connexion = await auth.login(donnees.email, donnees.password);
                     if (connexion.ok) {
+                        let classeRejointe = false;
+                        if (classeInscription) {
+                            const resultatClasse = await joindreClasseInscription({
+                                classeId: classeInscription.id,
+                                matiere: classeInscription.matiere,
+                                niveau: classeInscription.niveau
+                            });
+                            if (!resultatClasse.ok) {
+                                toast('Compte créé, mais la classe n’a pas pu être rejointe : ' + resultatClasse.error, 'warning');
+                                majEntete([]);
+                                naviguer('#/profil');
+                                return;
+                            }
+                            classeRejointe = true;
+                        }
                         toast('Compte créé, bienvenue !');
+                        if (classeRejointe) toast('Vous avez rejoint votre classe.');
                         majEntete([]);
                         naviguer(suivant ? '#/' + suivant : (donnees.enseignant ? '#/admin/classes' : '#/profil'));
                     } else {
@@ -3234,6 +3634,27 @@
     const LIBELLES_ROLES = { eleve: 'Élève', admin: 'Administrateur', superadmin: 'Super-admin' };
     const ORDRE_ROLES = { superadmin: 0, admin: 1, eleve: 2 };
     const LIBELLES_TYPES_ACTIVITE = { quiz: 'Quiz', matching: 'Associations', fillblank: 'Textes à trous' };
+    const LIBELLES_AUDIT_ENTITES = {
+        auth: 'Connexion',
+        profiles: 'Compte',
+        espaces: 'Espace',
+        classes: 'Classe',
+        lessons: 'Leçon',
+        exercises: 'Exercice',
+        resources: 'Ressource',
+        attempts: 'Résultat',
+        messages: 'Message reçu',
+        documents: 'Document',
+        ia_contenus: 'Contenu IA',
+        ia_quotas: 'Utilisation IA'
+    };
+    const LIBELLES_AUDIT_ACTIONS = {
+        login: 'Connexion',
+        logout: 'Déconnexion',
+        created: 'Création',
+        updated: 'Modification',
+        deleted: 'Suppression'
+    };
 
     function infosEspaceCompte(compte) {
         if (compte.role === 'admin') {
@@ -3365,7 +3786,7 @@
             '</tr>';
         }).join('');
 
-        const lignes = comptes.map(function (compte) {
+        const lignes = comptes.map(function (compte, indexCompte) {
             const infos = infosEspaceCompte(compte);
             const tentatives = auth.attempts(compte.username);
             const points = tentatives.reduce(function (acc, t) { return acc + t.score; }, 0);
@@ -3373,19 +3794,42 @@
             const moyenne = possibles > 0 ? Math.round((points / possibles) * 100) : null;
             const moi = user.username === compte.username;
             const options = Object.keys(LIBELLES_ROLES).map(function (cle) {
-                return '<option value="' + cle + '" ' + (compte.role === cle ? 'selected' : '') + '>' + LIBELLES_ROLES[cle] + '</option>';
+                return '<option value="' + cle + '" ' + (compte.role === cle ? 'selected' : '') + '>' + esc(LIBELLES_ROLES[cle]) + '</option>';
             }).join('');
             return '<tr>' +
                 '<td class="fw-semibold">' + esc(compte.username) + (moi ? ' <span class="badge bg-info text-dark">vous</span>' : '') + '</td>' +
                 '<td class="text-muted small">' + esc(compte.email) + '</td>' +
-                '<td><select class="form-select form-select-sm" data-action="role" data-username="' + esc(compte.username) + '" data-role="' + esc(compte.role) + '" style="min-width:150px" ' + (moi ? 'disabled' : '') + '>' + options + '</select></td>' +
+                '<td><span class="badge rounded-pill bg-light text-dark border">' + esc(LIBELLES_ROLES[compte.role] || compte.role) + '</span></td>' +
                 '<td class="small">' + esc(infos.espace) + '</td>' +
                 '<td class="small">' + esc(infos.classe) + '</td>' +
                 '<td>' + tentatives.length + '</td>' +
                 '<td>' + (moyenne === null ? '—' : moyenne + ' %') + '</td>' +
-                '<td class="text-end text-nowrap">' +
-                    '<button class="btn btn-sm btn-outline-secondary me-1" data-action="reinitialiser" data-username="' + esc(compte.username) + '" title="Réinitialiser la progression" ' + (tentatives.length ? '' : 'disabled') + '><i class="fas fa-rotate-left"></i></button>' +
-                    '<button class="btn btn-sm btn-outline-danger" data-action="supprimer" data-username="' + esc(compte.username) + '" title="Supprimer le compte" ' + (moi ? 'disabled' : '') + '><i class="fas fa-trash"></i></button>' +
+                '<td class="text-end">' +
+                    '<div class="dropdown">' +
+                        '<button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Gérer le compte ' + esc(compte.username) + '">' +
+                            '<i class="fas fa-sliders me-1"></i>Gérer' +
+                        '</button>' +
+                        '<div class="dropdown-menu dropdown-menu-end p-2 shadow-sm" style="min-width:250px">' +
+                            '<div class="dropdown-header px-2 pt-1 pb-2"><i class="fas fa-user-gear me-2"></i>Compte de ' + esc(compte.username) + '</div>' +
+                            '<button class="dropdown-item rounded-2 py-2" type="button" data-action="renommer" data-username="' + esc(compte.username) + '" ' + (moi ? 'disabled' : '') + '>' +
+                                '<i class="fas fa-pen me-2 text-primary"></i>Modifier le nom d’utilisateur' +
+                            '</button>' +
+                            '<button class="dropdown-item rounded-2 py-2" type="button" data-action="modifier-email" data-username="' + esc(compte.username) + '" ' + (moi ? 'disabled' : '') + '>' +
+                                '<i class="fas fa-envelope me-2 text-primary"></i>Modifier l’adresse e-mail' +
+                            '</button>' +
+                            '<label class="dropdown-item-text px-2 pt-2 pb-1 small fw-semibold" for="role-' + indexCompte + '">' +
+                                '<i class="fas fa-user-tag me-2 text-primary"></i>Rôle du compte' +
+                            '</label>' +
+                            '<select id="role-' + indexCompte + '" class="form-select form-select-sm mx-2" style="width:calc(100% - 1rem)" data-action="role" data-username="' + esc(compte.username) + '" data-role="' + esc(compte.role) + '" ' + (moi ? 'disabled' : '') + '>' + options + '</select>' +
+                            '<hr class="dropdown-divider">' +
+                            '<button class="dropdown-item rounded-2 py-2" type="button" data-action="reinitialiser" data-username="' + esc(compte.username) + '" ' + (tentatives.length ? '' : 'disabled') + '>' +
+                                '<i class="fas fa-rotate-left me-2 text-secondary"></i>Réinitialiser la progression' +
+                            '</button>' +
+                            '<button class="dropdown-item rounded-2 py-2 text-danger" type="button" data-action="supprimer" data-username="' + esc(compte.username) + '" ' + (moi ? 'disabled' : '') + '>' +
+                                '<i class="fas fa-trash me-2"></i>Supprimer le compte' +
+                            '</button>' +
+                        '</div>' +
+                    '</div>' +
                 '</td>' +
             '</tr>';
         }).join('');
@@ -3471,12 +3915,36 @@
                 '<div class="admin-panel">' +
                     '<h2 class="h5 mb-3"><i class="fas fa-address-book me-2"></i>Tous les comptes (' + comptes.length + ')</h2>' +
                     '<div class="table-responsive"><table class="table table-striped align-middle mb-0" id="table-comptes">' +
-                        '<thead><tr><th>Utilisateur</th><th>E-mail</th><th>Rôle</th><th>Espace</th><th>Classe</th><th>Tentatives</th><th>Moyenne</th><th class="text-end">Actions</th></tr></thead>' +
+                        '<thead><tr><th>Utilisateur</th><th>E-mail</th><th>Rôle</th><th>Espace</th><th>Classe</th><th>Tentatives</th><th>Moyenne</th><th class="text-end">Gestion</th></tr></thead>' +
                         '<tbody>' + lignes + '</tbody>' +
                     '</table></div>' +
+                    '<div class="modal fade" id="modal-gestion-compte" tabindex="-1" aria-labelledby="modal-gestion-compte-titre" aria-hidden="true">' +
+                        '<div class="modal-dialog modal-dialog-centered">' +
+                            '<div class="modal-content border-0 shadow">' +
+                                '<form id="form-gestion-compte">' +
+                                    '<div class="modal-header">' +
+                                        '<div><h2 class="modal-title fs-5" id="modal-gestion-compte-titre">Modifier un compte</h2>' +
+                                            '<p class="text-muted small mb-0" id="modal-gestion-compte-description"></p></div>' +
+                                        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>' +
+                                    '</div>' +
+                                    '<div class="modal-body">' +
+                                        '<div id="modal-gestion-compte-erreur" class="alert alert-danger d-none" role="alert"></div>' +
+                                        '<div id="modal-gestion-compte-champ">' +
+                                            '<label class="form-label fw-semibold" id="modal-gestion-compte-label" for="modal-gestion-compte-valeur"></label>' +
+                                            '<input class="form-control" id="modal-gestion-compte-valeur" required>' +
+                                        '</div>' +
+                                    '</div>' +
+                                    '<div class="modal-footer">' +
+                                        '<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>' +
+                                        '<button type="submit" class="btn btn-primary" id="modal-gestion-compte-valider"><i class="fas fa-floppy-disk me-1"></i>Enregistrer</button>' +
+                                    '</div>' +
+                                '</form>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
                     '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>' +
                         (backendActif
-                            ? 'Comptes synchronisés avec Supabase : les rôles, la création et la suppression s\'appliquent immédiatement.'
+                            ? 'Comptes synchronisés avec Supabase : les noms d’utilisateur, e-mails, rôles, création et suppression s\'appliquent immédiatement.'
                             : 'Les comptes et leurs données restent stockés dans ce navigateur. Le rôle « super-admin » ne peut être attribué que depuis cette page.') +
                     '</p>' +
                 '</div>' +
@@ -3490,12 +3958,30 @@
                         : '<p class="text-muted mb-0">Aucun espace enseignant pour le moment.</p>') +
                     '<p class="text-muted small mt-3 mb-0"><i class="fas fa-circle-info me-1"></i>Tous les espaces et tous les comptes confondus, sans cloisonnement.</p>' +
                 '</div>' +
+                '<div class="admin-panel mt-4" id="journal-panel">' +
+                    '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">' +
+                        '<h2 class="h5 mb-0"><i class="fas fa-list-check me-2"></i>Journal global des activités</h2>' +
+                        '<span class="badge bg-secondary" id="journal-count">Chargement…</span>' +
+                    '</div>' +
+                    '<p class="text-muted small" id="journal-status">' +
+                        (backendActif ? 'Chargement du journal protégé du super-administrateur…' : 'Le journal global nécessite le backend Supabase partagé.') +
+                    '</p>' +
+                    '<div class="table-responsive">' +
+                        '<table class="table table-striped align-middle mb-0">' +
+                            '<thead><tr><th>Date</th><th>Acteur</th><th>Action</th><th>Objet</th><th>Détail</th></tr></thead>' +
+                            '<tbody id="journal-lignes"><tr><td colspan="5" class="text-muted">' +
+                                (backendActif ? 'Chargement…' : 'Activez Supabase pour consulter les activités globales.') +
+                            '</td></tr></tbody>' +
+                        '</table>' +
+                    '</div>' +
+                    '<button type="button" class="btn btn-outline-primary btn-sm mt-3 d-none" id="journal-plus">Afficher les activités précédentes</button>' +
+                '</div>' +
                 '<div class="admin-panel mt-4" id="activites-panel">' +
                     '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
-                        '<h2 class="h5 mb-0"><i class="fas fa-clock-rotate-left me-2"></i>Activités de tous les utilisateurs</h2>' +
+                        '<h2 class="h5 mb-0"><i class="fas fa-chart-line me-2"></i>Résultats aux exercices</h2>' +
                         '<span class="badge bg-secondary">' + activitesAffichees.length + ' / ' + activites.length + '</span>' +
                     '</div>' +
-                    '<p class="text-muted small">Toutes les tentatives d\'exercices, tous comptes et tous espaces confondus, de la plus récente à la plus ancienne.</p>' +
+                    '<p class="text-muted small">Toutes les tentatives d’exercices, tous comptes et tous espaces confondus.</p>' +
                     (activitesAffichees.length
                         ? '<div class="table-responsive"><table class="table table-striped align-middle mb-0">' +
                             '<thead><tr><th>Utilisateur</th><th>Rôle</th><th>Espace</th><th>Classe</th><th>Exercice</th><th>Type</th><th>Score</th><th>Date</th></tr></thead>' +
@@ -3527,17 +4013,203 @@
             after: function (racine) {
                 const zone = racine.querySelector('#super-message');
                 const table = racine.querySelector('#table-comptes');
+                const modalElement = racine.querySelector('#modal-gestion-compte');
+                const modalForm = racine.querySelector('#form-gestion-compte');
+                const modalBootstrap = window.bootstrap && window.bootstrap.Modal;
+                const gestionModal = modalBootstrap ? modalBootstrap.getOrCreateInstance(modalElement) : null;
+                let actionCompteEnCours = null;
+                let utilisateurCompteEnCours = null;
+
+                modalElement.addEventListener('shown.bs.modal', function () {
+                    const input = racine.querySelector('#modal-gestion-compte-valeur');
+                    if (!racine.querySelector('#modal-gestion-compte-champ').classList.contains('d-none')) {
+                        input.focus();
+                        input.select();
+                    }
+                });
+
+                function ouvrirGestionCompte(action, username) {
+                    if (!gestionModal) {
+                        afficher('La fenêtre de gestion est indisponible. Rechargez la page puis réessayez.', 'danger');
+                        return;
+                    }
+                    const compteCible = auth.users().find(function (compte) { return compte.username === username; });
+                    if (!compteCible) {
+                        afficher('Utilisateur introuvable.', 'danger');
+                        return;
+                    }
+                    actionCompteEnCours = action;
+                    utilisateurCompteEnCours = username;
+                    const titre = racine.querySelector('#modal-gestion-compte-titre');
+                    const description = racine.querySelector('#modal-gestion-compte-description');
+                    const champ = racine.querySelector('#modal-gestion-compte-champ');
+                    const label = racine.querySelector('#modal-gestion-compte-label');
+                    const input = racine.querySelector('#modal-gestion-compte-valeur');
+                    const valider = racine.querySelector('#modal-gestion-compte-valider');
+                    const erreur = racine.querySelector('#modal-gestion-compte-erreur');
+                    erreur.classList.add('d-none');
+                    erreur.textContent = '';
+                    champ.classList.remove('d-none');
+                    input.required = true;
+                    input.disabled = false;
+                    valider.className = 'btn btn-primary';
+
+                    if (action === 'renommer') {
+                        titre.textContent = 'Modifier le nom d’utilisateur';
+                        description.textContent = 'Compte : ' + username + (compteCible.email !== username ? ' · E-mail de connexion : ' + compteCible.email : '');
+                        label.textContent = 'Nouveau nom d’utilisateur';
+                        input.type = 'text';
+                        input.value = username;
+                        input.minLength = 3;
+                        input.autocomplete = 'off';
+                        valider.innerHTML = '<i class="fas fa-floppy-disk me-1"></i>Enregistrer';
+                    } else if (action === 'modifier-email') {
+                        titre.textContent = 'Modifier l’adresse e-mail';
+                        description.textContent = 'Compte : ' + username + '. La nouvelle adresse sera active immédiatement, sans e-mail de confirmation.';
+                        label.textContent = 'Nouvelle adresse e-mail';
+                        input.type = 'email';
+                        input.value = compteCible.email;
+                        input.removeAttribute('minlength');
+                        input.autocomplete = 'off';
+                        valider.innerHTML = '<i class="fas fa-envelope me-1"></i>Mettre à jour';
+                    } else {
+                        champ.classList.add('d-none');
+                        input.required = false;
+                        input.value = '';
+                        input.removeAttribute('minlength');
+                        if (action === 'supprimer') {
+                            titre.textContent = 'Supprimer ce compte ?';
+                            description.textContent = 'Le compte de ' + username + ', ses résultats et ses contenus seront supprimés définitivement.';
+                            valider.className = 'btn btn-danger';
+                            valider.innerHTML = '<i class="fas fa-trash me-1"></i>Supprimer définitivement';
+                        } else {
+                            titre.textContent = 'Réinitialiser la progression ?';
+                            description.textContent = 'Les résultats enregistrés pour ' + username + ' seront effacés.';
+                            valider.className = 'btn btn-warning';
+                            valider.innerHTML = '<i class="fas fa-rotate-left me-1"></i>Réinitialiser';
+                        }
+                    }
+                    gestionModal.show();
+                }
+
+                modalForm.addEventListener('submit', async function (event) {
+                    event.preventDefault();
+                    const valider = racine.querySelector('#modal-gestion-compte-valider');
+                    const erreur = racine.querySelector('#modal-gestion-compte-erreur');
+                    const input = racine.querySelector('#modal-gestion-compte-valeur');
+                    valider.disabled = true;
+                    erreur.classList.add('d-none');
+                    let resultat = { ok: true };
+                    if (actionCompteEnCours === 'renommer') {
+                        resultat = await auth.renommerCompte(utilisateurCompteEnCours, input.value);
+                    } else if (actionCompteEnCours === 'modifier-email') {
+                        resultat = await auth.modifierEmailCompte(utilisateurCompteEnCours, input.value);
+                    } else if (actionCompteEnCours === 'reinitialiser') {
+                        auth.clearProgress(utilisateurCompteEnCours);
+                    } else if (actionCompteEnCours === 'supprimer') {
+                        resultat = await auth.removeUser(utilisateurCompteEnCours);
+                    } else {
+                        resultat = { ok: false, error: 'Action de compte inconnue.' };
+                    }
+                    valider.disabled = false;
+                    if (!resultat.ok) {
+                        erreur.textContent = resultat.error || 'La modification a échoué.';
+                        erreur.classList.remove('d-none');
+                        return;
+                    }
+                    const actionTerminee = actionCompteEnCours;
+                    const nomCompte = utilisateurCompteEnCours;
+                    gestionModal.hide();
+                    if (actionTerminee === 'renommer') {
+                        toast(resultat.avertissement || ('Nom d’utilisateur mis à jour : ' + resultat.username + '.'));
+                    } else if (actionTerminee === 'modifier-email') {
+                        toast('Adresse e-mail mise à jour pour ' + nomCompte + '.');
+                    } else if (actionTerminee === 'reinitialiser') {
+                        toast('Progression réinitialisée pour ' + nomCompte + '.');
+                    } else {
+                        toast('Compte supprimé.');
+                    }
+                    router();
+                });
+
+                const journalLignes = racine.querySelector('#journal-lignes');
+                const journalStatut = racine.querySelector('#journal-status');
+                const journalCompteur = racine.querySelector('#journal-count');
+                const journalPlus = racine.querySelector('#journal-plus');
+                const comptesParId = {};
+                comptes.forEach(function (compte) {
+                    if (compte.id) comptesParId[compte.id] = compte;
+                });
+                let decalageJournal = 0;
+                let totalJournal = 0;
+
+                async function chargerJournal() {
+                    if (!backendActif || !window.LearnHubBackend.chargerActivitesGlobales) return;
+                    journalPlus.disabled = true;
+                    const resultat = await window.LearnHubBackend.chargerActivitesGlobales(decalageJournal, 50);
+                    if (!resultat.ok) {
+                        journalPlus.disabled = false;
+                        journalStatut.textContent = resultat.error;
+                        journalCompteur.textContent = 'Indisponible';
+                        journalLignes.innerHTML = '<tr><td colspan="5" class="text-danger">' + esc(resultat.error) + '</td></tr>';
+                        journalPlus.classList.add('d-none');
+                        return;
+                    }
+
+                    totalJournal = resultat.total;
+                    const lignesJournal = resultat.events.map(function (event) {
+                        const acteur = event.actor_user_id ? comptesParId[event.actor_user_id] : null;
+                        const sujet = event.subject_user_id ? comptesParId[event.subject_user_id] : null;
+                        const details = event.details || {};
+                        const classeActuelle = details.class_id ? store.classes.get(details.class_id) : null;
+                        const classePrecedente = details.previous_class_id ? store.classes.get(details.previous_class_id) : null;
+                        const detailTexte = details.title || details.name || details.subject ||
+                            details.username || details.type ||
+                            (classeActuelle ? 'Classe : ' + classeActuelle.nom : '') ||
+                            (classePrecedente ? 'Classe quittée : ' + classePrecedente.nom : '');
+                        const detailComplementaire = details.role
+                            ? ' · ' + (LIBELLES_ROLES[details.role] || details.role)
+                            : (details.score !== undefined && details.total !== undefined
+                                ? ' · Score ' + details.score + '/' + details.total
+                                : (details.etudes !== undefined || details.questions !== undefined
+                                    ? ' · ' + (details.etudes || 0) + ' études, ' + (details.questions || 0) + ' questions'
+                                    : ''));
+                        let acteurTexte = acteur ? acteur.username : 'Visiteur';
+                        if (!event.actor_user_id && event.entity === 'profiles' && event.action === 'created') {
+                            acteurTexte = details.username || 'Nouvelle inscription';
+                        }
+                        if (sujet && sujet.id !== event.actor_user_id) {
+                            acteurTexte += ' → ' + sujet.username;
+                        }
+                        return '<tr>' +
+                            '<td class="text-muted small text-nowrap">' + esc(new Date(event.created_at).toLocaleString('fr-FR')) + '</td>' +
+                            '<td class="fw-semibold">' + esc(acteurTexte) + '</td>' +
+                            '<td>' + esc(LIBELLES_AUDIT_ACTIONS[event.action] || event.action) + '</td>' +
+                            '<td>' + esc(LIBELLES_AUDIT_ENTITES[event.entity] || event.entity) + '</td>' +
+                            '<td class="small">' + esc(detailTexte || '—') + esc(detailComplementaire) + '</td>' +
+                        '</tr>';
+                    }).join('');
+
+                    if (decalageJournal === 0) journalLignes.innerHTML = '';
+                    journalLignes.insertAdjacentHTML('beforeend', lignesJournal);
+                    decalageJournal += resultat.events.length;
+                    journalCompteur.textContent = decalageJournal + ' / ' + totalJournal;
+                    journalStatut.textContent = 'Événements de toute la plateforme. Les détails sensibles des messages et contenus IA ne sont pas copiés dans ce journal.';
+                    journalPlus.classList.toggle('d-none', decalageJournal >= totalJournal);
+                    journalPlus.disabled = false;
+                    if (!totalJournal) {
+                        journalLignes.innerHTML = '<tr><td colspan="5" class="text-muted">Aucune activité enregistrée. Les événements commenceront après l’installation du journal.</td></tr>';
+                    }
+                }
+
+                journalPlus.addEventListener('click', chargerJournal);
+                if (backendActif) chargerJournal();
 
                 if (backendActif && window.LearnHubBackend.observerPresence) {
                     const compteurPresence = racine.querySelector('#presence-count');
                     const statutPresence = racine.querySelector('#presence-status');
                     const listePresence = racine.querySelector('#presence-utilisateurs');
                     const panneauPresence = racine.querySelector('#presence-panel');
-                    const comptesParId = {};
-                    comptes.forEach(function (compte) {
-                        if (compte.id) comptesParId[compte.id] = compte;
-                    });
-
                     let revisionPresence = 0;
                     const arreterObservation = window.LearnHubBackend.observerPresence(async function (etat) {
                         const revision = ++revisionPresence;
@@ -3688,28 +4360,18 @@
                     router();
                 });
 
-                table.addEventListener('click', async function (event) {
+                table.addEventListener('click', function (event) {
                     const bouton = event.target.closest('button[data-action]');
                     if (!bouton) return;
                     const username = bouton.dataset.username;
 
-                    if (bouton.dataset.action === 'reinitialiser') {
-                        if (!window.confirm('Effacer la progression de ' + username + ' ?')) return;
-                        auth.clearProgress(username);
-                        toast('Progression réinitialisée.');
-                        router();
-                    } else if (bouton.dataset.action === 'supprimer') {
-                        if (!window.confirm('Supprimer définitivement le compte ' + username + ' ? Ses contenus et résultats seront perdus.')) return;
-                        bouton.disabled = true;
-                        const resultat = await auth.removeUser(username);
-                        bouton.disabled = false;
-                        if (!resultat.ok) {
-                            afficher(resultat.error, 'danger');
-                            return;
-                        }
-                        toast('Compte supprimé.');
-                        router();
+                    const menu = bouton.closest('.dropdown');
+                    const declencheurMenu = menu && menu.querySelector('[data-bs-toggle="dropdown"]');
+                    const menuBootstrap = window.bootstrap && window.bootstrap.Dropdown;
+                    if (declencheurMenu && menuBootstrap) {
+                        menuBootstrap.getOrCreateInstance(declencheurMenu).hide();
                     }
+                    ouvrirGestionCompte(bouton.dataset.action, username);
                 });
 
                 racine.querySelector('#export-comptes').addEventListener('click', function () {
@@ -3907,6 +4569,7 @@
         if (!segments.length) return vueAccueil();
         const premier = segments[0];
         switch (premier) {
+            case 'espace-cours': return vueEspaceCours();
             case 'matieres': return vueMatieres();
             case 'matiere': return vueMatiere(segments[1]);
             case 'niveaux': return vueNiveaux();
